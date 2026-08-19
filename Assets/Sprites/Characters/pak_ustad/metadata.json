@@ -1,0 +1,49 @@
+{
+  "group_id": "cc1e4181-296b-47d7-8c05-d4599c8f4637",
+  "states": [
+    {
+      "character": {
+        "id": "76e1a9ea-d5b5-44fe-b1b4-79ecc1b41bde",
+        "name": "Idle",
+        "prompt": "Elderly man with gray beard and mustache, kind gentle smile, wearing a black peci (traditional cap). White long-sleeve traditional robe/koko shirt with subtle embroidered collar pattern, brown pants. Holding wooden prayer beads (tasbih) in both hands, wearing a ring and wristwatch. Clean pixel art style, chibi proportions, idle standing pose facing forward.",
+        "size": {
+          "width": 256,
+          "height": 256
+        },
+        "template_id": "mannequin",
+        "directions": 8,
+        "view": "low top-down",
+        "created_at": "2026-08-18T15:04:49.508465+00:00"
+      },
+      "folder": "Idle",
+      "frames": {
+        "rotations": {
+          "south": "Idle/rotations/south.png",
+          "south-east": "Idle/rotations/south-east.png",
+          "east": "Idle/rotations/east.png",
+          "north-east": "Idle/rotations/north-east.png",
+          "north": "Idle/rotations/north.png",
+          "north-west": "Idle/rotations/north-west.png",
+          "west": "Idle/rotations/west.png",
+          "south-west": "Idle/rotations/south-west.png"
+        },
+        "animations": {
+          "Idle": {
+            "south": [
+              "Idle/animations/Idle/south/frame_000.png",
+              "Idle/animations/Idle/south/frame_001.png",
+              "Idle/animations/Idle/south/frame_002.png",
+              "Idle/animations/Idle/south/frame_003.png",
+              "Idle/animations/Idle/south/frame_004.png",
+              "Idle/animations/Idle/south/frame_005.png",
+              "Idle/animations/Idle/south/frame_006.png",
+              "Idle/animations/Idle/south/frame_007.png"
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "export_version": "3.1",
+  "export_date": "2026-08-18T15:21:17.249844"
+}

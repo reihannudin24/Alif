@@ -1,0 +1,49 @@
+{
+  "group_id": "532075b1-e04c-41ad-811c-4562d2a73121",
+  "states": [
+    {
+      "character": {
+        "id": "943f3c4c-be7c-44b1-aa06-28982db4be75",
+        "name": "Idle",
+        "prompt": "Young man with short black hair, sharp confident eyebrows, slight smirk expression. Wearing a reddish-brown batik long-sleeve shirt with intricate gold floral pattern, dark pants. Wearing a ring and wristwatch. Holding a calculator/financial gadget in one hand. Clean pixel art style, chibi proportions, idle standing pose facing forward.",
+        "size": {
+          "width": 256,
+          "height": 256
+        },
+        "template_id": "mannequin",
+        "directions": 8,
+        "view": "low top-down",
+        "created_at": "2026-08-18T15:03:47.735166+00:00"
+      },
+      "folder": "Idle",
+      "frames": {
+        "rotations": {
+          "south": "Idle/rotations/south.png",
+          "south-east": "Idle/rotations/south-east.png",
+          "east": "Idle/rotations/east.png",
+          "north-east": "Idle/rotations/north-east.png",
+          "north": "Idle/rotations/north.png",
+          "north-west": "Idle/rotations/north-west.png",
+          "west": "Idle/rotations/west.png",
+          "south-west": "Idle/rotations/south-west.png"
+        },
+        "animations": {
+          "Idle": {
+            "south": [
+              "Idle/animations/Idle/south/frame_000.png",
+              "Idle/animations/Idle/south/frame_001.png",
+              "Idle/animations/Idle/south/frame_002.png",
+              "Idle/animations/Idle/south/frame_003.png",
+              "Idle/animations/Idle/south/frame_004.png",
+              "Idle/animations/Idle/south/frame_005.png",
+              "Idle/animations/Idle/south/frame_006.png",
+              "Idle/animations/Idle/south/frame_007.png"
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "export_version": "3.1",
+  "export_date": "2026-08-18T15:21:14.042104"
+}

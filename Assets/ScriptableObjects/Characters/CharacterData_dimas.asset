@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 42b7d55ea5af2486e868237d7062cd30, type: 3}
+  m_Name: CharacterData_dimas
+  m_EditorClassIdentifier: Assembly-CSharp::Alif.Characters.CharacterData
+  CharacterName: Dimas
+  Description: Rekan kerja yang gampang gugup, tapi baik hati.
+  Portrait: {fileID: 21300000, guid: 472f1cb66352a4789a198beef3d0e43a, type: 3}
+  AnimatorController: {fileID: 9100000, guid: c10f4268b583c4327bbfbad542dce676, type: 2}
+  _relationshipLevel: 0
+  _affinityPoints: 0
+  _affinityPerLevel: 100
