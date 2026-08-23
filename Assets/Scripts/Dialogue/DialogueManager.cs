@@ -4,6 +4,7 @@ using UnityEngine;
 using Alif.Characters;
 using Alif.Core;
 using Alif.Player;
+using Alif.Systems;
 
 namespace Alif.Dialogue
 {
@@ -23,6 +24,7 @@ namespace Alif.Dialogue
 
         private DialogueData _currentDialogue;
         private CharacterData _currentSpeakerData;
+        private CharacterData _currentLineSpeakerData;
         private int _currentLineIndex;
 
         public bool IsDialogueActive { get; private set; }
@@ -32,14 +34,19 @@ namespace Alif.Dialogue
         /// dibaca DialogueUI untuk ditampilkan di dialogue box. Null kalau dialog nggak
         /// punya speakerData (misal monolog tanpa portrait).
         /// </summary>
-        public Sprite CurrentSpeakerPortrait => _currentSpeakerData != null ? _currentSpeakerData.Portrait : null;
+        public Sprite CurrentSpeakerPortrait => _currentLineSpeakerData != null ? _currentLineSpeakerData.Portrait : null;
 
         // Event untuk DialogueUI: dipanggil setiap kali baris dialog baru ditampilkan.
         public event Action<DialogueLine> OnLineDisplayed;
 
+        // Dipanggil setelah dampak skor sebuah pilihan diterapkan. UI dan quest system bisa
+        // mendengarkan event ini tanpa perlu tahu detail dialog yang sedang berjalan.
+        public event Action<DialogueChoice> OnChoiceSelected;
+
         // Event untuk DialogueUI: dipanggil saat dialog dimulai/selesai.
         public event Action OnDialogueStarted;
         public event Action OnDialogueEnded;
+        public event Action<DialogueData> OnDialogueCompleted;
 
         private void Awake()
         {
@@ -89,6 +96,7 @@ namespace Alif.Dialogue
         private void ShowCurrentLine()
         {
             DialogueLine line = _currentDialogue.Lines[_currentLineIndex];
+            _currentLineSpeakerData = line.SpeakerData != null ? line.SpeakerData : _currentSpeakerData;
             OnLineDisplayed?.Invoke(line);
         }
 
@@ -110,7 +118,9 @@ namespace Alif.Dialogue
                 return;
             }
 
-            int nextIndex = _currentLineIndex + 1;
+            int nextIndex = currentLine.NextLineIndex >= 0
+                ? currentLine.NextLineIndex
+                : _currentLineIndex + 1;
             if (nextIndex >= _currentDialogue.Lines.Count)
             {
                 EndDialogue();
@@ -137,6 +147,26 @@ namespace Alif.Dialogue
                 _currentSpeakerData.AddAffinity(choice.AffinityChange);
             }
 
+            if (ScoreSystem.Instance != null)
+            {
+                if (!Mathf.Approximately(choice.FinancialLogicChange, 0f))
+                {
+                    ScoreSystem.Instance.AdjustFinancialLogic(choice.FinancialLogicChange);
+                }
+
+                if (!Mathf.Approximately(choice.ShariaComplianceChange, 0f))
+                {
+                    ScoreSystem.Instance.AdjustShariaCompliance(choice.ShariaComplianceChange);
+                }
+
+                if (!Mathf.Approximately(choice.BalanceCorrection, 0f))
+                {
+                    ScoreSystem.Instance.MoveTowardsBalance(choice.BalanceCorrection);
+                }
+            }
+
+            OnChoiceSelected?.Invoke(choice);
+
             if (choice.NextLineIndex < 0 || choice.NextLineIndex >= _currentDialogue.Lines.Count)
             {
                 EndDialogue();
@@ -153,11 +183,13 @@ namespace Alif.Dialogue
         /// </summary>
         private void EndDialogue()
         {
-            string completedEventId = _currentDialogue.OnCompleteEventId;
+            DialogueData completedDialogue = _currentDialogue;
+            string completedEventId = completedDialogue.OnCompleteEventId;
 
             IsDialogueActive = false;
             _currentDialogue = null;
             _currentSpeakerData = null;
+            _currentLineSpeakerData = null;
             _currentLineIndex = 0;
 
             if (GameManager.Instance != null)
@@ -171,6 +203,7 @@ namespace Alif.Dialogue
             }
 
             OnDialogueEnded?.Invoke();
+            OnDialogueCompleted?.Invoke(completedDialogue);
 
             if (!string.IsNullOrEmpty(completedEventId))
             {

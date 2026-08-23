@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Alif.Characters;
 
 namespace Alif.Dialogue
 {
@@ -11,11 +12,18 @@ namespace Alif.Dialogue
     public class DialogueLine
     {
         public string SpeakerName;
+
+        [Tooltip("Opsional. Jika diisi, portrait pembicara pada baris ini akan menggantikan portrait default dialog.")]
+        public CharacterData SpeakerData;
+
         [TextArea(2, 5)]
         public string Text;
 
         [Tooltip("Isi hanya jika baris ini punya pilihan (choices). Kosongkan jika dialog linear biasa.")]
         public List<DialogueChoice> Choices = new List<DialogueChoice>();
+
+        [Tooltip("Lompatan sesudah baris linear ini. -1 berarti lanjut ke baris berikutnya seperti biasa. Berguna untuk menyatukan cabang dialog.")]
+        public int NextLineIndex = -1;
 
         public bool HasChoices => Choices != null && Choices.Count > 0;
     }
@@ -35,6 +43,23 @@ namespace Alif.Dialogue
 
         [Tooltip("Opsional: poin affinity yang ditambahkan ke NPC saat pilihan ini dipilih, untuk dating sim.")]
         public int AffinityChange = 0;
+
+        [Header("Dampak Neraca 100%")]
+        [Tooltip("Menggeser neraca ke Logika Finansial. Dalam Shared Balance Mode, Kepatuhan Syariah bergerak berlawanan agar total tetap 100%.")]
+        public float FinancialLogicChange = 0f;
+
+        [Tooltip("Menggeser neraca ke Kepatuhan Syariah. Dalam Shared Balance Mode, Logika Finansial bergerak berlawanan agar total tetap 100%.")]
+        public float ShariaComplianceChange = 0f;
+
+        [Tooltip("Menarik neraca kembali ke titik tengah 50% Finansial / 50% Syariah. Dipakai untuk pilihan jalan tengah yang sehat.")]
+        public float BalanceCorrection = 0f;
+
+        [Tooltip("ID event opsional untuk logic quest, toko, atau cutscene. Contoh: warung.order.ayam_geprek.")]
+        public string EventId;
+
+        [TextArea(1, 3)]
+        [Tooltip("Teks singkat yang ditampilkan UI setelah pilihan memengaruhi neraca.")]
+        public string OutcomeText;
     }
 
     /// <summary>

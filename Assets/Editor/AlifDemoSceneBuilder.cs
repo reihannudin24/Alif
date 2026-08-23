@@ -180,7 +180,8 @@ namespace Alif.EditorTools
             GetOrAddChild<TimeSystem>(managersRoot.transform, "TimeSystem");
             GetOrAddChild<EnergySystem>(managersRoot.transform, "EnergySystem");
             GetOrAddChild<CurrencySystem>(managersRoot.transform, "CurrencySystem");
-            GetOrAddChild<ScoreSystem>(managersRoot.transform, "ScoreSystem");
+            ScoreSystem scoreSystem = GetOrAddChild<ScoreSystem>(managersRoot.transform, "ScoreSystem");
+            ConfigureSharedScoreBalance(scoreSystem);
             GetOrAddChild<InventorySystem>(managersRoot.transform, "InventorySystem");
             DialogueManager dialogueManager = GetOrAddChild<DialogueManager>(managersRoot.transform, "DialogueManager");
 
@@ -190,6 +191,10 @@ namespace Alif.EditorTools
 
             // 5. NPC (pakai karakter asli dari Assets/Sprites/Characters, hasil "Alif > 1) Import Character Art").
             BuildNpcs();
+
+            // 5a. Chapter 1: Bu Siti sebagai kasir, Raka di dalam warung, serta titik meja
+            // yang baru memicu konflik setelah pemain benar-benar memesan makanan.
+            BuildWarungRestaurantStory();
 
             // 5b. Bangku/kursi yang bisa di-interact (nggak bisa ditembus + munculin monolog Alif).
             BuildBenches();
@@ -225,6 +230,17 @@ namespace Alif.EditorTools
                     Object.DestroyImmediate(root);
                 }
             }
+        }
+
+        private static void ConfigureSharedScoreBalance(ScoreSystem scoreSystem)
+        {
+            // Neraca selalu dimulai tepat di tengah. Semua pilihan konflik kemudian menggeser
+            // sisi Finansial atau Syariah, sementara total dua bar tetap 100%.
+            SetSerializedValue(scoreSystem, "_useSharedBalance", true);
+            SetSerializedValue(scoreSystem, "_maxFinancialLogic", 100f);
+            SetSerializedValue(scoreSystem, "_maxShariaCompliance", 100f);
+            SetSerializedValue(scoreSystem, "_currentFinancialLogic", 50f);
+            SetSerializedValue(scoreSystem, "_currentShariaCompliance", 50f);
         }
 
         // ---------------------------------------------------------------
@@ -277,6 +293,71 @@ namespace Alif.EditorTools
             (new Vector2(1.56f, 2.195f), new Vector2(1.32f, 1.15f)),       // panel dinding kanan Toilet (disempitkan, dulu nutup gate Informasi<->Toilet)
         };
 
+        // Collider detail untuk tiga peta chapter 1. Semua angka adalah koordinat lokal peta
+        // (sudah mempertimbangkan pivot Center dan PPU 200), sehingga otomatis ikut skala
+        // background masing-masing. Hanya benda padat yang didaftarkan; lantai, paving, aspal,
+        // dan jalur pintu sengaja TIDAK masuk daftar agar tetap dapat dilalui pemain.
+        private static readonly (string name, Vector2 center, Vector2 size)[] StasiunFrontPropBlockers =
+        {
+            // Tepi bawah sengaja berhenti di atas spawn keluar stasiun (local Y 0.7),
+            // sehingga Alif tidak muncul menabrak collider bangunan saat pindah area.
+            ("BangunanStasiun", new Vector2(0f, 1.68f), new Vector2(5.45f, 1.34f)),
+            ("BangkuKanan", new Vector2(2.05f, -0.68f), new Vector2(0.94f, 0.32f)),
+            ("PohonKiri", new Vector2(-3.28f, -0.28f), new Vector2(0.38f, 0.72f)),
+            ("TiangListrikKiri", new Vector2(-3.25f, -0.13f), new Vector2(0.23f, 0.86f)),
+            ("TiangListrikTengahKiri", new Vector2(-1.31f, -0.20f), new Vector2(0.23f, 0.82f)),
+            ("PohonTengahKiri", new Vector2(-0.89f, -0.50f), new Vector2(0.38f, 0.70f)),
+            ("PohonTengah", new Vector2(0.64f, -0.48f), new Vector2(0.38f, 0.70f)),
+            ("TiangListrikTengahKanan", new Vector2(1.08f, -0.18f), new Vector2(0.23f, 0.82f)),
+            ("TiangListrikKanan", new Vector2(3.27f, -0.16f), new Vector2(0.23f, 0.86f)),
+            ("PohonKanan", new Vector2(3.54f, -0.49f), new Vector2(0.38f, 0.70f)),
+        };
+
+        private static readonly (string name, Vector2 center, Vector2 size)[] WarungFrontPropBlockers =
+        {
+            // Bangunan/atap menutup area yang bukan lantai. Jalur paving dan aspal di depan
+            // tetap terbuka, termasuk titik trigger masuk warung yang berada di jalan.
+            ("BangunanWarung", new Vector2(0f, 1.95f), new Vector2(3.78f, 2.48f)),
+            ("MejaLuar", new Vector2(2.56f, 1.31f), new Vector2(1.25f, 1.00f)),
+            ("PangganganLuar", new Vector2(1.70f, 0.82f), new Vector2(0.66f, 0.62f)),
+            ("PohonKiriBawah", new Vector2(-3.80f, 1.80f), new Vector2(0.42f, 0.78f)),
+            ("PohonKiriAtas", new Vector2(-2.86f, 2.68f), new Vector2(0.42f, 0.84f)),
+            ("PohonKiriTengah", new Vector2(-2.20f, 1.48f), new Vector2(0.40f, 0.78f)),
+            ("PohonKanan", new Vector2(3.00f, 2.35f), new Vector2(0.52f, 0.98f)),
+            ("PalemTengahJalan", new Vector2(0.15f, -2.26f), new Vector2(0.42f, 0.76f)),
+        };
+
+        private static readonly (string name, Vector2 center, Vector2 size)[] WarungInteriorPropBlockers =
+        {
+            // Dinding belakang dan semua counter dapur/kasir: ini mencegah kasus pada
+            // screenshot ketika Alif bisa berdiri di atas grill atau masuk ke balik kasir.
+            ("DindingBelakangKiri", new Vector2(-2.45f, 2.78f), new Vector2(3.10f, 1.23f)),
+            ("DindingBelakangKanan", new Vector2(1.65f, 2.78f), new Vector2(4.70f, 1.23f)),
+            ("CounterKasir", new Vector2(-3.08f, 1.72f), new Vector2(1.86f, 0.92f)),
+            ("PilarDapur", new Vector2(-0.72f, 2.02f), new Vector2(0.46f, 2.42f)),
+            ("GrillDanCounterMasak", new Vector2(1.02f, 1.68f), new Vector2(4.02f, 1.02f)),
+            ("SteamerKanan", new Vector2(3.73f, 1.55f), new Vector2(0.42f, 0.92f)),
+            ("CounterSajiKanan", new Vector2(2.90f, 0.44f), new Vector2(3.24f, 0.82f)),
+            ("PilarTengah", new Vector2(-0.72f, -0.19f), new Vector2(0.48f, 1.98f)),
+
+            // Collider meja mengikuti daun meja saja, bukan satu kotak besar yang menyatukan
+            // meja dan kursi. Lorong di antara meja-kursi jadi bisa dilewati seperti visualnya.
+            ("MejaMakanKiriAtas", new Vector2(-3.35f, 0.25f), new Vector2(0.88f, 0.46f)),
+            ("MejaMakanTengahAtas", new Vector2(-1.60f, 0.24f), new Vector2(0.54f, 0.78f)),
+            ("MejaMakanKiriTengah", new Vector2(-3.35f, -0.92f), new Vector2(0.88f, 0.46f)),
+            ("MejaMakanTengah", new Vector2(-1.72f, -0.92f), new Vector2(0.54f, 0.74f)),
+            ("MejaMakanKiriBawah", new Vector2(-3.20f, -2.02f), new Vector2(0.54f, 0.70f)),
+            ("MejaMakanTengahBawah", new Vector2(-1.66f, -2.02f), new Vector2(0.54f, 0.70f)),
+            ("KursiBundarTengah", new Vector2(-1.72f, -1.32f), new Vector2(0.28f, 0.28f)),
+            ("KursiBundarBawah", new Vector2(-0.96f, -2.26f), new Vector2(0.28f, 0.28f)),
+            ("PapanMenu", new Vector2(1.25f, -1.01f), new Vector2(0.34f, 0.66f)),
+            // Dua bangku dibuat terpisah supaya celah visual di tengahnya tetap menjadi jalan.
+            ("BangkuRuangTungguKiri", new Vector2(2.12f, -1.10f), new Vector2(0.72f, 0.34f)),
+            ("BangkuRuangTungguKanan", new Vector2(2.96f, -1.10f), new Vector2(0.72f, 0.34f)),
+            ("TanamanRuangTunggu", new Vector2(3.72f, -1.18f), new Vector2(0.42f, 0.58f)),
+            ("BangkuKananBawah", new Vector2(3.84f, -2.05f), new Vector2(0.32f, 0.96f)),
+        };
+
         private static void BuildBackgroundColliders(GameObject background)
         {
             // Bersihkan collider lama dulu biar aman di-rebuild berulang kali.
@@ -317,6 +398,15 @@ namespace Alif.EditorTools
             collider.size = size;
         }
 
+        private static void AddPropBlockers(GameObject parent, (string name, Vector2 center, Vector2 size)[] blockers)
+        {
+            for (int i = 0; i < blockers.Length; i++)
+            {
+                (string name, Vector2 center, Vector2 size) = blockers[i];
+                AddBoxBlocker(parent, $"PropBlocker_{name}", center, size);
+            }
+        }
+
         // ---------------------------------------------------------------
         // AREA LUAR STASIUN (EKSTERIOR)
         // ---------------------------------------------------------------
@@ -347,7 +437,7 @@ namespace Alif.EditorTools
             for (int i = exterior.transform.childCount - 1; i >= 0; i--)
             {
                 Transform child = exterior.transform.GetChild(i);
-                if (child.name.StartsWith("BoundaryWall"))
+                if (child.name.StartsWith("BoundaryWall") || child.name.StartsWith("PropBlocker"))
                 {
                     Object.DestroyImmediate(child.gameObject);
                 }
@@ -362,6 +452,7 @@ namespace Alif.EditorTools
             AddBoxBlocker(exterior, "BoundaryWall_Bottom", new Vector2(0, -halfH - wallThickness / 2f), new Vector2(halfW * 2 + wallThickness * 2, wallThickness));
             AddBoxBlocker(exterior, "BoundaryWall_Left", new Vector2(-halfW - wallThickness / 2f, 0), new Vector2(wallThickness, halfH * 2 + wallThickness * 2));
             AddBoxBlocker(exterior, "BoundaryWall_Right", new Vector2(halfW + wallThickness / 2f, 0), new Vector2(wallThickness, halfH * 2 + wallThickness * 2));
+            AddPropBlockers(exterior, StasiunFrontPropBlockers);
         }
 
         // ---------------------------------------------------------------
@@ -378,6 +469,359 @@ namespace Alif.EditorTools
 
             // WarungBuSiti_Interior.jpg 1600x1359px, PPU 200 -> half extents (4.0, 3.3975).
             BuildAreaBackground("Background_WarungDalam", WarungDalamSpritePath, WarungDalamOrigin, 4.0f, 3.3975f, WarungDalamScale);
+        }
+
+        // ---------------------------------------------------------------
+        // CERITA WARUNG BU SITI
+        // ---------------------------------------------------------------
+        // Alur interaksi sengaja dipisah jadi Kasir -> Meja. Dengan demikian dialog konflik
+        // tidak mungkin berjalan saat Alif baru masuk warung; pemain harus memilih makanan,
+        // menyelesaikan pembayaran, lalu duduk menunggu pesanan terlebih dahulu.
+        private static void BuildWarungRestaurantStory()
+        {
+            CharacterData alif = GetOrCreateAlifCharacterData();
+            CharacterData buSiti = AssetDatabase.LoadAssetAtPath<CharacterData>($"{CharacterDataFolder}/CharacterData_bu_siti.asset");
+            CharacterData raka = AssetDatabase.LoadAssetAtPath<CharacterData>($"{CharacterDataFolder}/CharacterData_raka.asset");
+
+            if (buSiti == null || raka == null)
+            {
+                Debug.LogWarning("[Alif] CharacterData Bu Siti atau Raka belum tersedia. Jalankan 'Alif > 1) Import Character Art'.");
+                return;
+            }
+
+            DialogueData menu = BuildWarungMenuDialogue(alif, buSiti);
+            DialogueData order = BuildWarungOrderDialogue(alif, buSiti);
+            DialogueData conflict = BuildWarungConflictDialogue(alif, buSiti, raka);
+            DialogueData alreadyOrdered = BuildWarungInfoDialogue(
+                "DialogueData_WarungSudahPesan", alif, buSiti,
+                ("Bu Siti", buSiti, "Pesananmu sedang Ibu siapkan, Alif. Duduk dulu di meja dekat jendela, ya."));
+            DialogueData needOrder = BuildWarungInfoDialogue(
+                "DialogueData_WarungBelumPesan", alif, buSiti,
+                ("Alif", alif, "Sebelum duduk, aku pesan makanan ke Bu Siti dulu."));
+            DialogueData finished = BuildWarungInfoDialogue(
+                "DialogueData_WarungSelesai", alif, buSiti,
+                ("Bu Siti", buSiti, "Terima kasih, Alif. Ibu akan mulai dari catatan kas dan kontrak yang jelas, bukan janji yang tergesa-gesa."),
+                ("Alif", alif, "Sama-sama, Bu. Usaha yang sehat harus menjaga angka sekaligus amanah."));
+
+            GameObject storyRoot = FindOrCreateRoot("WarungBuSitiStory");
+            RestaurantStoryTrigger story = GetOrAddComponent<RestaurantStoryTrigger>(storyRoot);
+            SetSerializedRef(story, "_orderDialogue", order);
+            SetSerializedRef(story, "_conflictDialogue", conflict);
+            SetSerializedRef(story, "_alreadyOrderedDialogue", alreadyOrdered);
+            SetSerializedRef(story, "_needOrderDialogue", needOrder);
+            SetSerializedRef(story, "_finishedDialogue", finished);
+            SetSerializedRef(story, "_menuDialogue", menu);
+            SetSerializedRef(story, "_alifData", alif);
+
+            // Posisi ditentukan terhadap peta WarungBuSiti_Interior (origin 40,-40; scale 1.3).
+            // Bu Siti ada di depan kasir. Raka diposisikan di ubin kosong, bukan di atas counter.
+            BuildRestaurantCharacter(storyRoot.transform, "BuSiti_Kasir", buSiti, new Vector2(37.25f, -38.35f), story, RestaurantStoryPoint.PointType.Cashier, true);
+            BuildRestaurantCharacter(storyRoot.transform, "Raka_Tamu", raka, new Vector2(40.90f, -40.72f), null, RestaurantStoryPoint.PointType.Cashier, false);
+            BuildRestaurantSeat(storyRoot.transform, story, new Vector2(39.45f, -40.85f));
+            BuildRestaurantMenu(storyRoot.transform, story, new Vector2(41.62f, -41.98f));
+        }
+
+        private static void BuildRestaurantCharacter(Transform parent, string name, CharacterData characterData, Vector2 position,
+            RestaurantStoryTrigger story, RestaurantStoryPoint.PointType pointType, bool isInteractable)
+        {
+            GameObject character = FindOrCreateWorldChild(parent, name);
+            character.transform.position = new Vector3(position.x, position.y, 0f);
+
+            SpriteRenderer renderer = GetOrAddComponent<SpriteRenderer>(character);
+            renderer.sprite = characterData.Portrait;
+            renderer.sortingOrder = SortingOrderCharacters;
+
+            Animator animator = GetOrAddComponent<Animator>(character);
+            animator.runtimeAnimatorController = characterData.AnimatorController;
+
+            CircleCollider2D collider = GetOrAddComponent<CircleCollider2D>(character);
+            collider.radius = 0.34f;
+            collider.isTrigger = isInteractable;
+
+            if (!isInteractable)
+            {
+                character.layer = 0;
+                return;
+            }
+
+            character.layer = LayerIndexInteractable;
+            RestaurantStoryPoint point = GetOrAddComponent<RestaurantStoryPoint>(character);
+            SetSerializedRef(point, "_story", story);
+            SetSerializedValue(point, "_pointType", (int)pointType);
+            AddInteractionArrow(character.transform, new Vector2(0f, 1.0f));
+        }
+
+        private static void BuildRestaurantSeat(Transform parent, RestaurantStoryTrigger story, Vector2 position)
+        {
+            GameObject seat = FindOrCreateWorldChild(parent, "MejaTungguPesanan");
+            seat.transform.position = new Vector3(position.x, position.y, 0f);
+            seat.layer = LayerIndexInteractable;
+
+            BoxCollider2D collider = GetOrAddComponent<BoxCollider2D>(seat);
+            collider.size = new Vector2(0.95f, 0.72f);
+            collider.isTrigger = true;
+
+            RestaurantStoryPoint point = GetOrAddComponent<RestaurantStoryPoint>(seat);
+            SetSerializedRef(point, "_story", story);
+            SetSerializedValue(point, "_pointType", (int)RestaurantStoryPoint.PointType.Seat);
+            AddInteractionArrow(seat.transform, new Vector2(0f, 0.72f));
+        }
+
+        private static void BuildRestaurantMenu(Transform parent, RestaurantStoryTrigger story, Vector2 position)
+        {
+            // Titik trigger diletakkan tepat di depan papan menu agar Alif tidak perlu masuk
+            // ke collider fisik papan untuk membacanya.
+            GameObject menu = FindOrCreateWorldChild(parent, "PapanMenu_Interact");
+            menu.transform.position = new Vector3(position.x, position.y, 0f);
+            menu.layer = LayerIndexInteractable;
+
+            BoxCollider2D collider = GetOrAddComponent<BoxCollider2D>(menu);
+            collider.size = new Vector2(0.58f, 0.32f);
+            collider.isTrigger = true;
+
+            RestaurantStoryPoint point = GetOrAddComponent<RestaurantStoryPoint>(menu);
+            SetSerializedRef(point, "_story", story);
+            SetSerializedValue(point, "_pointType", (int)RestaurantStoryPoint.PointType.Menu);
+            AddInteractionArrow(menu.transform, new Vector2(0f, 0.54f));
+        }
+
+        private static DialogueData BuildWarungInfoDialogue(string fileName, CharacterData alif, CharacterData buSiti,
+            params (string speakerName, CharacterData speakerData, string text)[] lines)
+        {
+            DialogueData data = GetOrCreateStoryDialogue(fileName);
+            foreach (var line in lines)
+            {
+                AddStoryLine(data, line.speakerName, line.speakerData, line.text);
+            }
+            return data;
+        }
+
+        private static DialogueData BuildWarungMenuDialogue(CharacterData alif, CharacterData buSiti)
+        {
+            DialogueData data = GetOrCreateStoryDialogue("DialogueData_WarungLihatMenu");
+            AddStoryLine(data, "Alif", alif, "Aku cek menu Warung Bu Siti dulu.");
+            AddStoryLine(data, "Menu Warung Bu Siti", null,
+                "AYAM GEPREK + NASI — Rp18.000\nNASI TELUR — Rp12.000\nES TEH — Rp6.000\n\nPilih pesananmu di kasir.");
+            AddStoryLine(data, "Bu Siti", buSiti, "Kalau sudah memilih, datang ke kasir ya, Alif. Ibu catat pesananmu di sana.");
+            return data;
+        }
+
+        private static DialogueData BuildWarungOrderDialogue(CharacterData alif, CharacterData buSiti)
+        {
+            DialogueData data = GetOrCreateStoryDialogue("DialogueData_WarungPesanMakanan");
+            AddStoryLine(data, "Bu Siti", buSiti, "Selamat datang, Alif. Mau makan apa? Hari ini lauknya baru matang.");
+            DialogueLine menu = AddStoryLine(data, "Alif", alif, "Aku pilih menu yang mana, ya?");
+
+            int branchStart = data.Lines.Count;
+            const int linesPerBranch = 2;
+            int rejoinIndex = branchStart + 3 * linesPerBranch;
+            AddOrderBranch(data, alif, buSiti, "Aku pesan ayam geprek dan nasi, Bu.", "Siap, ayam geprek satu. Totalnya Rp18.000.", rejoinIndex);
+            AddOrderBranch(data, alif, buSiti, "Nasi telur saja, Bu. Yang sederhana.", "Boleh, nasi telur satu. Totalnya Rp12.000.", rejoinIndex);
+            AddOrderBranch(data, alif, buSiti, "Es teh dulu, Bu. Nanti makan setelahnya.", "Siap, es teh satu. Totalnya Rp6.000.", rejoinIndex);
+
+            menu.Choices.Add(new DialogueChoice { ChoiceText = "Ayam geprek + nasi — Rp18.000", NextLineIndex = branchStart, EventId = "warung.order.ayam_geprek" });
+            menu.Choices.Add(new DialogueChoice { ChoiceText = "Nasi telur — Rp12.000", NextLineIndex = branchStart + linesPerBranch, EventId = "warung.order.nasi_telur" });
+            menu.Choices.Add(new DialogueChoice { ChoiceText = "Es teh — Rp6.000", NextLineIndex = branchStart + linesPerBranch * 2, EventId = "warung.order.es_teh" });
+
+            AddStoryLine(data, "Bu Siti", buSiti, "Terima kasih. Duduk dulu di meja dekat jendela, ya. Pesananmu segera Ibu antar.");
+            AddStoryLine(data, "Alif", alif, "Baik, Bu. Aku tunggu di sana.");
+            return data;
+        }
+
+        private static void AddOrderBranch(DialogueData data, CharacterData alif, CharacterData buSiti, string alifLine, string buSitiLine, int rejoinIndex)
+        {
+            int buSitiIndex = data.Lines.Count + 1;
+            AddStoryLine(data, "Alif", alif, alifLine, buSitiIndex);
+            AddStoryLine(data, "Bu Siti", buSiti, buSitiLine, rejoinIndex);
+        }
+
+        private static DialogueData BuildWarungConflictDialogue(CharacterData alif, CharacterData buSiti, CharacterData raka)
+        {
+            DialogueData data = GetOrCreateStoryDialogue("DialogueData_WarungKonflikBuSiti");
+
+            // Bagian pembuka: konflik baru terdengar ketika Alif telah duduk menunggu makanan.
+            AddStoryLine(data, "Narator", null, "Alif duduk di meja dekat jendela. Suara sendok dan kompor pelan-pelan tenggelam oleh percakapan tegang di dekat kasir.");
+            AddStoryLine(data, "Alif", alif, "Hmm... Bu Siti kelihatan gelisah. Orang di dekat kasir itu Raka, kan?");
+            AddStoryLine(data, "Bu Siti", buSiti, "Mas Raka, Ibu memang butuh modal. Tapi kenapa formulirnya harus ditandatangani sekarang juga?");
+            AddStoryLine(data, "Raka", raka, "Karena kuotanya terbatas, Bu. PT Cuan Meroket siap setor Rp5 juta hari ini. Ibu tinggal kembalikan keuntungan tetap Rp2 juta setiap bulan. Modal aman, tidak perlu memikirkan rugi.");
+            AddStoryLine(data, "Bu Siti", buSiti, "Dua juta per bulan? Warung Ibu kadang ramai, kadang sepi. Kalau hujan panjang, pemasukan bisa turun.");
+            AddStoryLine(data, "Raka", raka, "Justru itu enaknya program kami. Apa pun keadaan warung, keuntungan Ibu sudah pasti. Tidak perlu repot hitung untung-rugi.");
+            AddStoryLine(data, "Alif", alif, "Maaf menyela, Bu. Janji hasil tetap sementara usaha bisa rugi itu bukan hal kecil. Kita perlu tahu akad dan risikonya dengan jelas.");
+            AddStoryLine(data, "Raka", raka, "Alif, ini dunia nyata. Pengusaha kecil butuh uang cepat, bukan kuliah panjang soal istilah.");
+            AddStoryLine(data, "Bu Siti", buSiti, "Bukan cuma soal kuliah, Mas. Minggu ini freezer rusak, harga ayam naik, dan pemasok minta pembayaran tunai. Ibu takut karyawan Ibu ikut terdampak.");
+            AddStoryLine(data, "Alif", alif, "Aku paham urgensinya. Karena itu keputusan cepat tetap harus punya dasar yang jujur.");
+            AddStoryLine(data, "Narator", null, "Di meja kasir ada kontrak satu halaman. Huruf kecil di bagian bawah menyebut denda tambahan jika pembayaran terlambat, tetapi tidak menjelaskan ke mana dana diputar.");
+            AddStoryLine(data, "Raka", raka, "Itu hanya administrasi. Tanda tangan saja, Bu. Nanti semuanya beres.");
+            AddStoryLine(data, "Bu Siti", buSiti, "Alif, kalau kamu di posisi Ibu, apa yang kamu lakukan dulu?");
+
+            AddThreeWayDecision(data, "Alif", alif, alif, new[]
+            {
+                new StoryDecisionOption(
+                    "Ambil dana cepat; yang penting freezer dan stok segera aman.",
+                    "Kita ambil saja sekarang, Bu. Kondisi kas sedang mendesak dan nanti detailnya bisa dipikirkan.",
+                    raka, "Nah, itu baru keputusan bisnis. Waktu tidak menunggu orang yang terlalu banyak bertanya.",
+                    14f, 0f, 0f, "Kebutuhan uang cepat membuat neraca condong ke Finansial."),
+                new StoryDecisionOption(
+                    "Tolak semua bentuk pembiayaan supaya tidak ada risiko syariah.",
+                    "Sebaiknya jangan ambil pembiayaan apa pun, Bu. Menolak semuanya pasti lebih aman.",
+                    buSiti, "Ibu lega tidak menandatangani, tapi freezer, stok, dan gaji besok tetap perlu jalan keluar.",
+                    0f, 14f, 0f, "Menghindari seluruh risiko membuat neraca condong ke Syariah."),
+                new StoryDecisionOption(
+                    "Jeda tanda tangan; cek arus kas dan cari akad pembiayaan yang transparan.",
+                    "Kita jangan tanda tangan terburu-buru. Catat kebutuhan kas, cek kemampuan bayar, lalu bandingkan akad yang jelas dan adil.",
+                    buSiti, "Ibu bisa menahan diri sebentar kalau kita punya langkah yang nyata, bukan sekadar menunggu.",
+                    0f, 0f, 12f, "Jalan tengah mengarahkan keputusan kembali ke 50% / 50%.")
+            });
+
+            AddStoryLine(data, "Alif", alif, "Pertama, kita pisahkan kebutuhan yang nyata dari janji di brosur. Berapa uang yang dibutuhkan, untuk apa, dan dari mana pelunasannya akan datang?");
+            AddStoryLine(data, "Bu Siti", buSiti, "Freezer butuh sekitar Rp3 juta. Sisanya untuk stok dan uang muka pemasok. Kalau stok aman, pelanggan makan siang tetap datang.");
+            AddStoryLine(data, "Alif", alif, "Jadi masalahnya arus kas jangka pendek, bukan alasan untuk menerima hasil yang katanya pasti tanpa risiko.");
+            AddStoryLine(data, "Raka", raka, "Angka-angka itu justru membuktikan Ibu butuh kami. Dengan Rp5 juta ini, masalah selesai dalam lima menit.");
+            AddStoryLine(data, "Alif", alif, "Masalah bisa terlihat selesai hari ini, tapi denda dan kewajiban tetapnya bisa membuat warung tertekan bulan depan.");
+            AddStoryLine(data, "Bu Siti", buSiti, "Ibu punya catatan penjualan tiga minggu terakhir. Tidak rapi, tapi semua pemasukan dan belanja Ibu tulis.");
+            AddStoryLine(data, "Narator", null, "Alif melihat catatan sederhana itu: penjualan cukup stabil pada hari kerja, sementara pengeluaran terbesar datang dari bahan baku dan listrik.");
+            AddStoryLine(data, "Alif", alif, "Catatan ini penting, Bu. Dari sini kita bisa membuat proyeksi yang masuk akal, bukan mengandalkan angka yang dijanjikan orang lain.");
+            AddStoryLine(data, "Raka", raka, "Proyeksi bisa meleset. Program kami tidak meleset karena kami menjamin hasilnya.");
+            AddStoryLine(data, "Alif", alif, "Justru jaminan hasil tanpa penjelasan usaha, pembagian risiko, dan dasar perhitungannya adalah tanda bahaya.");
+            AddStoryLine(data, "Bu Siti", buSiti, "Kalau begitu, bagaimana Ibu membedakan bantuan modal yang sehat dengan jebakan yang dibungkus kata investasi?");
+
+            AddThreeWayDecision(data, "Alif", alif, alif, new[]
+            {
+                new StoryDecisionOption(
+                    "Fokus pada hasil bulanan; minta Raka menunda denda saja.",
+                    "Yang penting hasil bulanannya masuk, Mas. Dendanya saja yang bisa dinegosiasikan.",
+                    raka, "Bisa dibicarakan, asal Bu Siti tanda tangan sekarang. Detail akan kami kirim setelah dana cair.",
+                    12f, 0f, 0f, "Janji pemasukan instan kembali menarik neraca ke Finansial."),
+                new StoryDecisionOption(
+                    "Hindari keuntungan usaha dan biarkan warung berhenti sementara.",
+                    "Lebih baik warung berhenti dulu. Kalau ada peluang untung dan risiko, sebaiknya tidak usah diambil.",
+                    buSiti, "Ibu menghargai kehati-hatian itu, tapi menutup warung juga berarti pelanggan dan dua karyawan kehilangan penghasilan.",
+                    0f, 12f, 0f, "Kehati-hatian tanpa rencana usaha menggeser neraca ke Syariah."),
+                new StoryDecisionOption(
+                    "Minta rincian akad: tujuan dana, biaya, risiko, jangka waktu, dan mekanisme bagi hasil.",
+                    "Kita minta rincian tertulis dulu: dana dipakai untuk apa, biaya apa saja, risiko siapa yang menanggung, dan bagaimana bagi hasilnya dihitung.",
+                    raka, "Itu terlalu banyak pertanyaan untuk dana kecil. Klien lain biasanya langsung percaya pada nama perusahaan kami.",
+                    0f, 0f, 12f, "Kejelasan akad menarik pilihan kembali ke jalan tengah.")
+            });
+
+            AddStoryLine(data, "Alif", alif, "Usaha tidak harus memilih antara bertahan secara finansial atau taat pada prinsip. Keduanya perlu dibuat saling menguatkan.");
+            AddStoryLine(data, "Bu Siti", buSiti, "Berarti Ibu boleh mencari modal, asal tidak menutup mata pada isi perjanjian dan kemampuan warung membayar?");
+            AddStoryLine(data, "Alif", alif, "Betul. Misalnya cicilan pembelian freezer dengan harga dan jadwal yang disepakati di awal, atau kerja sama bagi hasil yang jelas atas usaha yang nyata. Kita tetap harus cek lembaga dan kontraknya.");
+            AddStoryLine(data, "Raka", raka, "Kalian membuat semua hal terasa sulit. Kalau terus bicara, kesempatan ini habis pukul empat sore.");
+            AddStoryLine(data, "Bu Siti", buSiti, "Tekanan seperti itu yang membuat Ibu tidak nyaman, Mas. Ibu perlu memahami sebelum menyetujui.");
+            AddStoryLine(data, "Alif", alif, "Bu Siti juga berhak memeriksa legalitas perusahaan, meminta salinan kontrak, dan tidak menyerahkan data atau uang sebelum semua terang.");
+            AddStoryLine(data, "Raka", raka, "Saya tidak punya waktu menunggu rapat panjang. Jadi, keputusan akhirnya apa?");
+
+            AddThreeWayDecision(data, "Alif", alif, alif, new[]
+            {
+                new StoryDecisionOption(
+                    "Tanda tangani dulu agar dana masuk; perbaiki kontraknya nanti.",
+                    "Bu, tanda tangani dulu saja supaya dana masuk. Nanti kalau ada masalah kita perbaiki kontraknya.",
+                    raka, "Pilihan yang realistis. Saya siapkan formulirnya sekarang.",
+                    10f, 0f, 0f, "Tekanan menyelesaikan hari ini menggeser neraca ke Finansial."),
+                new StoryDecisionOption(
+                    "Tolak setiap kerja sama dan jual peralatan untuk menutup kebutuhan.",
+                    "Lebih baik kita menolak semuanya dan menjual peralatan yang ada. Setidaknya tidak ada kontrak yang meragukan.",
+                    buSiti, "Itu mungkin aman dari kontrak buruk, tapi warung bisa kehilangan alat yang justru dipakai untuk bangkit.",
+                    0f, 10f, 0f, "Penolakan total menggeser neraca ke Syariah."),
+                new StoryDecisionOption(
+                    "Tolak tekanan Raka; amankan stok hari ini dan temui lembaga pembiayaan syariah/koperasi dengan catatan kas.",
+                    "Kita tolak tekanan ini, Bu. Hari ini kita atur stok yang paling penting; besok kita bawa catatan kas ke lembaga tepercaya untuk membahas pembiayaan yang transparan.",
+                    buSiti, "Itu masuk akal. Ibu tidak mengabaikan kebutuhan warung, tapi juga tidak menyerahkan masa depannya pada janji yang tidak jelas.",
+                    0f, 0f, 12f, "Langkah nyata dan transparan menarik neraca ke titik seimbang.")
+            });
+
+            AddStoryLine(data, "Raka", raka, "Kalau begitu saya pergi. Tapi jangan menyesal ketika pemasok tidak mau menunggu.");
+            AddStoryLine(data, "Alif", alif, "Kami tidak menolak solusi, Mas. Kami hanya menolak keputusan yang disembunyikan di balik janji hasil pasti dan tekanan waktu.");
+            AddStoryLine(data, "Narator", null, "Raka merapikan brosurnya. Senyumnya memudar ketika Bu Siti mengembalikan pulpen tanpa menandatangani apa pun.");
+            AddStoryLine(data, "Bu Siti", buSiti, "Terima kasih, Alif. Tadi Ibu hampir percaya karena panik. Sekarang Ibu tahu panik bukan alasan untuk melewatkan pertanyaan penting.");
+            AddStoryLine(data, "Alif", alif, "Kita mulai dari yang bisa Ibu kendalikan: catatan kas harian, prioritas belanja, dan kontrak yang bisa Ibu pahami sebelum menyetujui.");
+            AddStoryLine(data, "Bu Siti", buSiti, "Besok Ibu hubungi pemasok untuk jadwal yang lebih realistis. Setelah itu kita cari pilihan pembiayaan yang jelas dan sesuai kebutuhan warung.");
+            AddStoryLine(data, "Alif", alif, "Itu langkah yang baik, Bu. Menjaga usaha tetap hidup dan menjaga amanah tidak harus saling mengalahkan.");
+            AddStoryLine(data, "Narator", null, "Pesanan Alif akhirnya tiba. Di HUD, dua bar menunjukkan arah keputusan yang ia ambil: totalnya selalu 100%, dan jalan sehat berada di tengah.");
+            AddStoryLine(data, "Bu Siti", buSiti, "Makan dulu, Alif. Setelah ini Ibu punya keberanian untuk menyelesaikan masalah dengan kepala dingin.");
+            return data;
+        }
+
+        private struct StoryDecisionOption
+        {
+            public string ChoiceText;
+            public string AlifLine;
+            public CharacterData Responder;
+            public string ResponseLine;
+            public float FinancialChange;
+            public float ShariaChange;
+            public float BalanceCorrection;
+            public string OutcomeText;
+
+            public StoryDecisionOption(string choiceText, string alifLine, CharacterData responder, string responseLine,
+                float financialChange, float shariaChange, float balanceCorrection, string outcomeText)
+            {
+                ChoiceText = choiceText;
+                AlifLine = alifLine;
+                Responder = responder;
+                ResponseLine = responseLine;
+                FinancialChange = financialChange;
+                ShariaChange = shariaChange;
+                BalanceCorrection = balanceCorrection;
+                OutcomeText = outcomeText;
+            }
+        }
+
+        private static void AddThreeWayDecision(DialogueData data, string speakerName, CharacterData speakerData, CharacterData alif,
+            StoryDecisionOption[] options)
+        {
+            DialogueLine prompt = AddStoryLine(data, speakerName, speakerData, "Pilih respons Alif:");
+            int branchStart = data.Lines.Count;
+            const int linesPerBranch = 2;
+            int rejoinIndex = branchStart + options.Length * linesPerBranch;
+
+            for (int i = 0; i < options.Length; i++)
+            {
+                StoryDecisionOption option = options[i];
+                int responseIndex = data.Lines.Count + 1;
+                AddStoryLine(data, "Alif", alif, option.AlifLine, responseIndex);
+                AddStoryLine(data, option.Responder != null ? option.Responder.CharacterName : "Narator", option.Responder, option.ResponseLine, rejoinIndex);
+                prompt.Choices.Add(new DialogueChoice
+                {
+                    ChoiceText = option.ChoiceText,
+                    NextLineIndex = branchStart + i * linesPerBranch,
+                    FinancialLogicChange = option.FinancialChange,
+                    ShariaComplianceChange = option.ShariaChange,
+                    BalanceCorrection = option.BalanceCorrection,
+                    OutcomeText = option.OutcomeText
+                });
+            }
+        }
+
+        private static DialogueData GetOrCreateStoryDialogue(string fileName)
+        {
+            string path = $"{DialogueDataFolder}/{fileName}.asset";
+            DialogueData data = AssetDatabase.LoadAssetAtPath<DialogueData>(path);
+            if (data == null)
+            {
+                data = ScriptableObject.CreateInstance<DialogueData>();
+                EnsureFolder(DialogueDataFolder);
+                AssetDatabase.CreateAsset(data, path);
+            }
+
+            data.Lines.Clear();
+            data.OnCompleteEventId = string.Empty;
+            EditorUtility.SetDirty(data);
+            return data;
+        }
+
+        private static DialogueLine AddStoryLine(DialogueData data, string speakerName, CharacterData speakerData, string text, int nextLineIndex = -1)
+        {
+            DialogueLine line = new DialogueLine
+            {
+                SpeakerName = speakerName,
+                SpeakerData = speakerData,
+                Text = text,
+                NextLineIndex = nextLineIndex
+            };
+            data.Lines.Add(line);
+            return line;
         }
 
         // Helper generik "background + boundary luar doang" — dipakai Warung Depan & Dalam,
@@ -405,7 +849,7 @@ namespace Alif.EditorTools
             for (int i = root.transform.childCount - 1; i >= 0; i--)
             {
                 Transform child = root.transform.GetChild(i);
-                if (child.name.StartsWith("BoundaryWall"))
+                if (child.name.StartsWith("BoundaryWall") || child.name.StartsWith("PropBlocker"))
                 {
                     Object.DestroyImmediate(child.gameObject);
                 }
@@ -416,6 +860,15 @@ namespace Alif.EditorTools
             AddBoxBlocker(root, "BoundaryWall_Bottom", new Vector2(0, -halfH - wallThickness / 2f), new Vector2(halfW * 2 + wallThickness * 2, wallThickness));
             AddBoxBlocker(root, "BoundaryWall_Left", new Vector2(-halfW - wallThickness / 2f, 0), new Vector2(wallThickness, halfH * 2 + wallThickness * 2));
             AddBoxBlocker(root, "BoundaryWall_Right", new Vector2(halfW + wallThickness / 2f, 0), new Vector2(wallThickness, halfH * 2 + wallThickness * 2));
+
+            if (rootName == "Background_WarungDepan")
+            {
+                AddPropBlockers(root, WarungFrontPropBlockers);
+            }
+            else if (rootName == "Background_WarungDalam")
+            {
+                AddPropBlockers(root, WarungInteriorPropBlockers);
+            }
         }
 
         // ---------------------------------------------------------------
@@ -964,6 +1417,8 @@ namespace Alif.EditorTools
             SetSerializedRef(dialogueUI, "_inventoryPanelRoot", inventoryPanel);
             SetSerializedRef(dialogueUI, "_pauseButtonRoot", pauseButtonGO);
 
+            BuildScoreBalanceFeedback(canvasGO.transform, canvasGO);
+
             SetSerializedRef(uiManager, "_hudPanel", hudPanel);
             SetSerializedRef(uiManager, "_inventoryPanel", inventoryPanel);
             SetSerializedRef(uiManager, "_dialoguePanel", dialoguePanel);
@@ -1260,7 +1715,7 @@ namespace Alif.EditorTools
         {
             GameObject panel = FindOrCreateChild(canvasTransform, "HUD_Panel");
             RectTransform panelRT = panel.GetComponent<RectTransform>() ?? panel.AddComponent<RectTransform>();
-            SetRect(panelRT, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(20, -20), new Vector2(280, 200));
+            SetRect(panelRT, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(20, -20), new Vector2(280, 220));
             AddImage(panelRT, new Color(0.25f, 0.16f, 0.08f, 0.85f));
 
             // Jam (jam:menit) sengaja dihapus dari HUD — kalau ada sisa "ClockText" dari build
@@ -1280,6 +1735,10 @@ namespace Alif.EditorTools
             Slider financialLogicSlider = BuildLabeledSlider(panel.transform, "FinancialLogic", "Logika Finansial", -68, new Color(0.35f, 0.6f, 0.85f, 1f));
             Slider shariaComplianceSlider = BuildLabeledSlider(panel.transform, "ShariaCompliance", "Kepatuhan Syariah", -102, new Color(0.85f, 0.65f, 0.25f, 1f));
 
+            TextMeshProUGUI balanceHint = FindOrCreateText(panel.transform, "BalanceHint", "NERACA: 100% TOTAL • IDEAL 50% / 50%",
+                new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, 1), new Vector2(12, -136), new Vector2(-12, 14), 9, TextAlignmentOptions.Left);
+            balanceHint.color = new Color(1f, 1f, 1f, 0.58f);
+
             FindOrCreateText(panel.transform, "MoneyLabel", "Uang",
                 new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 0), new Vector2(12, 32), new Vector2(-12, 14), 11, TextAlignmentOptions.Left)
                 .color = new Color(1f, 1f, 1f, 0.75f);
@@ -1295,6 +1754,24 @@ namespace Alif.EditorTools
             SetSerializedRef(hud, "_moneyText", moneyText);
 
             return panel;
+        }
+
+        private static void BuildScoreBalanceFeedback(Transform canvasTransform, GameObject canvasGO)
+        {
+            // Root-nya sengaja bukan child Dialogue_Panel supaya feedback tetap tampak saat
+            // pilihan baru saja menutup/membuka pergantian baris dialog.
+            GameObject panel = FindOrCreateChild(canvasTransform, "ScoreBalanceFeedback");
+            RectTransform panelRT = panel.GetComponent<RectTransform>();
+            SetRect(panelRT, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(180, -34), new Vector2(450, 76));
+            AddImage(panelRT, new Color(0.08f, 0.06f, 0.04f, 0.91f));
+
+            TextMeshProUGUI feedbackText = FindOrCreateText(panel.transform, "FeedbackText", "",
+                Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(-20, -10), 12, TextAlignmentOptions.Center);
+
+            ScoreBalanceFeedbackUI feedbackUI = GetOrAddComponent<ScoreBalanceFeedbackUI>(canvasGO);
+            SetSerializedRef(feedbackUI, "_panelRoot", panel);
+            SetSerializedRef(feedbackUI, "_messageText", feedbackText);
+            panel.SetActive(false);
         }
 
         // Label kecil + progress bar di bawahnya, dipakai buat Energy, Financial Logic (skor
@@ -1753,6 +2230,24 @@ namespace Alif.EditorTools
             SerializedProperty prop = so.FindProperty(fieldName);
             if (prop == null) return;
             prop.floatValue = value;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void SetSerializedValue(Object target, string fieldName, bool value)
+        {
+            var so = new SerializedObject(target);
+            SerializedProperty prop = so.FindProperty(fieldName);
+            if (prop == null) return;
+            prop.boolValue = value;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void SetSerializedValue(Object target, string fieldName, int value)
+        {
+            var so = new SerializedObject(target);
+            SerializedProperty prop = so.FindProperty(fieldName);
+            if (prop == null) return;
+            prop.intValue = value;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 

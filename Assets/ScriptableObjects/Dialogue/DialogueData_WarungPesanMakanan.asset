@@ -1,0 +1,91 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7e7e8abb4e4b043c08377bbf1eb960b6, type: 3}
+  m_Name: DialogueData_WarungPesanMakanan
+  m_EditorClassIdentifier: Assembly-CSharp::Alif.Dialogue.DialogueData
+  Lines:
+  - SpeakerName: Bu Siti
+    SpeakerData: {fileID: 11400000, guid: 30e3e15dad8d8407bb8e3f8221f9e816, type: 2}
+    Text: Selamat datang, Alif. Mau makan apa? Hari ini lauknya baru matang.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Aku pilih menu yang mana, ya?
+    Choices:
+    - ChoiceText: "Ayam geprek + nasi \u2014 Rp18.000"
+      NextLineIndex: 2
+      AffinityChange: 0
+      FinancialLogicChange: 0
+      ShariaComplianceChange: 0
+      BalanceCorrection: 0
+      EventId: warung.order.ayam_geprek
+      OutcomeText: 
+    - ChoiceText: "Nasi telur \u2014 Rp12.000"
+      NextLineIndex: 4
+      AffinityChange: 0
+      FinancialLogicChange: 0
+      ShariaComplianceChange: 0
+      BalanceCorrection: 0
+      EventId: warung.order.nasi_telur
+      OutcomeText: 
+    - ChoiceText: "Es teh \u2014 Rp6.000"
+      NextLineIndex: 6
+      AffinityChange: 0
+      FinancialLogicChange: 0
+      ShariaComplianceChange: 0
+      BalanceCorrection: 0
+      EventId: warung.order.es_teh
+      OutcomeText: 
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Aku pesan ayam geprek dan nasi, Bu.
+    Choices: []
+    NextLineIndex: 3
+  - SpeakerName: Bu Siti
+    SpeakerData: {fileID: 11400000, guid: 30e3e15dad8d8407bb8e3f8221f9e816, type: 2}
+    Text: Siap, ayam geprek satu. Totalnya Rp18.000.
+    Choices: []
+    NextLineIndex: 8
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Nasi telur saja, Bu. Yang sederhana.
+    Choices: []
+    NextLineIndex: 5
+  - SpeakerName: Bu Siti
+    SpeakerData: {fileID: 11400000, guid: 30e3e15dad8d8407bb8e3f8221f9e816, type: 2}
+    Text: Boleh, nasi telur satu. Totalnya Rp12.000.
+    Choices: []
+    NextLineIndex: 8
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Es teh dulu, Bu. Nanti makan setelahnya.
+    Choices: []
+    NextLineIndex: 7
+  - SpeakerName: Bu Siti
+    SpeakerData: {fileID: 11400000, guid: 30e3e15dad8d8407bb8e3f8221f9e816, type: 2}
+    Text: Siap, es teh satu. Totalnya Rp6.000.
+    Choices: []
+    NextLineIndex: 8
+  - SpeakerName: Bu Siti
+    SpeakerData: {fileID: 11400000, guid: 30e3e15dad8d8407bb8e3f8221f9e816, type: 2}
+    Text: Terima kasih. Duduk dulu di meja dekat jendela, ya. Pesananmu segera Ibu
+      antar.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Baik, Bu. Aku tunggu di sana.
+    Choices: []
+    NextLineIndex: -1
+  OnCompleteEventId: 

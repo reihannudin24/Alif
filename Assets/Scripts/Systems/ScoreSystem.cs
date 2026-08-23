@@ -4,10 +4,10 @@ using UnityEngine;
 namespace Alif.Systems
 {
     /// <summary>
-    /// Dua skor inti dari minigame "AI Detektif" (lihat storyline Chapter 1-5): tiap kali
-    /// pemain mengetik argumen buat mematahkan pelaku penipuan finansial, backend menilai
-    /// argumennya lalu nambah/ngurangin dua skor ini. Nilai 0-100, dipakai buat isi dua
-    /// progress bar di HUD.
+    /// Neraca pilihan inti game. Dalam Shared Balance Mode (default), Logika Finansial dan
+    /// Kepatuhan Syariah berbagi satu total 100%: ketika satu sisi naik, sisi lain turun.
+    /// Ini membuat pilihan yang terlalu mengejar uang atau terlalu menghindari risiko terlihat
+    /// jelas, sementara jalan terbaik berada di sekitar titik tengah 50% / 50%.
     ///
     /// - Financial Logic: masuk akal secara matematis/bisnis (dari sisi logika keuangan).
     /// - Sharia Compliance: bebas dari Riba, Gharar, dan Maysir (dari sisi syariah).
@@ -18,11 +18,15 @@ namespace Alif.Systems
 
         [Header("Financial Logic")]
         [SerializeField] private float _maxFinancialLogic = 100f;
-        [SerializeField] private float _currentFinancialLogic = 0f;
+        [SerializeField] private float _currentFinancialLogic = 50f;
 
         [Header("Sharia Compliance")]
         [SerializeField] private float _maxShariaCompliance = 100f;
-        [SerializeField] private float _currentShariaCompliance = 0f;
+        [SerializeField] private float _currentShariaCompliance = 50f;
+
+        [Header("Balance Rule")]
+        [Tooltip("Jika aktif, kedua bar selalu berbagi total 100%. Nonaktifkan hanya untuk mode penilaian lama yang memakai dua skor terpisah.")]
+        [SerializeField] private bool _useSharedBalance = true;
 
         // Event membawa nilai 0-1 (persentase), langsung dipakai buat Slider.value di UI.
         public event Action<float> OnFinancialLogicChanged;
@@ -42,6 +46,7 @@ namespace Alif.Systems
             }
 
             Instance = this;
+            NormalizeSharedBalance();
         }
 
         private void Start()
@@ -56,8 +61,7 @@ namespace Alif.Systems
         /// </summary>
         public void AdjustFinancialLogic(float delta)
         {
-            _currentFinancialLogic = Mathf.Clamp(_currentFinancialLogic + delta, 0f, _maxFinancialLogic);
-            OnFinancialLogicChanged?.Invoke(FinancialLogicPercent01);
+            SetFinancialLogic(_currentFinancialLogic + delta);
         }
 
         /// <summary>
@@ -66,7 +70,57 @@ namespace Alif.Systems
         /// </summary>
         public void AdjustShariaCompliance(float delta)
         {
+            if (_useSharedBalance)
+            {
+                // Sharia naik berarti porsi finansial turun, sehingga total tetap 100%.
+                float nextFinancial = _currentFinancialLogic - delta;
+                SetFinancialLogic(nextFinancial);
+                return;
+            }
+
             _currentShariaCompliance = Mathf.Clamp(_currentShariaCompliance + delta, 0f, _maxShariaCompliance);
+            NotifyScoresChanged();
+        }
+
+        /// <summary>
+        /// Tarik neraca menuju jalan tengah. Nilai 10 berarti paling banyak bergerak 10 poin
+        /// menuju 50/50, tanpa pernah melewati titik tengah.
+        /// </summary>
+        public void MoveTowardsBalance(float amount)
+        {
+            if (!_useSharedBalance)
+            {
+                return;
+            }
+
+            float targetFinancial = _maxFinancialLogic * 0.5f;
+            SetFinancialLogic(Mathf.MoveTowards(_currentFinancialLogic, targetFinancial, Mathf.Abs(amount)));
+        }
+
+        private void SetFinancialLogic(float value)
+        {
+            _currentFinancialLogic = Mathf.Clamp(value, 0f, _maxFinancialLogic);
+
+            if (_useSharedBalance)
+            {
+                float financialPercent = _maxFinancialLogic <= 0f ? 0.5f : _currentFinancialLogic / _maxFinancialLogic;
+                _currentShariaCompliance = (1f - financialPercent) * _maxShariaCompliance;
+            }
+
+            NotifyScoresChanged();
+        }
+
+        private void NormalizeSharedBalance()
+        {
+            if (_useSharedBalance)
+            {
+                SetFinancialLogic(_currentFinancialLogic);
+            }
+        }
+
+        private void NotifyScoresChanged()
+        {
+            OnFinancialLogicChanged?.Invoke(FinancialLogicPercent01);
             OnShariaComplianceChanged?.Invoke(ShariaCompliancePercent01);
         }
     }

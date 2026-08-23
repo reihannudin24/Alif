@@ -144,3 +144,40 @@ terkait di `UIManager.cs`.
 4. Klik "Next" sampai dialog selesai — pastikan `Dialogue_Panel` hilang lagi dan Player bisa gerak lagi.
 5. Cek HUD: jam berjalan otomatis, energy bar & uang berubah sesuai pemanggilan
    `EnergySystem.Instance.ConsumeEnergy(...)` / `CurrencySystem.Instance.AddMoney(...)` dari script lain.
+
+## 7. Chapter 1 — Cutscene Warung Bu Siti
+
+Builder demo sekarang juga merangkai satu event cerita di **Warung Bu Siti**. Jalankan
+**`Alif > 2) Build Demo Scene`** setelah script selesai di-import. Builder membuat karakter
+Bu Siti di kasir, Raka di area warung, titik interaksi meja, lima DialogueData story, serta
+panel feedback neraca pada HUD.
+
+Flow pengujiannya:
+
+1. Dari stasiun, masuk ke Warung Bu Siti lalu masuk ke area dalam.
+2. Dekati **papan menu** di area tunggu lalu tekan **E** untuk melihat harga. Papan menu punya
+   trigger sendiri di depan objeknya, jadi tetap bisa dibaca tanpa menembus collider papan.
+3. Dekati **Bu Siti** di kasir dan pilih salah satu menu. Uang Alif berkurang sesuai harga.
+4. Dekati tanda interaksi di **meja dekat jendela**. Konflik baru dimulai pada titik ini;
+   meja akan mengingatkan pemain untuk memesan bila belum membeli makanan.
+5. Selesaikan tiga keputusan. Masing-masing punya tiga opsi: mengejar kebutuhan finansial,
+   menghindari semua risiko secara berlebihan, atau solusi transparan yang mengarahkan
+   neraca kembali ke jalan tengah.
+
+### Neraca 100%
+
+`ScoreSystem` memakai **Shared Balance Mode** untuk event ini. Logika Finansial dan Kepatuhan
+Syariah selalu berbagi total 100%, dimulai dari **50% / 50%**. Pilihan yang condong ke salah
+satu sisi menggeser dua bar secara berlawanan; pilihan jalan tengah menarik nilai kembali ke
+50% / 50%. Feedback setelah memilih menunjukkan nilai terbaru. Bila chapter lain membutuhkan
+dua skor independen seperti desain lama, nonaktifkan `Use Shared Balance` pada `ScoreSystem`.
+
+### Collision peta Chapter 1
+
+Builder juga membuat collider non-trigger untuk benda solid di **depan Stasiun**, **depan
+Warung Bu Siti**, dan **dalam Warung Bu Siti**. Collider mengikuti badan benda: meja hanya
+memblok daun mejanya, bangku ruang tunggu terpisah per bangku, dan kursi bundar memakai radius
+kecil. Karena itu celah/lantai di antara furnitur tetap bisa dipakai. Bangunan/dinding, pohon,
+tiang, kasir, grill, counter dapur, steamer, dan papan menu tetap solid; lantai, paving, aspal,
+serta jalur pintu tidak diberi collider. Semua definisi berada di `AlifDemoSceneBuilder` pada
+daftar `*PropBlockers`; ubah daftar itu jika tata letak background diganti.

@@ -1,0 +1,452 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7e7e8abb4e4b043c08377bbf1eb960b6, type: 3}
+  m_Name: DialogueData_WarungKonflikBuSiti
+  m_EditorClassIdentifier: Assembly-CSharp::Alif.Dialogue.DialogueData
+  Lines:
+  - SpeakerName: Narator
+    SpeakerData: {fileID: 0}
+    Text: Alif duduk di meja dekat jendela. Suara sendok dan kompor pelan-pelan tenggelam
+      oleh percakapan tegang di dekat kasir.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Hmm... Bu Siti kelihatan gelisah. Orang di dekat kasir itu Raka, kan?
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Bu Siti
+    SpeakerData: {fileID: 11400000, guid: 30e3e15dad8d8407bb8e3f8221f9e816, type: 2}
+    Text: Mas Raka, Ibu memang butuh modal. Tapi kenapa formulirnya harus ditandatangani
+      sekarang juga?
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Raka
+    SpeakerData: {fileID: 11400000, guid: bbc7ebd26e1234001ad59f735c01e6d7, type: 2}
+    Text: Karena kuotanya terbatas, Bu. PT Cuan Meroket siap setor Rp5 juta hari
+      ini. Ibu tinggal kembalikan keuntungan tetap Rp2 juta setiap bulan. Modal aman,
+      tidak perlu memikirkan rugi.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Bu Siti
+    SpeakerData: {fileID: 11400000, guid: 30e3e15dad8d8407bb8e3f8221f9e816, type: 2}
+    Text: Dua juta per bulan? Warung Ibu kadang ramai, kadang sepi. Kalau hujan panjang,
+      pemasukan bisa turun.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Raka
+    SpeakerData: {fileID: 11400000, guid: bbc7ebd26e1234001ad59f735c01e6d7, type: 2}
+    Text: Justru itu enaknya program kami. Apa pun keadaan warung, keuntungan Ibu
+      sudah pasti. Tidak perlu repot hitung untung-rugi.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Maaf menyela, Bu. Janji hasil tetap sementara usaha bisa rugi itu bukan
+      hal kecil. Kita perlu tahu akad dan risikonya dengan jelas.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Raka
+    SpeakerData: {fileID: 11400000, guid: bbc7ebd26e1234001ad59f735c01e6d7, type: 2}
+    Text: Alif, ini dunia nyata. Pengusaha kecil butuh uang cepat, bukan kuliah panjang
+      soal istilah.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Bu Siti
+    SpeakerData: {fileID: 11400000, guid: 30e3e15dad8d8407bb8e3f8221f9e816, type: 2}
+    Text: Bukan cuma soal kuliah, Mas. Minggu ini freezer rusak, harga ayam naik,
+      dan pemasok minta pembayaran tunai. Ibu takut karyawan Ibu ikut terdampak.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Aku paham urgensinya. Karena itu keputusan cepat tetap harus punya dasar
+      yang jujur.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Narator
+    SpeakerData: {fileID: 0}
+    Text: Di meja kasir ada kontrak satu halaman. Huruf kecil di bagian bawah menyebut
+      denda tambahan jika pembayaran terlambat, tetapi tidak menjelaskan ke mana
+      dana diputar.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Raka
+    SpeakerData: {fileID: 11400000, guid: bbc7ebd26e1234001ad59f735c01e6d7, type: 2}
+    Text: Itu hanya administrasi. Tanda tangan saja, Bu. Nanti semuanya beres.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Bu Siti
+    SpeakerData: {fileID: 11400000, guid: 30e3e15dad8d8407bb8e3f8221f9e816, type: 2}
+    Text: Alif, kalau kamu di posisi Ibu, apa yang kamu lakukan dulu?
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: 'Pilih respons Alif:'
+    Choices:
+    - ChoiceText: Ambil dana cepat; yang penting freezer dan stok segera aman.
+      NextLineIndex: 14
+      AffinityChange: 0
+      FinancialLogicChange: 14
+      ShariaComplianceChange: 0
+      BalanceCorrection: 0
+      EventId: 
+      OutcomeText: Kebutuhan uang cepat membuat neraca condong ke Finansial.
+    - ChoiceText: Tolak semua bentuk pembiayaan supaya tidak ada risiko syariah.
+      NextLineIndex: 16
+      AffinityChange: 0
+      FinancialLogicChange: 0
+      ShariaComplianceChange: 14
+      BalanceCorrection: 0
+      EventId: 
+      OutcomeText: Menghindari seluruh risiko membuat neraca condong ke Syariah.
+    - ChoiceText: Jeda tanda tangan; cek arus kas dan cari akad pembiayaan yang transparan.
+      NextLineIndex: 18
+      AffinityChange: 0
+      FinancialLogicChange: 0
+      ShariaComplianceChange: 0
+      BalanceCorrection: 12
+      EventId: 
+      OutcomeText: Jalan tengah mengarahkan keputusan kembali ke 50% / 50%.
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Kita ambil saja sekarang, Bu. Kondisi kas sedang mendesak dan nanti detailnya
+      bisa dipikirkan.
+    Choices: []
+    NextLineIndex: 15
+  - SpeakerName: Raka
+    SpeakerData: {fileID: 11400000, guid: bbc7ebd26e1234001ad59f735c01e6d7, type: 2}
+    Text: Nah, itu baru keputusan bisnis. Waktu tidak menunggu orang yang terlalu
+      banyak bertanya.
+    Choices: []
+    NextLineIndex: 20
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Sebaiknya jangan ambil pembiayaan apa pun, Bu. Menolak semuanya pasti lebih
+      aman.
+    Choices: []
+    NextLineIndex: 17
+  - SpeakerName: Bu Siti
+    SpeakerData: {fileID: 11400000, guid: 30e3e15dad8d8407bb8e3f8221f9e816, type: 2}
+    Text: Ibu lega tidak menandatangani, tapi freezer, stok, dan gaji besok tetap
+      perlu jalan keluar.
+    Choices: []
+    NextLineIndex: 20
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Kita jangan tanda tangan terburu-buru. Catat kebutuhan kas, cek kemampuan
+      bayar, lalu bandingkan akad yang jelas dan adil.
+    Choices: []
+    NextLineIndex: 19
+  - SpeakerName: Bu Siti
+    SpeakerData: {fileID: 11400000, guid: 30e3e15dad8d8407bb8e3f8221f9e816, type: 2}
+    Text: Ibu bisa menahan diri sebentar kalau kita punya langkah yang nyata, bukan
+      sekadar menunggu.
+    Choices: []
+    NextLineIndex: 20
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Pertama, kita pisahkan kebutuhan yang nyata dari janji di brosur. Berapa
+      uang yang dibutuhkan, untuk apa, dan dari mana pelunasannya akan datang?
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Bu Siti
+    SpeakerData: {fileID: 11400000, guid: 30e3e15dad8d8407bb8e3f8221f9e816, type: 2}
+    Text: Freezer butuh sekitar Rp3 juta. Sisanya untuk stok dan uang muka pemasok.
+      Kalau stok aman, pelanggan makan siang tetap datang.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Jadi masalahnya arus kas jangka pendek, bukan alasan untuk menerima hasil
+      yang katanya pasti tanpa risiko.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Raka
+    SpeakerData: {fileID: 11400000, guid: bbc7ebd26e1234001ad59f735c01e6d7, type: 2}
+    Text: Angka-angka itu justru membuktikan Ibu butuh kami. Dengan Rp5 juta ini,
+      masalah selesai dalam lima menit.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Masalah bisa terlihat selesai hari ini, tapi denda dan kewajiban tetapnya
+      bisa membuat warung tertekan bulan depan.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Bu Siti
+    SpeakerData: {fileID: 11400000, guid: 30e3e15dad8d8407bb8e3f8221f9e816, type: 2}
+    Text: Ibu punya catatan penjualan tiga minggu terakhir. Tidak rapi, tapi semua
+      pemasukan dan belanja Ibu tulis.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Narator
+    SpeakerData: {fileID: 0}
+    Text: 'Alif melihat catatan sederhana itu: penjualan cukup stabil pada hari kerja,
+      sementara pengeluaran terbesar datang dari bahan baku dan listrik.'
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Catatan ini penting, Bu. Dari sini kita bisa membuat proyeksi yang masuk
+      akal, bukan mengandalkan angka yang dijanjikan orang lain.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Raka
+    SpeakerData: {fileID: 11400000, guid: bbc7ebd26e1234001ad59f735c01e6d7, type: 2}
+    Text: Proyeksi bisa meleset. Program kami tidak meleset karena kami menjamin
+      hasilnya.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Justru jaminan hasil tanpa penjelasan usaha, pembagian risiko, dan dasar
+      perhitungannya adalah tanda bahaya.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Bu Siti
+    SpeakerData: {fileID: 11400000, guid: 30e3e15dad8d8407bb8e3f8221f9e816, type: 2}
+    Text: Kalau begitu, bagaimana Ibu membedakan bantuan modal yang sehat dengan
+      jebakan yang dibungkus kata investasi?
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: 'Pilih respons Alif:'
+    Choices:
+    - ChoiceText: Fokus pada hasil bulanan; minta Raka menunda denda saja.
+      NextLineIndex: 32
+      AffinityChange: 0
+      FinancialLogicChange: 12
+      ShariaComplianceChange: 0
+      BalanceCorrection: 0
+      EventId: 
+      OutcomeText: Janji pemasukan instan kembali menarik neraca ke Finansial.
+    - ChoiceText: Hindari keuntungan usaha dan biarkan warung berhenti sementara.
+      NextLineIndex: 34
+      AffinityChange: 0
+      FinancialLogicChange: 0
+      ShariaComplianceChange: 12
+      BalanceCorrection: 0
+      EventId: 
+      OutcomeText: Kehati-hatian tanpa rencana usaha menggeser neraca ke Syariah.
+    - ChoiceText: 'Minta rincian akad: tujuan dana, biaya, risiko, jangka waktu,
+        dan mekanisme bagi hasil.'
+      NextLineIndex: 36
+      AffinityChange: 0
+      FinancialLogicChange: 0
+      ShariaComplianceChange: 0
+      BalanceCorrection: 12
+      EventId: 
+      OutcomeText: Kejelasan akad menarik pilihan kembali ke jalan tengah.
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Yang penting hasil bulanannya masuk, Mas. Dendanya saja yang bisa dinegosiasikan.
+    Choices: []
+    NextLineIndex: 33
+  - SpeakerName: Raka
+    SpeakerData: {fileID: 11400000, guid: bbc7ebd26e1234001ad59f735c01e6d7, type: 2}
+    Text: Bisa dibicarakan, asal Bu Siti tanda tangan sekarang. Detail akan kami
+      kirim setelah dana cair.
+    Choices: []
+    NextLineIndex: 38
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Lebih baik warung berhenti dulu. Kalau ada peluang untung dan risiko, sebaiknya
+      tidak usah diambil.
+    Choices: []
+    NextLineIndex: 35
+  - SpeakerName: Bu Siti
+    SpeakerData: {fileID: 11400000, guid: 30e3e15dad8d8407bb8e3f8221f9e816, type: 2}
+    Text: Ibu menghargai kehati-hatian itu, tapi menutup warung juga berarti pelanggan
+      dan dua karyawan kehilangan penghasilan.
+    Choices: []
+    NextLineIndex: 38
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: 'Kita minta rincian tertulis dulu: dana dipakai untuk apa, biaya apa saja,
+      risiko siapa yang menanggung, dan bagaimana bagi hasilnya dihitung.'
+    Choices: []
+    NextLineIndex: 37
+  - SpeakerName: Raka
+    SpeakerData: {fileID: 11400000, guid: bbc7ebd26e1234001ad59f735c01e6d7, type: 2}
+    Text: Itu terlalu banyak pertanyaan untuk dana kecil. Klien lain biasanya langsung
+      percaya pada nama perusahaan kami.
+    Choices: []
+    NextLineIndex: 38
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Usaha tidak harus memilih antara bertahan secara finansial atau taat pada
+      prinsip. Keduanya perlu dibuat saling menguatkan.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Bu Siti
+    SpeakerData: {fileID: 11400000, guid: 30e3e15dad8d8407bb8e3f8221f9e816, type: 2}
+    Text: Berarti Ibu boleh mencari modal, asal tidak menutup mata pada isi perjanjian
+      dan kemampuan warung membayar?
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Betul. Misalnya cicilan pembelian freezer dengan harga dan jadwal yang
+      disepakati di awal, atau kerja sama bagi hasil yang jelas atas usaha yang nyata.
+      Kita tetap harus cek lembaga dan kontraknya.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Raka
+    SpeakerData: {fileID: 11400000, guid: bbc7ebd26e1234001ad59f735c01e6d7, type: 2}
+    Text: Kalian membuat semua hal terasa sulit. Kalau terus bicara, kesempatan ini
+      habis pukul empat sore.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Bu Siti
+    SpeakerData: {fileID: 11400000, guid: 30e3e15dad8d8407bb8e3f8221f9e816, type: 2}
+    Text: Tekanan seperti itu yang membuat Ibu tidak nyaman, Mas. Ibu perlu memahami
+      sebelum menyetujui.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Bu Siti juga berhak memeriksa legalitas perusahaan, meminta salinan kontrak,
+      dan tidak menyerahkan data atau uang sebelum semua terang.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Raka
+    SpeakerData: {fileID: 11400000, guid: bbc7ebd26e1234001ad59f735c01e6d7, type: 2}
+    Text: Saya tidak punya waktu menunggu rapat panjang. Jadi, keputusan akhirnya
+      apa?
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: 'Pilih respons Alif:'
+    Choices:
+    - ChoiceText: Tanda tangani dulu agar dana masuk; perbaiki kontraknya nanti.
+      NextLineIndex: 46
+      AffinityChange: 0
+      FinancialLogicChange: 10
+      ShariaComplianceChange: 0
+      BalanceCorrection: 0
+      EventId: 
+      OutcomeText: Tekanan menyelesaikan hari ini menggeser neraca ke Finansial.
+    - ChoiceText: Tolak setiap kerja sama dan jual peralatan untuk menutup kebutuhan.
+      NextLineIndex: 48
+      AffinityChange: 0
+      FinancialLogicChange: 0
+      ShariaComplianceChange: 10
+      BalanceCorrection: 0
+      EventId: 
+      OutcomeText: Penolakan total menggeser neraca ke Syariah.
+    - ChoiceText: Tolak tekanan Raka; amankan stok hari ini dan temui lembaga pembiayaan
+        syariah/koperasi dengan catatan kas.
+      NextLineIndex: 50
+      AffinityChange: 0
+      FinancialLogicChange: 0
+      ShariaComplianceChange: 0
+      BalanceCorrection: 12
+      EventId: 
+      OutcomeText: Langkah nyata dan transparan menarik neraca ke titik seimbang.
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Bu, tanda tangani dulu saja supaya dana masuk. Nanti kalau ada masalah
+      kita perbaiki kontraknya.
+    Choices: []
+    NextLineIndex: 47
+  - SpeakerName: Raka
+    SpeakerData: {fileID: 11400000, guid: bbc7ebd26e1234001ad59f735c01e6d7, type: 2}
+    Text: Pilihan yang realistis. Saya siapkan formulirnya sekarang.
+    Choices: []
+    NextLineIndex: 52
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Lebih baik kita menolak semuanya dan menjual peralatan yang ada. Setidaknya
+      tidak ada kontrak yang meragukan.
+    Choices: []
+    NextLineIndex: 49
+  - SpeakerName: Bu Siti
+    SpeakerData: {fileID: 11400000, guid: 30e3e15dad8d8407bb8e3f8221f9e816, type: 2}
+    Text: Itu mungkin aman dari kontrak buruk, tapi warung bisa kehilangan alat yang
+      justru dipakai untuk bangkit.
+    Choices: []
+    NextLineIndex: 52
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Kita tolak tekanan ini, Bu. Hari ini kita atur stok yang paling penting;
+      besok kita bawa catatan kas ke lembaga tepercaya untuk membahas pembiayaan
+      yang transparan.
+    Choices: []
+    NextLineIndex: 51
+  - SpeakerName: Bu Siti
+    SpeakerData: {fileID: 11400000, guid: 30e3e15dad8d8407bb8e3f8221f9e816, type: 2}
+    Text: Itu masuk akal. Ibu tidak mengabaikan kebutuhan warung, tapi juga tidak
+      menyerahkan masa depannya pada janji yang tidak jelas.
+    Choices: []
+    NextLineIndex: 52
+  - SpeakerName: Raka
+    SpeakerData: {fileID: 11400000, guid: bbc7ebd26e1234001ad59f735c01e6d7, type: 2}
+    Text: Kalau begitu saya pergi. Tapi jangan menyesal ketika pemasok tidak mau
+      menunggu.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Kami tidak menolak solusi, Mas. Kami hanya menolak keputusan yang disembunyikan
+      di balik janji hasil pasti dan tekanan waktu.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Narator
+    SpeakerData: {fileID: 0}
+    Text: Raka merapikan brosurnya. Senyumnya memudar ketika Bu Siti mengembalikan
+      pulpen tanpa menandatangani apa pun.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Bu Siti
+    SpeakerData: {fileID: 11400000, guid: 30e3e15dad8d8407bb8e3f8221f9e816, type: 2}
+    Text: Terima kasih, Alif. Tadi Ibu hampir percaya karena panik. Sekarang Ibu
+      tahu panik bukan alasan untuk melewatkan pertanyaan penting.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: 'Kita mulai dari yang bisa Ibu kendalikan: catatan kas harian, prioritas
+      belanja, dan kontrak yang bisa Ibu pahami sebelum menyetujui.'
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Bu Siti
+    SpeakerData: {fileID: 11400000, guid: 30e3e15dad8d8407bb8e3f8221f9e816, type: 2}
+    Text: Besok Ibu hubungi pemasok untuk jadwal yang lebih realistis. Setelah itu
+      kita cari pilihan pembiayaan yang jelas dan sesuai kebutuhan warung.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Itu langkah yang baik, Bu. Menjaga usaha tetap hidup dan menjaga amanah
+      tidak harus saling mengalahkan.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Narator
+    SpeakerData: {fileID: 0}
+    Text: 'Pesanan Alif akhirnya tiba. Di HUD, dua bar menunjukkan arah keputusan
+      yang ia ambil: totalnya selalu 100%, dan jalan sehat berada di tengah.'
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Bu Siti
+    SpeakerData: {fileID: 11400000, guid: 30e3e15dad8d8407bb8e3f8221f9e816, type: 2}
+    Text: Makan dulu, Alif. Setelah ini Ibu punya keberanian untuk menyelesaikan
+      masalah dengan kepala dingin.
+    Choices: []
+    NextLineIndex: -1
+  OnCompleteEventId: 
