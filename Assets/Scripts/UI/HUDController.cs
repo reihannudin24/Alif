@@ -20,6 +20,10 @@ namespace Alif.UI
         [Header("Energy Display")]
         [SerializeField] private Slider _energySlider;
 
+        [Header("Score Display")]
+        [SerializeField] private Slider _financialLogicSlider;
+        [SerializeField] private Slider _shariaComplianceSlider;
+
         [Header("Currency Display")]
         [SerializeField] private TMP_Text _moneyText;
 
@@ -44,6 +48,14 @@ namespace Alif.UI
                 CurrencySystem.Instance.OnMoneyChanged += HandleMoneyChanged;
                 HandleMoneyChanged(CurrencySystem.Instance.CurrentMoney);
             }
+
+            if (ScoreSystem.Instance != null)
+            {
+                ScoreSystem.Instance.OnFinancialLogicChanged += HandleFinancialLogicChanged;
+                ScoreSystem.Instance.OnShariaComplianceChanged += HandleShariaComplianceChanged;
+                HandleFinancialLogicChanged(ScoreSystem.Instance.FinancialLogicPercent01);
+                HandleShariaComplianceChanged(ScoreSystem.Instance.ShariaCompliancePercent01);
+            }
         }
 
         private void OnDisable()
@@ -61,6 +73,12 @@ namespace Alif.UI
             if (CurrencySystem.Instance != null)
             {
                 CurrencySystem.Instance.OnMoneyChanged -= HandleMoneyChanged;
+            }
+
+            if (ScoreSystem.Instance != null)
+            {
+                ScoreSystem.Instance.OnFinancialLogicChanged -= HandleFinancialLogicChanged;
+                ScoreSystem.Instance.OnShariaComplianceChanged -= HandleShariaComplianceChanged;
             }
         }
 
@@ -90,6 +108,22 @@ namespace Alif.UI
             if (_moneyText != null)
             {
                 _moneyText.text = amount.ToString("N0");
+            }
+        }
+
+        private void HandleFinancialLogicChanged(float percent01)
+        {
+            if (_financialLogicSlider != null)
+            {
+                _financialLogicSlider.value = percent01;
+            }
+        }
+
+        private void HandleShariaComplianceChanged(float percent01)
+        {
+            if (_shariaComplianceSlider != null)
+            {
+                _shariaComplianceSlider.value = percent01;
             }
         }
     }

@@ -142,6 +142,7 @@ namespace Alif.EditorTools
             GetOrAddChild<TimeSystem>(managersRoot.transform, "TimeSystem");
             GetOrAddChild<EnergySystem>(managersRoot.transform, "EnergySystem");
             GetOrAddChild<CurrencySystem>(managersRoot.transform, "CurrencySystem");
+            GetOrAddChild<ScoreSystem>(managersRoot.transform, "ScoreSystem");
             GetOrAddChild<InventorySystem>(managersRoot.transform, "InventorySystem");
             DialogueManager dialogueManager = GetOrAddChild<DialogueManager>(managersRoot.transform, "DialogueManager");
 
@@ -667,7 +668,7 @@ namespace Alif.EditorTools
         {
             GameObject panel = FindOrCreateChild(canvasTransform, "HUD_Panel");
             RectTransform panelRT = panel.GetComponent<RectTransform>() ?? panel.AddComponent<RectTransform>();
-            SetRect(panelRT, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(20, -20), new Vector2(260, 120));
+            SetRect(panelRT, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(20, -20), new Vector2(280, 210));
             AddImage(panelRT, new Color(0.25f, 0.16f, 0.08f, 0.85f));
 
             TextMeshProUGUI dayWeekText = FindOrCreateText(panel.transform, "DayWeekText", "Tuesday, 1st week",
@@ -676,7 +677,11 @@ namespace Alif.EditorTools
             TextMeshProUGUI clockText = FindOrCreateText(panel.transform, "ClockText", "15:03",
                 new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, 1), new Vector2(12, -36), new Vector2(-12, 24), 16, TextAlignmentOptions.Left);
 
-            Slider energySlider = BuildEnergySlider(panel.transform);
+            // Tiga bar diberi label kecil di atasnya (dulu cuma Energy sendirian jadi nggak
+            // perlu label; sekarang ada 3 bar sekaligus, tanpa label bakal ambigu).
+            Slider energySlider = BuildLabeledSlider(panel.transform, "Energy", "Energi", -58, new Color(0.45f, 0.75f, 0.35f, 1f));
+            Slider financialLogicSlider = BuildLabeledSlider(panel.transform, "FinancialLogic", "Logika Finansial", -92, new Color(0.35f, 0.6f, 0.85f, 1f));
+            Slider shariaComplianceSlider = BuildLabeledSlider(panel.transform, "ShariaCompliance", "Kepatuhan Syariah", -126, new Color(0.85f, 0.65f, 0.25f, 1f));
 
             TextMeshProUGUI moneyText = FindOrCreateText(panel.transform, "MoneyText", "150",
                 new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 0), new Vector2(12, 10), new Vector2(-12, 24), 16, TextAlignmentOptions.Left);
@@ -685,16 +690,25 @@ namespace Alif.EditorTools
             SetSerializedRef(hud, "_dayWeekText", dayWeekText);
             SetSerializedRef(hud, "_clockText", clockText);
             SetSerializedRef(hud, "_energySlider", energySlider);
+            SetSerializedRef(hud, "_financialLogicSlider", financialLogicSlider);
+            SetSerializedRef(hud, "_shariaComplianceSlider", shariaComplianceSlider);
             SetSerializedRef(hud, "_moneyText", moneyText);
 
             return panel;
         }
 
-        private static Slider BuildEnergySlider(Transform parent)
+        // Label kecil + progress bar di bawahnya, dipakai buat Energy, Financial Logic (skor
+        // logika bisnis argumen pemain di minigame AI Detektif), dan Sharia Compliance (skor
+        // bebas Riba/Gharar/Maysir) — beda warna fill per bar biar gampang dibedain sekilas.
+        private static Slider BuildLabeledSlider(Transform parent, string name, string label, float topY, Color fillColor)
         {
-            GameObject sliderGO = FindOrCreateChild(parent, "EnergySlider");
+            FindOrCreateText(parent, $"{name}Label", label,
+                new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, 1), new Vector2(12, topY), new Vector2(-12, 14), 11, TextAlignmentOptions.Left)
+                .color = new Color(1f, 1f, 1f, 0.75f);
+
+            GameObject sliderGO = FindOrCreateChild(parent, $"{name}Slider");
             RectTransform sliderRT = sliderGO.GetComponent<RectTransform>() ?? sliderGO.AddComponent<RectTransform>();
-            SetRect(sliderRT, new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, 1), new Vector2(12, -66), new Vector2(-24, 14));
+            SetRect(sliderRT, new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, 1), new Vector2(12, topY - 16), new Vector2(-24, 12));
 
             Slider slider = GetOrAddComponent<Slider>(sliderGO);
             slider.transition = Selectable.Transition.None;
@@ -720,7 +734,7 @@ namespace Alif.EditorTools
             fillRT.pivot = new Vector2(0f, 0.5f);
             fillRT.offsetMin = Vector2.zero;
             fillRT.offsetMax = Vector2.zero;
-            AddImage(fillRT, new Color(0.45f, 0.75f, 0.35f, 1f));
+            AddImage(fillRT, fillColor);
 
             slider.fillRect = fillRT;
 
@@ -803,7 +817,7 @@ namespace Alif.EditorTools
             FindOrCreateText(panel.transform, "DialogueText", "...",
                 new Vector2(0, 0), new Vector2(1, 1), new Vector2(0, 1), new Vector2(textLeft, -44), new Vector2(-16, -50), 16, TextAlignmentOptions.TopLeft);
 
-            GameObject nextButtonGO = BuildSimpleButton(panel.transform, "NextButton", "Lanjut ▶");
+            GameObject nextButtonGO = BuildSimpleButton(panel.transform, "NextButton", "Lanjut >");
             RectTransform nextRT = nextButtonGO.GetComponent<RectTransform>();
             SetRect(nextRT, new Vector2(1, 0), new Vector2(1, 0), new Vector2(1, 0), new Vector2(-16, 12), new Vector2(110, 32));
 
@@ -858,7 +872,7 @@ namespace Alif.EditorTools
         // ---------------------------------------------------------------
         // HELPERS: hierarchy / komponen
         // ---------------------------------------------------------------
-        private static GameObject FindOrCreateRoot(string name)
+        internal static GameObject FindOrCreateRoot(string name)
         {
             var scene = SceneManager.GetActiveScene();
             foreach (GameObject root in scene.GetRootGameObjects())
@@ -874,7 +888,7 @@ namespace Alif.EditorTools
             return go;
         }
 
-        private static GameObject FindOrCreateChild(Transform parent, string name)
+        internal static GameObject FindOrCreateChild(Transform parent, string name)
         {
             Transform existing = parent.Find(name);
             if (existing != null)
@@ -905,7 +919,7 @@ namespace Alif.EditorTools
             return go;
         }
 
-        private static GameObject FindOrCreateUIRoot(string name)
+        internal static GameObject FindOrCreateUIRoot(string name)
         {
             var scene = SceneManager.GetActiveScene();
             foreach (GameObject root in scene.GetRootGameObjects())
@@ -927,13 +941,13 @@ namespace Alif.EditorTools
             return GetOrAddComponent<T>(go);
         }
 
-        private static T GetOrAddComponent<T>(GameObject go) where T : Component
+        internal static T GetOrAddComponent<T>(GameObject go) where T : Component
         {
             T comp = go.GetComponent<T>();
             return comp != null ? comp : go.AddComponent<T>();
         }
 
-        private static void EnsureEventSystem()
+        internal static void EnsureEventSystem()
         {
             if (Object.FindAnyObjectByType<EventSystem>() != null)
             {
@@ -946,7 +960,7 @@ namespace Alif.EditorTools
             go.AddComponent<InputSystemUIInputModule>();
         }
 
-        private static void EnsureFolder(string path)
+        internal static void EnsureFolder(string path)
         {
             if (AssetDatabase.IsValidFolder(path))
             {
@@ -966,7 +980,7 @@ namespace Alif.EditorTools
         // ---------------------------------------------------------------
         // HELPERS: UI layout
         // ---------------------------------------------------------------
-        private static void SetRect(RectTransform rt, Vector2 anchorMin, Vector2 anchorMax, Vector2 pivot, Vector2 anchoredPos, Vector2 sizeDelta)
+        internal static void SetRect(RectTransform rt, Vector2 anchorMin, Vector2 anchorMax, Vector2 pivot, Vector2 anchoredPos, Vector2 sizeDelta)
         {
             rt.anchorMin = anchorMin;
             rt.anchorMax = anchorMax;
@@ -975,7 +989,7 @@ namespace Alif.EditorTools
             rt.sizeDelta = sizeDelta;
         }
 
-        private static void StretchFull(RectTransform rt)
+        internal static void StretchFull(RectTransform rt)
         {
             rt.anchorMin = Vector2.zero;
             rt.anchorMax = Vector2.one;
@@ -983,14 +997,14 @@ namespace Alif.EditorTools
             rt.offsetMax = Vector2.zero;
         }
 
-        private static Image AddImage(RectTransform rt, Color color)
+        internal static Image AddImage(RectTransform rt, Color color)
         {
             Image img = GetOrAddComponent<Image>(rt.gameObject);
             img.color = color;
             return img;
         }
 
-        private static TextMeshProUGUI FindOrCreateText(Transform parent, string name, string defaultText,
+        internal static TextMeshProUGUI FindOrCreateText(Transform parent, string name, string defaultText,
             Vector2 anchorMin, Vector2 anchorMax, Vector2 pivot, Vector2 anchoredPos, Vector2 sizeDelta,
             float fontSize, TextAlignmentOptions alignment)
         {
@@ -1013,7 +1027,7 @@ namespace Alif.EditorTools
         // ---------------------------------------------------------------
         // HELPERS: SerializedObject (untuk isi field private [SerializeField])
         // ---------------------------------------------------------------
-        private static void SetSerializedRef(Object target, string fieldName, Object value)
+        internal static void SetSerializedRef(Object target, string fieldName, Object value)
         {
             var so = new SerializedObject(target);
             SerializedProperty prop = so.FindProperty(fieldName);
@@ -1054,7 +1068,7 @@ namespace Alif.EditorTools
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        private static void SetSerializedObjectList(Object target, string fieldName, System.Collections.Generic.List<Object> values)
+        internal static void SetSerializedObjectList(Object target, string fieldName, System.Collections.Generic.List<Object> values)
         {
             var so = new SerializedObject(target);
             SerializedProperty prop = so.FindProperty(fieldName);

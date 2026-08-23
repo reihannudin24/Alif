@@ -4,20 +4,36 @@ using UnityEngine;
 namespace Alif.EditorTools
 {
     /// <summary>
-    /// Setting import untuk gambar background/interior di Assets/Sprites/Backgrounds/.
-    /// Beda dari karakter: art ini shading halus (bukan pixel art blocky), jadi pakai
-    /// filter Bilinear (bukan Point) supaya nggak kelihatan pecah/bergerigi waktu di-scale.
-    /// PPU 200 dipilih supaya proporsinya nyambung sama karakter (Assets/Sprites/Characters,
-    /// PPU 256 dengan tinggi konten ~225px) — lihat AlifDemoSceneBuilder.BuildBackground().
+    /// Setting import untuk gambar background/interior (Assets/Sprites/Backgrounds/) dan panel
+    /// cutscene (Assets/Sprites/Cutscenes/). Keduanya art ilustrasi shading halus (bukan pixel
+    /// art blocky kayak karakter), jadi pakai filter Bilinear (bukan Point) supaya nggak
+    /// kelihatan pecah/bergerigi waktu di-scale. PPU 200 dipilih supaya proporsinya nyambung
+    /// sama karakter (Assets/Sprites/Characters, PPU 256 dengan tinggi konten ~225px) — lihat
+    /// AlifDemoSceneBuilder.BuildBackground(). Untuk panel cutscene (dipakai di UI Image, bukan
+    /// SpriteRenderer dunia) PPU ini nggak berpengaruh, jadi dibiarkan sama biar satu aturan saja.
     /// </summary>
     public class AlifBackgroundTexturePostprocessor : AssetPostprocessor
     {
-        private const string BackgroundsFolder = "Assets/Sprites/Backgrounds/";
+        private static readonly string[] IllustratedArtFolders =
+        {
+            "Assets/Sprites/Backgrounds/",
+            "Assets/Sprites/Cutscenes/",
+        };
 
         private void OnPreprocessTexture()
         {
             string path = assetPath.Replace("\\", "/");
-            if (!path.StartsWith(BackgroundsFolder))
+            bool inIllustratedArtFolder = false;
+            foreach (string folder in IllustratedArtFolders)
+            {
+                if (path.StartsWith(folder))
+                {
+                    inIllustratedArtFolder = true;
+                    break;
+                }
+            }
+
+            if (!inIllustratedArtFolder)
             {
                 return;
             }
