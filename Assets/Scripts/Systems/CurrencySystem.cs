@@ -12,12 +12,19 @@ namespace Alif.Systems
         public static CurrencySystem Instance { get; private set; }
 
         [Header("Currency")]
-        [SerializeField] private int _currentMoney = 0;
+        [Tooltip("Uang tunai yang dipegang Alif (di kantong) — ini yang ditampilkan HUD.")]
+        [SerializeField] private int _currentMoney = 100000;
+
+        [Header("Bank Account (ATM)")]
+        [Tooltip("Saldo di rekening/ATM — terpisah dari uang tunai, cuma bisa dipindah ke uang tunai lewat AtmUI.Withdraw().")]
+        [SerializeField] private int _bankBalance = 1000000;
 
         // Event membawa jumlah uang terbaru setelah berubah.
         public event Action<int> OnMoneyChanged;
+        public event Action<int> OnBankBalanceChanged;
 
         public int CurrentMoney => _currentMoney;
+        public int BankBalance => _bankBalance;
 
         private void Awake()
         {
@@ -33,6 +40,7 @@ namespace Alif.Systems
         private void Start()
         {
             OnMoneyChanged?.Invoke(_currentMoney);
+            OnBankBalanceChanged?.Invoke(_bankBalance);
         }
 
         /// <summary>
@@ -73,5 +81,22 @@ namespace Alif.Systems
         }
 
         public bool HasEnoughMoney(int amount) => _currentMoney >= amount;
+
+        /// <summary>
+        /// Tarik tunai dari saldo bank (ATM) ke uang kantong. Mengembalikan false kalau saldo
+        /// bank tidak cukup, supaya AtmUI bisa menolak transaksi tanpa nge-crash.
+        /// </summary>
+        public bool Withdraw(int amount)
+        {
+            if (amount <= 0 || _bankBalance < amount)
+            {
+                return false;
+            }
+
+            _bankBalance -= amount;
+            OnBankBalanceChanged?.Invoke(_bankBalance);
+            AddMoney(amount);
+            return true;
+        }
     }
 }

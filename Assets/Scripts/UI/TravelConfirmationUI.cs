@@ -10,12 +10,19 @@ namespace Alif.UI
     /// transisi/fade ke area lain, biar nggak langsung "loading" pas Player kesenggol
     /// trigger pintu. Beda dari QuitConfirmationUI karena aksi konfirmnya dinamis (callback per
     /// pemanggilan), bukan selalu satu aksi tetap.
+    ///
+    /// GameObject-nya SENGAJA selalu aktif (visibility diatur lewat CanvasGroup, bukan
+    /// SetActive) — kalau root-nya nonaktif dari awal scene di-load, Awake() nggak akan pernah
+    /// dipanggil sampai ada yang manggil SetActive(true) duluan, padahal Instance cuma di-set di
+    /// Awake(). Itu bikin SceneDoor (yang manggil lewat TravelConfirmationUI.Instance, bukan
+    /// referensi langsung) SELAMANYA dapet null, popup-nya nggak pernah muncul dan langsung
+    /// jatuh ke fallback transisi tanpa nanya.
     /// </summary>
     public class TravelConfirmationUI : MonoBehaviour
     {
         public static TravelConfirmationUI Instance { get; private set; }
 
-        [SerializeField] private GameObject _root;
+        [SerializeField] private CanvasGroup _canvasGroup;
         [SerializeField] private TMP_Text _messageText;
         [SerializeField] private Button _confirmButton;
         [SerializeField] private Button _cancelButton;
@@ -23,7 +30,7 @@ namespace Alif.UI
         private Action _onConfirmed;
         private Action _onCancelled;
 
-        public bool IsShowing => _root != null && _root.activeSelf;
+        public bool IsShowing => _canvasGroup != null && _canvasGroup.blocksRaycasts;
 
         private void Awake()
         {
@@ -66,18 +73,24 @@ namespace Alif.UI
             _onConfirmed = onConfirmed;
             _onCancelled = onCancelled;
 
-            if (_root != null)
-            {
-                _root.SetActive(true);
-            }
+            SetVisible(true);
         }
 
         public void Hide()
         {
-            if (_root != null)
+            SetVisible(false);
+        }
+
+        private void SetVisible(bool visible)
+        {
+            if (_canvasGroup == null)
             {
-                _root.SetActive(false);
+                return;
             }
+
+            _canvasGroup.alpha = visible ? 1f : 0f;
+            _canvasGroup.interactable = visible;
+            _canvasGroup.blocksRaycasts = visible;
         }
 
         private void HandleConfirmClicked()

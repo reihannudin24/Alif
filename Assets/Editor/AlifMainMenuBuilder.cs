@@ -342,15 +342,23 @@ namespace Alif.EditorTools
             Button cancelButton = BuildMenuButton(card.transform, "CancelButton", "BATAL", -8f, OrangeButton, new Vector2(340, 44), 16f);
             Button confirmButton = BuildMenuButton(card.transform, "ConfirmButton", "YA, KELUAR", -60f, QuitButton, new Vector2(340, 40), 15f);
 
+            // Overlay-nya SENGAJA dibiarkan aktif (bukan SetActive(false)) — visibility diatur
+            // lewat CanvasGroup di QuitConfirmationUI, karena Instance-nya cuma ke-set di
+            // Awake() dan Awake() nggak pernah jalan buat GameObject yang nonaktif dari awal
+            // scene di-load.
+            CanvasGroup canvasGroup = GetOrAddComponent<CanvasGroup>(overlay);
+
             QuitConfirmationUI quitConfirmation = GetOrAddComponent<QuitConfirmationUI>(overlay);
-            SetSerializedRef(quitConfirmation, "_root", overlay);
+            SetSerializedRef(quitConfirmation, "_canvasGroup", canvasGroup);
             SetSerializedRef(quitConfirmation, "_confirmButton", confirmButton);
             SetSerializedRef(quitConfirmation, "_cancelButton", cancelButton);
 
             AddClickSfxListener(confirmButton, audioManager, clickSfx);
             AddClickSfxListener(cancelButton, audioManager, clickSfx);
 
-            overlay.SetActive(false);
+            canvasGroup.alpha = 0f;
+            canvasGroup.interactable = false;
+            canvasGroup.blocksRaycasts = false;
 
             return quitConfirmation;
         }

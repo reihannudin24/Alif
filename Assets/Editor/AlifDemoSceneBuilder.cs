@@ -37,13 +37,36 @@ namespace Alif.EditorTools
         private const string PlayerSpriteFolder = "Assets/Sprites/Characters/alif";
         private const string PlayerControllerPath = "Assets/Animations/Player/Alif_Player.controller";
         private const string BackgroundSpritePath = "Assets/Sprites/Backgrounds/Stasiun_Interior.png";
-        private const string ExteriorBackgroundSpritePath = "Assets/Sprites/Backgrounds/Stasiun_Luar.png";
+        // Stasiun_Luar.png (placeholder lama) diganti Stasiun_Depan.jpg (art final chapter 1)
+        // begitu Player "keluar" stasiun.
+        private const string ExteriorBackgroundSpritePath = "Assets/Sprites/Backgrounds/Stasiun_Depan.jpg";
+        private const string WarungDepanSpritePath = "Assets/Sprites/Backgrounds/WarungBuSiti_Depan.jpg";
+        private const string WarungDalamSpritePath = "Assets/Sprites/Backgrounds/WarungBuSiti_Interior.jpg";
         private const string TargetScenePath = "Assets/Scenes/SampleScene.unity";
 
         // Area eksterior ditaruh jauh di bawah interior (bukan scene terpisah, biar CameraFollow
         // otomatis "pindah" cuma dengan reposisi Player) — cukup jauh (20 unit) dari batas bawah
         // interior (halfH 4.72) supaya nggak pernah kelihatan bertumpuk di kamera.
         private static readonly Vector2 ExteriorOrigin = new Vector2(0f, -20f);
+
+        // Warung Bu Siti ditaruh jauh ke kanan (bukan di bawah/nyambung visual sama Stasiun
+        // Depan — pindah antar area di sini selalu lewat SceneDoor + fade, bukan jalan
+        // nyambung), biar nggak pernah kelihatan bertumpuk di kamera sama area lain.
+        private static readonly Vector2 WarungDepanOrigin = new Vector2(40f, -20f);
+        private static readonly Vector2 WarungDalamOrigin = new Vector2(40f, -40f);
+
+        // Stasiun_Depan.jpg, WarungBuSiti_Depan.jpg, & WarungBuSiti_Interior.jpg digambar lebih
+        // "zoom in" (detail per tile lebih gede) dibanding tileset Stasiun_Interior.png — dipakai
+        // apa adanya (PPU 200 sama), gambarnya jadi keliatan mini & Player kayak raksasa
+        // dibanding kamera (orthoSize 3.2). Area-area chapter 1 ini di-scale up TRANSFORM-nya
+        // (bukan Player) biar proporsinya pas ngisi layar — Player tetap ukuran normal, jadi
+        // makin gede scale background-nya, makin "kecil" kelihatannya Player relatif ke
+        // background (efek yang diminta), TANPA benar-benar nge-shrink sprite Player itu sendiri.
+        // Nilai per area diminta user langsung (Stasiun Depan paling agresif, Warung Depan
+        // malah dikecilin balik ke skala asli gambarnya, Warung Dalam di tengah-tengah).
+        private const float StasiunDepanScale = 2.4f;
+        private const float WarungDepanScale = 1.1f;
+        private const float WarungDalamScale = 1.3f;
 
         // Sorting layer custom (Background/Ground/Characters/UI) ternyata nggak reliable
         // di-resolve lewat -executeMethod (batch mode) — baik by-name maupun by-ID selalu
@@ -144,6 +167,10 @@ namespace Alif.EditorTools
             // 2b. Area luar stasiun (eksterior) + pintu penghubung interior<->eksterior, biar
             // Player bisa "keluar" dari stasiun lewat koridor tengah paling bawah.
             BuildStasiunLuar();
+
+            // 2c. Chapter 1: Warung Bu Siti (depan + dalam), terhubung dari Stasiun Depan.
+            BuildWarungBuSiti();
+
             BuildDoors();
 
             // 3. Persistent managers.
@@ -166,6 +193,9 @@ namespace Alif.EditorTools
 
             // 5b. Bangku/kursi yang bisa di-interact (nggak bisa ditembus + munculin monolog Alif).
             BuildBenches();
+
+            // 5b-2. Loket Karcis (ambil voucher promo kereta) & ATM (tarik tunai dari saldo bank).
+            BuildStationInteractables();
 
             // 5c. Monolog pembuka Alif — jembatan naratif dari cutscene ke gameplay bebas,
             // otomatis muncul begitu scene ini pertama kali dimuat, sebelum interaksi ke NPC lain.
@@ -304,6 +334,11 @@ namespace Alif.EditorTools
 
             GameObject exterior = FindOrCreateRoot("Background_StasiunLuar");
             exterior.transform.position = new Vector3(ExteriorOrigin.x, ExteriorOrigin.y, 0f);
+            // Art-nya digambar lebih "zoom in" dibanding tileset interior — di-scale up biar
+            // ngisi layar kamera (orthoSize 3.2) dgn proporsi yg sama, nggak keliatan mini
+            // ketutup banyak void hitam di sekitarnya. Blocker anak-anaknya (localPosition/size)
+            // otomatis ikut ke-scale bareng transform ini, nggak perlu diubah manual.
+            exterior.transform.localScale = Vector3.one * StasiunDepanScale;
 
             SpriteRenderer sr = GetOrAddComponent<SpriteRenderer>(exterior);
             sr.sprite = exteriorSprite;
@@ -318,15 +353,69 @@ namespace Alif.EditorTools
                 }
             }
 
-            // Stasiun_Luar.png 1540x1834px, PPU 200 -> half extents (3.85, 4.585).
-            const float halfW = 3.85f;
-            const float halfH = 4.585f;
+            // Stasiun_Depan.jpg 1600x873px, PPU 200 -> half extents (4.0, 2.1825).
+            const float halfW = 4.0f;
+            const float halfH = 2.1825f;
             const float wallThickness = 0.2f;
 
             AddBoxBlocker(exterior, "BoundaryWall_Top", new Vector2(0, halfH + wallThickness / 2f), new Vector2(halfW * 2 + wallThickness * 2, wallThickness));
             AddBoxBlocker(exterior, "BoundaryWall_Bottom", new Vector2(0, -halfH - wallThickness / 2f), new Vector2(halfW * 2 + wallThickness * 2, wallThickness));
             AddBoxBlocker(exterior, "BoundaryWall_Left", new Vector2(-halfW - wallThickness / 2f, 0), new Vector2(wallThickness, halfH * 2 + wallThickness * 2));
             AddBoxBlocker(exterior, "BoundaryWall_Right", new Vector2(halfW + wallThickness / 2f, 0), new Vector2(wallThickness, halfH * 2 + wallThickness * 2));
+        }
+
+        // ---------------------------------------------------------------
+        // WARUNG BU SITI (depan + dalam) — area baru chapter 1, terhubung dari Stasiun Depan
+        // lewat Door_KeWarung, dan depan<->dalam lewat Door_MasukWarung/Door_KeluarWarung
+        // (lihat BuildDoors). Sama kayak Stasiun Depan, belum ada analisis pixel detail buat
+        // furniture/pohon di dalamnya — boundary luar doang biar Player nggak jalan ke void di
+        // luar gambar. Bisa ditambah VoidBlocker presisi nanti kalau perlu.
+        // ---------------------------------------------------------------
+        private static void BuildWarungBuSiti()
+        {
+            // WarungBuSiti_Depan.jpg 1600x1511px, PPU 200 -> half extents (4.0, 3.7775).
+            BuildAreaBackground("Background_WarungDepan", WarungDepanSpritePath, WarungDepanOrigin, 4.0f, 3.7775f, WarungDepanScale);
+
+            // WarungBuSiti_Interior.jpg 1600x1359px, PPU 200 -> half extents (4.0, 3.3975).
+            BuildAreaBackground("Background_WarungDalam", WarungDalamSpritePath, WarungDalamOrigin, 4.0f, 3.3975f, WarungDalamScale);
+        }
+
+        // Helper generik "background + boundary luar doang" — dipakai Warung Depan & Dalam,
+        // pola sama persis kayak BuildStasiunLuar tapi bisa dipakai berkali-kali buat area beda.
+        private static void BuildAreaBackground(string rootName, string spritePath, Vector2 origin, float halfW, float halfH, float scale)
+        {
+            Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(spritePath);
+            if (sprite == null)
+            {
+                Debug.LogWarning($"[Alif] Background sprite tidak ditemukan di '{spritePath}', dilewati.");
+                return;
+            }
+
+            GameObject root = FindOrCreateRoot(rootName);
+            root.transform.position = new Vector3(origin.x, origin.y, 0f);
+            // Lihat komentar StasiunDepanScale/WarungDepanScale/WarungDalamScale — blocker anak-anaknya
+            // (localPosition/size) otomatis ikut ke-scale bareng transform ini, nggak perlu
+            // diubah manual.
+            root.transform.localScale = Vector3.one * scale;
+
+            SpriteRenderer sr = GetOrAddComponent<SpriteRenderer>(root);
+            sr.sprite = sprite;
+            sr.sortingOrder = SortingOrderGround;
+
+            for (int i = root.transform.childCount - 1; i >= 0; i--)
+            {
+                Transform child = root.transform.GetChild(i);
+                if (child.name.StartsWith("BoundaryWall"))
+                {
+                    Object.DestroyImmediate(child.gameObject);
+                }
+            }
+
+            const float wallThickness = 0.2f;
+            AddBoxBlocker(root, "BoundaryWall_Top", new Vector2(0, halfH + wallThickness / 2f), new Vector2(halfW * 2 + wallThickness * 2, wallThickness));
+            AddBoxBlocker(root, "BoundaryWall_Bottom", new Vector2(0, -halfH - wallThickness / 2f), new Vector2(halfW * 2 + wallThickness * 2, wallThickness));
+            AddBoxBlocker(root, "BoundaryWall_Left", new Vector2(-halfW - wallThickness / 2f, 0), new Vector2(wallThickness, halfH * 2 + wallThickness * 2));
+            AddBoxBlocker(root, "BoundaryWall_Right", new Vector2(halfW + wallThickness / 2f, 0), new Vector2(wallThickness, halfH * 2 + wallThickness * 2));
         }
 
         // ---------------------------------------------------------------
@@ -342,11 +431,37 @@ namespace Alif.EditorTools
             GameObject interiorSpawnGO = FindOrCreateWorldChild(doorsRoot.transform, "InteriorSpawn");
             interiorSpawnGO.transform.position = new Vector3(0f, -3.8f, 0f);
 
+            // Stasiun_Depan.jpg jauh lebih pendek (halfH 2.1825) daripada placeholder lama
+            // (Stasiun_Luar.png, halfH 4.585) — titik spawn/pintu ikut digeser masuk biar tetap
+            // di dalam gambar, di sekitar area tangga pintu masuk stasiun (dekat bagian atas).
+            // Offset-nya dikali StasiunDepanScale/WarungDepanScale/WarungDalamScale (tergantung fisiknya ada di
+            // area mana) karena area itu (beda dari interior) di-scale up transform-nya — lihat
+            // komentar di deklarasinya.
             GameObject exteriorSpawnGO = FindOrCreateWorldChild(doorsRoot.transform, "ExteriorSpawn");
-            exteriorSpawnGO.transform.position = new Vector3(0f, ExteriorOrigin.y + 3.5f, 0f);
+            exteriorSpawnGO.transform.position = new Vector3(0f, ExteriorOrigin.y + 0.7f * StasiunDepanScale, 0f);
 
             BuildDoorTrigger(doorsRoot.transform, "Door_KeluarStasiun", new Vector2(0f, -4.55f), new Vector2(1.2f, 0.3f), exteriorSpawnGO.transform, "Keluar dari stasiun?");
-            BuildDoorTrigger(doorsRoot.transform, "Door_MasukStasiun", new Vector2(0f, ExteriorOrigin.y + 5f), new Vector2(1.2f, 0.3f), interiorSpawnGO.transform, "Masuk ke stasiun?");
+            BuildDoorTrigger(doorsRoot.transform, "Door_MasukStasiun", new Vector2(0f, ExteriorOrigin.y + 1.1f * StasiunDepanScale), new Vector2(1.2f, 0.3f) * StasiunDepanScale, interiorSpawnGO.transform, "Masuk ke stasiun?");
+
+            // --- Stasiun Depan <-> Warung Bu Siti Depan (chapter 1: "jalan ke kanan") ---
+            GameObject stasiunEdgeSpawnGO = FindOrCreateWorldChild(doorsRoot.transform, "StasiunEdgeSpawn");
+            stasiunEdgeSpawnGO.transform.position = new Vector3(3.0f * StasiunDepanScale, ExteriorOrigin.y - 0.3f * StasiunDepanScale, 0f);
+
+            GameObject warungEdgeSpawnGO = FindOrCreateWorldChild(doorsRoot.transform, "WarungEdgeSpawn");
+            warungEdgeSpawnGO.transform.position = new Vector3(WarungDepanOrigin.x - 3.0f * WarungDepanScale, WarungDepanOrigin.y - 0.3f * WarungDepanScale, 0f);
+
+            BuildDoorTrigger(doorsRoot.transform, "Door_KeWarung", new Vector2(3.6f * StasiunDepanScale, ExteriorOrigin.y - 0.3f * StasiunDepanScale), new Vector2(0.5f, 1.5f) * StasiunDepanScale, warungEdgeSpawnGO.transform, "Jalan ke Warung Bu Siti?");
+            BuildDoorTrigger(doorsRoot.transform, "Door_KeStasiun", new Vector2(WarungDepanOrigin.x - 3.6f * WarungDepanScale, WarungDepanOrigin.y - 0.3f * WarungDepanScale), new Vector2(0.5f, 1.5f) * WarungDepanScale, stasiunEdgeSpawnGO.transform, "Balik ke Stasiun?");
+
+            // --- Warung Bu Siti Depan <-> Dalam (interact di depan warung) ---
+            GameObject warungLuarSpawnGO = FindOrCreateWorldChild(doorsRoot.transform, "WarungLuarSpawn");
+            warungLuarSpawnGO.transform.position = new Vector3(WarungDepanOrigin.x - 0.5f * WarungDepanScale, WarungDepanOrigin.y - 1.4f * WarungDepanScale, 0f);
+
+            GameObject warungDalamSpawnGO = FindOrCreateWorldChild(doorsRoot.transform, "WarungDalamSpawn");
+            warungDalamSpawnGO.transform.position = new Vector3(WarungDalamOrigin.x - 0.5f * WarungDalamScale, WarungDalamOrigin.y - 2.6f * WarungDalamScale, 0f);
+
+            BuildDoorTrigger(doorsRoot.transform, "Door_MasukWarung", new Vector2(WarungDepanOrigin.x - 0.5f * WarungDepanScale, WarungDepanOrigin.y - 1.0f * WarungDepanScale), new Vector2(1.0f, 0.4f) * WarungDepanScale, warungDalamSpawnGO.transform, "Masuk ke Warung Bu Siti?");
+            BuildDoorTrigger(doorsRoot.transform, "Door_KeluarWarung", new Vector2(WarungDalamOrigin.x - 0.5f * WarungDalamScale, WarungDalamOrigin.y - 2.9f * WarungDalamScale), new Vector2(1.0f, 0.4f) * WarungDalamScale, warungLuarSpawnGO.transform, "Keluar dari Warung Bu Siti?");
         }
 
         private static void BuildDoorTrigger(Transform parent, string name, Vector2 worldPosition, Vector2 size, Transform destination, string confirmMessage)
@@ -676,6 +791,72 @@ namespace Alif.EditorTools
         }
 
         // ---------------------------------------------------------------
+        // LOKET KARCIS (ambil voucher promo kereta) & ATM (tarik tunai) — posisi hitbox
+        // dianalisis dari Stasiun_Interior.png (2222x1888px, PPU 200, pivot Center): meja loket
+        // karcis di ruang kiri-bawah, mesin ATM biru di ruang kanan-bawah (ruang Display).
+        // ---------------------------------------------------------------
+        private static readonly (Vector2 center, Vector2 size) LoketKarcisPlacement = (new Vector2(-3.0f, -1.7f), new Vector2(2.4f, 0.7f));
+        private static readonly (Vector2 center, Vector2 size) AtmPlacement = (new Vector2(1.9f, -1.6f), new Vector2(0.6f, 0.7f));
+
+        private static void BuildStationInteractables()
+        {
+            GameObject background = FindOrCreateRoot("Background");
+            CharacterData alifData = GetOrCreateAlifCharacterData();
+
+            // --- Loket Karcis: interact -> dapat "Voucher Promo Kereta" masuk inventory ---
+            GameObject loket = FindOrCreateWorldChild(background.transform, "LoketKarcis");
+            loket.transform.localPosition = LoketKarcisPlacement.center;
+            loket.layer = LayerIndexInteractable;
+
+            BoxCollider2D loketCollider = GetOrAddComponent<BoxCollider2D>(loket);
+            loketCollider.size = LoketKarcisPlacement.size;
+
+            Sprite voucherIcon = GetOrCreateTicketIconSprite("Icon_VoucherPromo",
+                new Color(0.85f, 0.62f, 0.18f, 1f), new Color(0.98f, 0.9f, 0.75f, 1f), 64, 44);
+
+            ItemPickup voucherPickup = GetOrAddComponent<ItemPickup>(loket);
+            SetSerializedValue(voucherPickup, "_itemName", "Voucher Promo Kereta");
+            SetSerializedRef(voucherPickup, "_itemIcon", voucherIcon);
+            SetSerializedRef(voucherPickup, "_pickupDialogue", GetOrCreateVoucherDialogue());
+            SetSerializedRef(voucherPickup, "_speakerData", alifData);
+
+            AddInteractionArrow(loket.transform, new Vector2(0f, LoketKarcisPlacement.size.y / 2f + 0.25f));
+
+            // --- ATM: interact -> buka AtmUI, tarik tunai dari saldo bank ---
+            GameObject atm = FindOrCreateWorldChild(background.transform, "Atm");
+            atm.transform.localPosition = AtmPlacement.center;
+            atm.layer = LayerIndexInteractable;
+
+            BoxCollider2D atmCollider = GetOrAddComponent<BoxCollider2D>(atm);
+            atmCollider.size = AtmPlacement.size;
+
+            GetOrAddComponent<AtmController>(atm);
+
+            AddInteractionArrow(atm.transform, new Vector2(0f, AtmPlacement.size.y / 2f + 0.25f));
+        }
+
+        private static DialogueData GetOrCreateVoucherDialogue()
+        {
+            string path = $"{DialogueDataFolder}/DialogueData_VoucherPromo.asset";
+            DialogueData data = AssetDatabase.LoadAssetAtPath<DialogueData>(path);
+            if (data != null)
+            {
+                return data;
+            }
+
+            data = ScriptableObject.CreateInstance<DialogueData>();
+            data.Lines.Add(new DialogueLine
+            {
+                SpeakerName = "Alif",
+                Text = "Ada voucher promo kereta di loket! Lumayan, aku ambil buat jaga-jaga."
+            });
+
+            EnsureFolder(DialogueDataFolder);
+            AssetDatabase.CreateAsset(data, path);
+            return data;
+        }
+
+        // ---------------------------------------------------------------
         // MONOLOG PEMBUKA (jembatan naratif cutscene -> gameplay bebas)
         // ---------------------------------------------------------------
         private static void BuildOpeningMonologue(PlayerController playerController)
@@ -756,6 +937,10 @@ namespace Alif.EditorTools
             // singleton, ditemukan runtime lewat TravelConfirmationUI.Instance, nggak perlu
             // di-assign ke komponen lain di sini.
             BuildTravelConfirmationPopup(canvasGO.transform, audioManager, clickSfx);
+
+            // Popup ATM (tarik tunai) — singleton, ditemukan runtime lewat AtmUI.Instance oleh
+            // AtmController, nggak perlu di-assign ke komponen lain di sini.
+            BuildAtmPopup(canvasGO.transform, audioManager, clickSfx);
 
             // DialogueUI diletakkan di root Canvas (selalu aktif) supaya tetap subscribe ke event
             // DialogueManager walaupun panel visualnya (dialoguePanel) sedang disembunyikan.
@@ -945,15 +1130,23 @@ namespace Alif.EditorTools
             SetRect(confirmButtonGO.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -60), new Vector2(340, 40));
             Button confirmButton = confirmButtonGO.GetComponent<Button>();
 
+            // Overlay-nya SENGAJA dibiarkan aktif (bukan SetActive(false)) — visibility diatur
+            // lewat CanvasGroup di QuitConfirmationUI, karena Instance-nya cuma ke-set di
+            // Awake() dan Awake() nggak pernah jalan buat GameObject yang nonaktif dari awal
+            // scene di-load.
+            CanvasGroup canvasGroup = GetOrAddComponent<CanvasGroup>(overlay);
+
             QuitConfirmationUI quitConfirmation = GetOrAddComponent<QuitConfirmationUI>(overlay);
-            SetSerializedRef(quitConfirmation, "_root", overlay);
+            SetSerializedRef(quitConfirmation, "_canvasGroup", canvasGroup);
             SetSerializedRef(quitConfirmation, "_confirmButton", confirmButton);
             SetSerializedRef(quitConfirmation, "_cancelButton", cancelButton);
 
             AddClickSfxListener(confirmButton, audioManager, clickSfx);
             AddClickSfxListener(cancelButton, audioManager, clickSfx);
 
-            overlay.SetActive(false);
+            canvasGroup.alpha = 0f;
+            canvasGroup.interactable = false;
+            canvasGroup.blocksRaycasts = false;
 
             return quitConfirmation;
         }
@@ -986,8 +1179,13 @@ namespace Alif.EditorTools
             SetRect(confirmButtonGO.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -8), new Vector2(340, 44));
             Button confirmButton = confirmButtonGO.GetComponent<Button>();
 
+            // Overlay-nya SENGAJA dibiarkan aktif — sama alasannya kayak QuitConfirmationUI di
+            // atas (visibility lewat CanvasGroup, bukan SetActive, biar Awake()/Instance-nya
+            // selalu ke-set pas scene load).
+            CanvasGroup canvasGroup = GetOrAddComponent<CanvasGroup>(overlay);
+
             TravelConfirmationUI travelConfirmation = GetOrAddComponent<TravelConfirmationUI>(overlay);
-            SetSerializedRef(travelConfirmation, "_root", overlay);
+            SetSerializedRef(travelConfirmation, "_canvasGroup", canvasGroup);
             SetSerializedRef(travelConfirmation, "_messageText", messageText);
             SetSerializedRef(travelConfirmation, "_confirmButton", confirmButton);
             SetSerializedRef(travelConfirmation, "_cancelButton", cancelButton);
@@ -995,7 +1193,67 @@ namespace Alif.EditorTools
             AddClickSfxListener(confirmButton, audioManager, clickSfx);
             AddClickSfxListener(cancelButton, audioManager, clickSfx);
 
-            overlay.SetActive(false);
+            canvasGroup.alpha = 0f;
+            canvasGroup.interactable = false;
+            canvasGroup.blocksRaycasts = false;
+        }
+
+        // Popup ATM — saldo bank + tombol tarik tunai beberapa nominal + "Ambil Semua". Tarik
+        // tunai mindahin saldo dari CurrencySystem.BankBalance ke uang kantong (lihat AtmUI).
+        private static void BuildAtmPopup(Transform canvasTransform, AudioManager audioManager, AudioClip clickSfx)
+        {
+            GameObject overlay = FindOrCreateChild(canvasTransform, "AtmPopup");
+            RectTransform overlayRT = overlay.GetComponent<RectTransform>();
+            StretchFull(overlayRT);
+            AddImage(overlayRT, new Color(0f, 0f, 0f, 0.6f));
+            overlay.transform.SetAsLastSibling();
+
+            GameObject card = FindOrCreateChild(overlay.transform, "Card");
+            RectTransform cardRT = card.GetComponent<RectTransform>();
+            SetRect(cardRT, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(420, 520));
+            AddImage(cardRT, new Color(0.16f, 0.12f, 0.08f, 0.97f));
+
+            TMP_Text balanceText = FindOrCreateText(card.transform, "BalanceText", "Saldo ATM: Rp 1.000.000",
+                new Vector2(0, 1), new Vector2(1, 1), new Vector2(0.5f, 1f), new Vector2(0, -30), new Vector2(-32, 40), 18, TextAlignmentOptions.Center);
+            balanceText.fontStyle = FontStyles.Bold;
+
+            Button withdraw50 = BuildAtmButton(card.transform, "Withdraw50k", "Rp 50.000", new Vector2(-102, -90), new Vector2(180, 40));
+            Button withdraw100 = BuildAtmButton(card.transform, "Withdraw100k", "Rp 100.000", new Vector2(102, -90), new Vector2(180, 40));
+            Button withdraw200 = BuildAtmButton(card.transform, "Withdraw200k", "Rp 200.000", new Vector2(-102, -138), new Vector2(180, 40));
+            Button withdraw500 = BuildAtmButton(card.transform, "Withdraw500k", "Rp 500.000", new Vector2(102, -138), new Vector2(180, 40));
+            Button withdrawAll = BuildAtmButton(card.transform, "WithdrawAll", "AMBIL SEMUA", new Vector2(0, -190), new Vector2(360, 40));
+            Button closeButton = BuildAtmButton(card.transform, "CloseButton", "TUTUP", new Vector2(0, -238), new Vector2(200, 34));
+
+            var withdrawButtons = new System.Collections.Generic.List<Object> { withdraw50, withdraw100, withdraw200, withdraw500 };
+
+            // Overlay-nya SENGAJA dibiarkan aktif — sama alasannya kayak QuitConfirmationUI /
+            // TravelConfirmationUI (visibility lewat CanvasGroup, bukan SetActive, biar
+            // Awake()/Instance-nya selalu ke-set pas scene load, bukan ditunda sampai nggak
+            // pernah kepanggil).
+            CanvasGroup canvasGroup = GetOrAddComponent<CanvasGroup>(overlay);
+
+            AtmUI atmUI = GetOrAddComponent<AtmUI>(overlay);
+            SetSerializedRef(atmUI, "_canvasGroup", canvasGroup);
+            SetSerializedRef(atmUI, "_balanceText", balanceText);
+            SetSerializedRef(atmUI, "_closeButton", closeButton);
+            SetSerializedRef(atmUI, "_withdrawAllButton", withdrawAll);
+            SetSerializedObjectList(atmUI, "_withdrawButtons", withdrawButtons);
+
+            foreach (Button button in new[] { withdraw50, withdraw100, withdraw200, withdraw500, withdrawAll, closeButton })
+            {
+                AddClickSfxListener(button, audioManager, clickSfx);
+            }
+
+            canvasGroup.alpha = 0f;
+            canvasGroup.interactable = false;
+            canvasGroup.blocksRaycasts = false;
+        }
+
+        private static Button BuildAtmButton(Transform parent, string name, string label, Vector2 anchoredPosition, Vector2 size)
+        {
+            GameObject go = BuildSimpleButton(parent, name, label);
+            SetRect(go.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), anchoredPosition, size);
+            return go.GetComponent<Button>();
         }
 
         private static GameObject BuildHUD(Transform canvasTransform)
@@ -1653,6 +1911,90 @@ namespace Alif.EditorTools
             importer.SaveAndReimport();
 
             return AssetDatabase.LoadAssetAtPath<Sprite>(relativePath);
+        }
+
+        // Ikon "tiket/voucher" sederhana buat item inventory (placeholder original, disintesis
+        // dari kode — bukan reuse art dari sumber lain) — persegi rounded-corner dengan garis
+        // putus-putus vertikal (kesan sobekan tiket) di sepertiga lebarnya.
+        internal static Sprite GetOrCreateTicketIconSprite(string name, Color baseColor, Color perforationColor, int width, int height)
+        {
+            string relativePath = $"Assets/Sprites/UI/{name}.png";
+            Sprite existing = AssetDatabase.LoadAssetAtPath<Sprite>(relativePath);
+            if (existing != null)
+            {
+                return existing;
+            }
+
+            EnsureFolder("Assets/Sprites/UI");
+
+            var tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            var pixels = new Color[width * height];
+            const int cornerRadius = 8;
+            int perforationX = width / 3;
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    float edgeAlpha = RoundedRectEdgeAlpha(x, y, width, height, cornerRadius);
+                    Color pixel = baseColor;
+                    pixel.a *= edgeAlpha;
+
+                    bool onPerforationLine = Mathf.Abs(x - perforationX) <= 1;
+                    bool dashOn = (y / 4) % 2 == 0;
+                    if (onPerforationLine && dashOn && edgeAlpha > 0.5f)
+                    {
+                        pixel = perforationColor;
+                        pixel.a = baseColor.a;
+                    }
+
+                    pixels[y * width + x] = pixel;
+                }
+            }
+
+            tex.SetPixels(pixels);
+            tex.Apply();
+
+            byte[] png = tex.EncodeToPNG();
+            Object.DestroyImmediate(tex);
+
+            string projectRoot = Directory.GetParent(Application.dataPath).FullName;
+            File.WriteAllBytes(Path.Combine(projectRoot, relativePath), png);
+            AssetDatabase.ImportAsset(relativePath);
+
+            var importer = (TextureImporter)AssetImporter.GetAtPath(relativePath);
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.filterMode = FilterMode.Bilinear;
+            importer.alphaIsTransparency = true;
+            importer.mipmapEnabled = false;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.SaveAndReimport();
+
+            return AssetDatabase.LoadAssetAtPath<Sprite>(relativePath);
+        }
+
+        // Alpha 0..1 buat 1 piksel (x,y) dalam persegi rounded-corner ukuran width x height,
+        // radius sudut r — 1 penuh di tengah, di-soften 1px persis di lengkungan sudut.
+        private static float RoundedRectEdgeAlpha(int x, int y, int width, int height, int r)
+        {
+            float px = x + 0.5f;
+            float py = y + 0.5f;
+
+            bool inLeft = px < r;
+            bool inRight = px > width - r;
+            bool inTop = py < r;
+            bool inBottom = py > height - r;
+
+            if ((inLeft || inRight) && (inTop || inBottom))
+            {
+                float cx = inLeft ? r : width - r;
+                float cy = inTop ? r : height - r;
+                float dist = Vector2.Distance(new Vector2(px, py), new Vector2(cx, cy));
+                return Mathf.Clamp01(r - dist);
+            }
+
+            return 1f;
         }
     }
 }
