@@ -28,14 +28,61 @@ namespace Alif.UI
         [SerializeField] private Button _choiceButtonPrefab;
         [SerializeField] private Transform _choiceButtonContainer;
 
+        [Header("Klik Di Luar Untuk Lanjut")]
+        [Tooltip("Lapisan penuh-layar transparan di belakang portrait — klik di sini (bukan di teks/portrait/tombol) dihitung sama kayak klik Next.")]
+        [SerializeField] private Button _advanceCatcherButton;
+
+        [Header("Sembunyikan Saat Dialog Aktif")]
+        [Tooltip("Virtual joystick — disembunyikan selama dialog (movement udah terkunci, jadi nggak relevan) lalu dimunculkan lagi begitu dialog selesai.")]
+        [SerializeField] private GameObject _joystickRoot;
+        [Tooltip("Tombol interact 'E' on-screen.")]
+        [SerializeField] private GameObject _interactButtonRoot;
+        [Tooltip("Bar inventory di bawah layar.")]
+        [SerializeField] private GameObject _inventoryPanelRoot;
+        [Tooltip("Tombol pause di pojok layar.")]
+        [SerializeField] private GameObject _pauseButtonRoot;
+
+        [Header("Audio")]
+        [SerializeField] private Alif.Core.AudioManager _audioManager;
+        [SerializeField] private AudioClip _buttonClickSfx;
+
+        [Header("Portrait Animation")]
+        [Tooltip("Lama animasi slide-in + fade-in portrait tiap kali pembicara berganti (detik).")]
+        [SerializeField] private float _portraitEnterDuration = 0.35f;
+        [Tooltip("Jarak geser awal portrait dari posisi diamnya (px), datang dari kanan.")]
+        [SerializeField] private float _portraitEnterOffsetX = 120f;
+
         private readonly List<GameObject> _spawnedChoiceButtons = new List<GameObject>();
         private DialogueLine _currentLine;
+
+        private RectTransform _portraitRect;
+        private CanvasGroup _portraitCanvasGroup;
+        private Vector2 _portraitRestPosition;
+        private bool _portraitAnimStateReady;
+        private Sprite _lastPortraitSprite;
+        private Coroutine _portraitEnterRoutine;
 
         private void Awake()
         {
             if (_nextButton != null)
             {
                 _nextButton.onClick.AddListener(HandleNextClicked);
+            }
+
+            if (_advanceCatcherButton != null)
+            {
+                _advanceCatcherButton.onClick.AddListener(HandleBackgroundClicked);
+            }
+
+            // Background box dialog sendiri juga punya Button (dipasang di scene builder) buat
+            // area di dalam box yang nggak ke-tutup teks — dengerin klik-nya di sini juga.
+            if (_dialogueBoxRoot != null)
+            {
+                Button panelButton = _dialogueBoxRoot.GetComponent<Button>();
+                if (panelButton != null)
+                {
+                    panelButton.onClick.AddListener(HandleBackgroundClicked);
+                }
             }
         }
 
@@ -112,6 +159,10 @@ namespace Alif.UI
         {
             SetBoxVisible(false);
             ClearChoiceButtons();
+
+            // Reset supaya dialog berikutnya (walau kebetulan mulai dari NPC yang sama) tetap
+            // mainin animasi masuk dari awal, bukan dianggap "pembicara sama, skip animasi".
+            _lastPortraitSprite = null;
         }
 
         /// <summary>
@@ -134,9 +185,22 @@ namespace Alif.UI
 
             if (_portraitImage != null)
             {
+                EnsurePortraitAnimState();
+
                 Sprite portrait = DialogueManager.Instance != null ? DialogueManager.Instance.CurrentSpeakerPortrait : null;
+                // Cuma mainin animasi masuk (slide + fade) waktu pembicaranya BENERAN ganti,
+                // bukan tiap baris — kalau NPC yang sama ngomong beberapa baris berturut-turut,
+                // portrait-nya diem aja di tempat, nggak keluar-masuk tiap klik "next".
+                bool isNewSpeaker = portrait != null && portrait != _lastPortraitSprite;
+
                 _portraitImage.sprite = portrait;
                 _portraitImage.enabled = portrait != null;
+                _lastPortraitSprite = portrait;
+
+                if (isNewSpeaker)
+                {
+                    PlayPortraitEnterAnimation();
+                }
             }
 
             ClearChoiceButtons();
@@ -171,7 +235,11 @@ namespace Alif.UI
                 }
 
                 // Simpan referensi choice lewat closure supaya klik tombol memanggil choice yang benar.
-                choiceButton.onClick.AddListener(() => DialogueManager.Instance.SelectChoice(choice));
+                choiceButton.onClick.AddListener(() =>
+                {
+                    PlayClickSfx();
+                    DialogueManager.Instance.SelectChoice(choice);
+                });
 
                 _spawnedChoiceButtons.Add(choiceButton.gameObject);
             }
@@ -189,7 +257,32 @@ namespace Alif.UI
 
         private void HandleNextClicked()
         {
+            PlayClickSfx();
             DialogueManager.Instance.AdvanceDialogue();
+        }
+
+        /// <summary>
+        /// Klik di area lain (bukan teks/portrait/tombol) — sama kayak klik Next, TAPI cuma
+        /// kalau NextButton emang lagi ditampilkan. Kalau lagi nunjukin choices, klik sembarangan
+        /// nggak boleh nge-skip pemilihan pilihan (user wajib klik salah satu choice-nya).
+        /// </summary>
+        private void HandleBackgroundClicked()
+        {
+            if (_nextButton == null || !_nextButton.gameObject.activeSelf)
+            {
+                return;
+            }
+
+            PlayClickSfx();
+            DialogueManager.Instance.AdvanceDialogue();
+        }
+
+        private void PlayClickSfx()
+        {
+            if (_audioManager != null && _buttonClickSfx != null)
+            {
+                _audioManager.PlaySfx(_buttonClickSfx);
+            }
         }
 
         private void SetNextButtonVisible(bool visible)
@@ -200,11 +293,120 @@ namespace Alif.UI
             }
         }
 
+        /// <summary>
+        /// Cache RectTransform/posisi diam portrait + pasang CanvasGroup (buat fade) sekali di
+        /// awal. Ditunda sampai portrait pertama kali dipakai (bukan di Awake) karena posisi
+        /// diamnya (anchoredPosition) baru valid setelah layout dari scene builder ke-load.
+        /// </summary>
+        private void EnsurePortraitAnimState()
+        {
+            if (_portraitAnimStateReady || _portraitImage == null)
+            {
+                return;
+            }
+
+            _portraitRect = _portraitImage.rectTransform;
+            _portraitRestPosition = _portraitRect.anchoredPosition;
+
+            _portraitCanvasGroup = _portraitImage.GetComponent<CanvasGroup>();
+            if (_portraitCanvasGroup == null)
+            {
+                _portraitCanvasGroup = _portraitImage.gameObject.AddComponent<CanvasGroup>();
+            }
+
+            // Portrait SENGAJA nge-block raycast (bukan pass-through) — klik di area karakter
+            // harus "diserap" diam-diam, TIDAK dihitung sebagai klik "area lain" yang mestinya
+            // memicu lanjut/tutup dialog (lihat DialogueAdvanceCatcher di belakangnya). Ini aman
+            // buat NextButton/tombol choice karena keduanya ada di Dialogue_Panel yang sekarang
+            // di-render DI DEPAN portrait (lihat urutan sibling di AlifDemoSceneBuilder).
+            _portraitCanvasGroup.blocksRaycasts = true;
+            _portraitCanvasGroup.interactable = false;
+
+            _portraitAnimStateReady = true;
+        }
+
+        private void PlayPortraitEnterAnimation()
+        {
+            if (!_portraitAnimStateReady)
+            {
+                return;
+            }
+
+            if (_portraitEnterRoutine != null)
+            {
+                StopCoroutine(_portraitEnterRoutine);
+            }
+
+            _portraitEnterRoutine = StartCoroutine(PortraitEnterRoutine());
+        }
+
+        /// <summary>
+        /// Slide-in dari kanan + fade-in, ease-out cubic. Posisi start selalu dihitung dari
+        /// _portraitRestPosition (bukan posisi rect saat ini) supaya kalau kepotong/ke-interupsi
+        /// di tengah jalan, animasi berikutnya tetap mulai dari titik yang benar.
+        /// </summary>
+        private IEnumerator PortraitEnterRoutine()
+        {
+            Vector2 startPosition = _portraitRestPosition + new Vector2(_portraitEnterOffsetX, 0f);
+            float elapsed = 0f;
+
+            while (elapsed < _portraitEnterDuration)
+            {
+                elapsed += Time.deltaTime;
+                float progress = Mathf.Clamp01(elapsed / _portraitEnterDuration);
+                float eased = 1f - Mathf.Pow(1f - progress, 3f);
+
+                _portraitRect.anchoredPosition = Vector2.Lerp(startPosition, _portraitRestPosition, eased);
+                _portraitCanvasGroup.alpha = eased;
+
+                yield return null;
+            }
+
+            _portraitRect.anchoredPosition = _portraitRestPosition;
+            _portraitCanvasGroup.alpha = 1f;
+            _portraitEnterRoutine = null;
+        }
+
         private void SetBoxVisible(bool visible)
         {
             if (_dialogueBoxRoot != null)
             {
                 _dialogueBoxRoot.SetActive(visible);
+            }
+
+            // Portrait & advance-catcher sekarang GameObject terpisah (bukan child dialogueBoxRoot
+            // lagi) — jadi harus di-toggle manual bareng box-nya di sini.
+            if (_portraitImage != null)
+            {
+                _portraitImage.gameObject.SetActive(visible);
+            }
+
+            if (_advanceCatcherButton != null)
+            {
+                _advanceCatcherButton.gameObject.SetActive(visible);
+            }
+
+            // Joystick, tombol interact, & bar inventory nggak relevan waktu dialog (movement
+            // udah terkunci) dan cuma nutupin layar visual novel — sembunyikan pas dialog
+            // muncul, munculin lagi pas dialog selesai.
+            if (_joystickRoot != null)
+            {
+                _joystickRoot.SetActive(!visible);
+            }
+
+            if (_interactButtonRoot != null)
+            {
+                _interactButtonRoot.SetActive(!visible);
+            }
+
+            if (_inventoryPanelRoot != null)
+            {
+                _inventoryPanelRoot.SetActive(!visible);
+            }
+
+            if (_pauseButtonRoot != null)
+            {
+                _pauseButtonRoot.SetActive(!visible);
             }
         }
     }

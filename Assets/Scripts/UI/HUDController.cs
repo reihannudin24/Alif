@@ -7,7 +7,8 @@ namespace Alif.UI
 {
     /// <summary>
     /// Menghubungkan TimeSystem, EnergySystem, dan CurrencySystem ke tampilan HUD
-    /// di pojok kiri atas layar: hari/minggu, jam, energy bar, dan uang.
+    /// di pojok kiri atas layar: hari/minggu, energy bar, dan uang. Jam (jam:menit) sengaja
+    /// tidak ditampilkan — TimeSystem tetap jalan di belakang layar buat hitungan hari/minggu.
     /// Script ini murni "listener" — tidak menyimpan logic game, hanya update UI
     /// setiap kali sistem terkait memanggil event.
     /// </summary>
@@ -15,7 +16,6 @@ namespace Alif.UI
     {
         [Header("Time Display")]
         [SerializeField] private TMP_Text _dayWeekText;
-        [SerializeField] private TMP_Text _clockText;
 
         [Header("Energy Display")]
         [SerializeField] private Slider _energySlider;
@@ -88,11 +88,6 @@ namespace Alif.UI
             {
                 _dayWeekText.text = TimeSystem.Instance.GetFormattedDay();
             }
-
-            if (_clockText != null)
-            {
-                _clockText.text = TimeSystem.Instance.GetFormattedTime();
-            }
         }
 
         private void HandleEnergyChanged(float percent01)
@@ -107,7 +102,7 @@ namespace Alif.UI
         {
             if (_moneyText != null)
             {
-                _moneyText.text = amount.ToString("N0");
+                _moneyText.text = $"Rp {amount:N0}";
             }
         }
 

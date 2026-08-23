@@ -12,8 +12,9 @@ using Alif.UI;
 namespace Alif.EditorTools
 {
     /// <summary>
-    /// Tool editor sekali-klik untuk membangun scene cutscene pembuka Chapter 1. Tiap "scene"
-    /// adalah komposisi 2-3 panel gambar (kayak halaman komik) yang muncul satu-satu dengan
+    /// Tool editor sekali-klik untuk membangun scene cutscene pembuka Chapter 1. Scene pertama
+    /// adalah "title card" teks prolog (layar hitam + teks tengah). Scene setelahnya masing-
+    /// masing komposisi 2-3 panel gambar (kayak halaman komik) yang muncul satu-satu dengan
     /// animasi slide+fade — panel di paruh atas duluan, baru paruh bawah. Dibuka otomatis
     /// begitu pemain klik "MAIN BARU" di Main Menu.
     ///
@@ -44,6 +45,26 @@ namespace Alif.EditorTools
             }
         }
 
+        // Parts kosong = "title card" teks doang (layar hitam + teks di tengah), dipakai buat
+        // scene prolog paling awal sebelum panel gambar mulai muncul.
+        private struct SceneDef
+        {
+            public PartDef[] Parts;
+            public string IntroText;
+
+            public SceneDef(PartDef[] parts)
+            {
+                Parts = parts;
+                IntroText = "";
+            }
+
+            public SceneDef(string introText)
+            {
+                Parts = System.Array.Empty<PartDef>();
+                IntroText = introText;
+            }
+        }
+
         // Komposisi ditentukan dari mockup yang dikasih user: Scene 1 = 2 panel (atas TibaSolo,
         // bawah DalamKereta, tanpa dialog — cold-open wordless). Scene 2 = 3 panel (atas penuh
         // Gambir, bawah kiri Peron + bawah kanan Badge), dua panel terakhir ini yang bawa baris
@@ -61,19 +82,28 @@ namespace Alif.EditorTools
         // kalau nanti file-nya di-rename biar konsisten sama isinya, update juga referensi ini.
         private const string AlifBatin = "Alif (Batin)";
 
-        private static readonly PartDef[][] Scenes =
+        // Teks prolog (scene 0) — sengaja cuma nyeritain "pulang ke Solo", TANPA nyinggung
+        // warung Bu Siti atau kasus apa pun, karena di titik cerita ini Alif belum tau soal itu
+        // sama sekali (baru ketemu & connect ke plot itu belakangan, lewat dialog Scene 2 skrip).
+        private const string PrologText =
+            "Solo, sore itu.\n\n" +
+            "Setelah bertahun-tahun merantau ke Jakarta, Alif akhirnya kembali menginjakkan kaki di kota kelahirannya.\n\n" +
+            "Ia belum tahu, kepulangan ini akan membawanya pada satu misi yang tak pernah ia bayangkan sebelumnya...";
+
+        private static readonly SceneDef[] Scenes =
         {
-            new[]
+            new SceneDef(PrologText),
+            new SceneDef(new[]
             {
                 new PartDef("Chapter1_04_Peron.png", new Vector2(0, 0.5f), new Vector2(1, 1), "", ""), // isi: TibaSolo
                 new PartDef("Chapter1_05_Badge.png", new Vector2(0, 0), new Vector2(1, 0.5f), "", ""), // isi: DalamKereta
-            },
-            new[]
+            }),
+            new SceneDef(new[]
             {
                 new PartDef("Chapter1_02_DalamKereta.png", new Vector2(0, 0.5f), new Vector2(1, 1), "", ""), // isi: Gambir
                 new PartDef("Chapter1_01_Gambir.png", new Vector2(0, 0), new Vector2(0.5f, 0.5f), AlifBatin, "Akhirnya sampai juga..."), // isi: Peron
                 new PartDef("Chapter1_03_TibaSolo.png", new Vector2(0.5f, 0), new Vector2(1, 0.5f), AlifBatin, "Perut udah keroncongan nih. Makan ayam geprek di warung Bu Siti deket sini enak kali ya."), // isi: Badge
-            },
+            }),
         };
 
         [MenuItem("Alif/5) Build Chapter 1 Cutscene Scene")]
@@ -135,6 +165,7 @@ namespace Alif.EditorTools
             BuildBackdrop(canvasGO.transform);
             (Transform panelContainer, Image[] slotImages, RectTransform[] slotRects, CanvasGroup[] slotGroups) = BuildPanelSlots(canvasGO.transform);
             (GameObject dialogueBox, TextMeshProUGUI speakerNameText, TextMeshProUGUI dialogueText) = BuildDialogueOverlay(panelContainer);
+            (GameObject introTextRoot, TextMeshProUGUI introText) = BuildIntroTextPanel(canvasGO.transform);
             Button nextButton = BuildNextButton(canvasGO.transform);
             Button skipButton = BuildSkipButton(canvasGO.transform);
 
@@ -145,6 +176,8 @@ namespace Alif.EditorTools
             AlifDemoSceneBuilder.SetSerializedRef(controller, "_dialogueBox", dialogueBox);
             AlifDemoSceneBuilder.SetSerializedRef(controller, "_speakerNameText", speakerNameText);
             AlifDemoSceneBuilder.SetSerializedRef(controller, "_dialogueText", dialogueText);
+            AlifDemoSceneBuilder.SetSerializedRef(controller, "_introTextRoot", introTextRoot);
+            AlifDemoSceneBuilder.SetSerializedRef(controller, "_introText", introText);
             SetScenesArray(controller);
 
             nextButton.onClick = new Button.ButtonClickedEvent();
@@ -240,6 +273,26 @@ namespace Alif.EditorTools
             return (overlay, speakerNameText, dialogueText);
         }
 
+        // "Title card" prolog — layar hitam polos + teks di tengah, kayak intro RPG klasik.
+        // Backdrop (hitam, fullscreen) sudah ada dari BuildBackdrop, jadi di sini cuma perlu
+        // teksnya. Nonaktif secara default; CutscenePlayerController yang nyalain kalau scene
+        // aktifnya "text-only" (Parts kosong).
+        private static (GameObject, TextMeshProUGUI) BuildIntroTextPanel(Transform canvasTransform)
+        {
+            GameObject root = AlifDemoSceneBuilder.FindOrCreateChild(canvasTransform, "IntroTextPanel");
+            RectTransform rootRT = root.GetComponent<RectTransform>();
+            AlifDemoSceneBuilder.SetRect(rootRT, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(900, 400));
+
+            TextMeshProUGUI introText = AlifDemoSceneBuilder.FindOrCreateText(root.transform, "IntroText", "",
+                Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, 22, TextAlignmentOptions.Center);
+            introText.fontStyle = FontStyles.Italic;
+            introText.color = new Color(1f, 1f, 1f, 0.9f);
+            introText.lineSpacing = 12f;
+
+            root.SetActive(false);
+            return (root, introText);
+        }
+
         private static Button BuildNextButton(Transform canvasTransform)
         {
             GameObject go = AlifDemoSceneBuilder.FindOrCreateChild(canvasTransform, "NextButton");
@@ -284,8 +337,10 @@ namespace Alif.EditorTools
 
             for (int s = 0; s < Scenes.Length; s++)
             {
-                PartDef[] parts = Scenes[s];
+                PartDef[] parts = Scenes[s].Parts;
                 SerializedProperty sceneProp = scenesProp.GetArrayElementAtIndex(s);
+                sceneProp.FindPropertyRelative("IntroText").stringValue = Scenes[s].IntroText;
+
                 SerializedProperty partsProp = sceneProp.FindPropertyRelative("Parts");
                 partsProp.arraySize = parts.Length;
 

@@ -21,6 +21,11 @@ namespace Alif.UI
         [SerializeField] private string _chapterSelectSceneName = "ChapterSelect";
         [SerializeField] private string _chapter1CutsceneSceneName = "Chapter1Cutscene";
 
+        [SerializeField] private AudioManager _audioManager;
+        [SerializeField] private AudioClip _backgroundMusic;
+
+        [SerializeField] private QuitConfirmationUI _quitConfirmation;
+
         private void Start()
         {
             if (GameManager.Instance != null)
@@ -31,6 +36,11 @@ namespace Alif.UI
             if (_continueButton != null)
             {
                 _continueButton.interactable = PlayerPrefs.GetInt(HasSaveKey, 0) == 1;
+            }
+
+            if (_audioManager != null)
+            {
+                _audioManager.PlayMusic(_backgroundMusic);
             }
         }
 
@@ -50,11 +60,12 @@ namespace Alif.UI
 
         public void OnQuitClicked()
         {
-#if UNITY_EDITOR
-            UnityEditor.EditorApplication.isPlaying = false;
-#else
-            Application.Quit();
-#endif
+            // Sekarang cuma munculin popup konfirmasi — Application.Quit() yang beneran
+            // dieksekusi QuitConfirmationUI sendiri kalau user nge-tap "Ya".
+            if (_quitConfirmation != null)
+            {
+                _quitConfirmation.Show();
+            }
         }
     }
 }

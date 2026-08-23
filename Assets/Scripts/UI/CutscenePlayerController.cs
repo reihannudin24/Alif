@@ -27,6 +27,10 @@ namespace Alif.UI
     public struct CutsceneScene
     {
         public CutscenePanelPart[] Parts;
+
+        // Kalau Parts kosong, scene ini dianggap "title card" teks doang (layar hitam polos +
+        // teks di tengah, kayak intro RPG klasik) — dipakai buat prolog sebelum panel gambar.
+        [TextArea] public string IntroText;
     }
 
     /// <summary>
@@ -48,6 +52,8 @@ namespace Alif.UI
         [SerializeField] private GameObject _dialogueBox;
         [SerializeField] private TMP_Text _speakerNameText;
         [SerializeField] private TMP_Text _dialogueText;
+        [SerializeField] private GameObject _introTextRoot;
+        [SerializeField] private TMP_Text _introText;
         [SerializeField] private string _nextSceneName = "SampleScene";
 
         private int _sceneIndex;
@@ -59,41 +65,73 @@ namespace Alif.UI
         private void Start()
         {
             _sceneIndex = 0;
-            _partIndex = 0;
-            ClearAllSlots();
-            RevealNextPart();
+            PlayCurrentScene();
         }
 
         public void OnNextClicked()
         {
-            if (_isAnimating)
+            bool isTextOnlyScene = IsTextOnlyScene(_scenes[_sceneIndex]);
+
+            if (!isTextOnlyScene && _isAnimating)
             {
                 CompleteAnimatingPartInstantly();
                 return;
             }
 
-            CutscenePanelPart[] parts = _scenes[_sceneIndex].Parts;
-            if (_partIndex < parts.Length)
+            if (!isTextOnlyScene && _partIndex < _scenes[_sceneIndex].Parts.Length)
             {
                 RevealNextPart();
                 return;
             }
 
             _sceneIndex++;
-            _partIndex = 0;
             if (_sceneIndex >= _scenes.Length)
             {
                 SceneManager.LoadScene(_nextSceneName);
                 return;
             }
 
-            ClearAllSlots();
-            RevealNextPart();
+            PlayCurrentScene();
         }
 
         public void OnSkipClicked()
         {
             SceneManager.LoadScene(_nextSceneName);
+        }
+
+        private static bool IsTextOnlyScene(CutsceneScene scene)
+        {
+            return scene.Parts == null || scene.Parts.Length == 0;
+        }
+
+        private void PlayCurrentScene()
+        {
+            _partIndex = 0;
+            CutsceneScene scene = _scenes[_sceneIndex];
+
+            if (IsTextOnlyScene(scene))
+            {
+                ClearAllSlots();
+                if (_introTextRoot != null)
+                {
+                    _introTextRoot.SetActive(true);
+                }
+
+                if (_introText != null)
+                {
+                    _introText.text = scene.IntroText;
+                }
+
+                return;
+            }
+
+            if (_introTextRoot != null)
+            {
+                _introTextRoot.SetActive(false);
+            }
+
+            ClearAllSlots();
+            RevealNextPart();
         }
 
         private void ClearAllSlots()

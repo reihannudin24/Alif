@@ -4,13 +4,15 @@ using UnityEngine;
 namespace Alif.EditorTools
 {
     /// <summary>
-    /// Setting import untuk gambar background/interior (Assets/Sprites/Backgrounds/) dan panel
-    /// cutscene (Assets/Sprites/Cutscenes/). Keduanya art ilustrasi shading halus (bukan pixel
-    /// art blocky kayak karakter), jadi pakai filter Bilinear (bukan Point) supaya nggak
-    /// kelihatan pecah/bergerigi waktu di-scale. PPU 200 dipilih supaya proporsinya nyambung
-    /// sama karakter (Assets/Sprites/Characters, PPU 256 dengan tinggi konten ~225px) — lihat
-    /// AlifDemoSceneBuilder.BuildBackground(). Untuk panel cutscene (dipakai di UI Image, bukan
-    /// SpriteRenderer dunia) PPU ini nggak berpengaruh, jadi dibiarkan sama biar satu aturan saja.
+    /// Setting import untuk gambar background/interior (Assets/Sprites/Backgrounds/), panel
+    /// cutscene (Assets/Sprites/Cutscenes/), dan portrait karakter buat dialogue box
+    /// (Assets/Sprites/Portraits/). Semuanya art ilustrasi shading halus (bukan pixel art
+    /// blocky kayak karakter), jadi pakai filter Bilinear (bukan Point) supaya nggak kelihatan
+    /// pecah/bergerigi waktu di-scale. PPU 200 dipilih supaya proporsinya nyambung sama
+    /// karakter (Assets/Sprites/Characters, PPU 256 dengan tinggi konten ~225px) — lihat
+    /// AlifDemoSceneBuilder.BuildBackground(). Untuk panel cutscene & portrait (dipakai di UI
+    /// Image, bukan SpriteRenderer dunia) PPU ini nggak berpengaruh, jadi dibiarkan sama biar
+    /// satu aturan saja.
     /// </summary>
     public class AlifBackgroundTexturePostprocessor : AssetPostprocessor
     {
@@ -18,6 +20,7 @@ namespace Alif.EditorTools
         {
             "Assets/Sprites/Backgrounds/",
             "Assets/Sprites/Cutscenes/",
+            "Assets/Sprites/Portraits/",
         };
 
         private void OnPreprocessTexture()

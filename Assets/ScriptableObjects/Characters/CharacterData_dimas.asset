@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Alif.Characters.CharacterData
   CharacterName: Dimas
   Description: Rekan kerja yang gampang gugup, tapi baik hati.
-  Portrait: {fileID: 21300000, guid: 472f1cb66352a4789a198beef3d0e43a, type: 3}
+  Portrait: {fileID: 21300000, guid: ba2562cb2b66f4c7bb6622a58bd65154, type: 3}
   AnimatorController: {fileID: 9100000, guid: c10f4268b583c4327bbfbad542dce676, type: 2}
   _relationshipLevel: 0
   _affinityPoints: 0

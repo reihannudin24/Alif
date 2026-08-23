@@ -37,7 +37,13 @@ namespace Alif.EditorTools
         private const string PlayerSpriteFolder = "Assets/Sprites/Characters/alif";
         private const string PlayerControllerPath = "Assets/Animations/Player/Alif_Player.controller";
         private const string BackgroundSpritePath = "Assets/Sprites/Backgrounds/Stasiun_Interior.png";
+        private const string ExteriorBackgroundSpritePath = "Assets/Sprites/Backgrounds/Stasiun_Luar.png";
         private const string TargetScenePath = "Assets/Scenes/SampleScene.unity";
+
+        // Area eksterior ditaruh jauh di bawah interior (bukan scene terpisah, biar CameraFollow
+        // otomatis "pindah" cuma dengan reposisi Player) — cukup jauh (20 unit) dari batas bawah
+        // interior (halfH 4.72) supaya nggak pernah kelihatan bertumpuk di kamera.
+        private static readonly Vector2 ExteriorOrigin = new Vector2(0f, -20f);
 
         // Sorting layer custom (Background/Ground/Characters/UI) ternyata nggak reliable
         // di-resolve lewat -executeMethod (batch mode) — baik by-name maupun by-ID selalu
@@ -135,6 +141,11 @@ namespace Alif.EditorTools
             // 2. Background interior (kalau sudah ada file-nya di Assets/Sprites/Backgrounds/).
             BuildBackground();
 
+            // 2b. Area luar stasiun (eksterior) + pintu penghubung interior<->eksterior, biar
+            // Player bisa "keluar" dari stasiun lewat koridor tengah paling bawah.
+            BuildStasiunLuar();
+            BuildDoors();
+
             // 3. Persistent managers.
             GameObject managersRoot = FindOrCreateRoot("_GameManagers");
             GetOrAddChild<GameManager>(managersRoot.transform, "GameManager");
@@ -155,6 +166,10 @@ namespace Alif.EditorTools
 
             // 5b. Bangku/kursi yang bisa di-interact (nggak bisa ditembus + munculin monolog Alif).
             BuildBenches();
+
+            // 5c. Monolog pembuka Alif — jembatan naratif dari cutscene ke gameplay bebas,
+            // otomatis muncul begitu scene ini pertama kali dimuat, sebelum interaksi ke NPC lain.
+            BuildOpeningMonologue(playerController);
 
             // Hubungkan DialogueManager ke PlayerController (supaya movement terkunci saat dialog).
             SetSerializedRef(dialogueManager, "_playerController", playerController);
@@ -273,6 +288,82 @@ namespace Alif.EditorTools
         }
 
         // ---------------------------------------------------------------
+        // AREA LUAR STASIUN (EKSTERIOR)
+        // ---------------------------------------------------------------
+        // Belum ada analisis pixel detail kayak interior (belum tau letak persis tembok/void di
+        // gambar ini) — buat sekarang cukup boundary luar doang, biar Player nggak jalan ke void
+        // di luar gambar. Bisa ditambah VoidBlocker presisi nanti kalau perlu.
+        private static void BuildStasiunLuar()
+        {
+            Sprite exteriorSprite = AssetDatabase.LoadAssetAtPath<Sprite>(ExteriorBackgroundSpritePath);
+            if (exteriorSprite == null)
+            {
+                Debug.LogWarning($"[Alif] Background sprite tidak ditemukan di '{ExteriorBackgroundSpritePath}', dilewati.");
+                return;
+            }
+
+            GameObject exterior = FindOrCreateRoot("Background_StasiunLuar");
+            exterior.transform.position = new Vector3(ExteriorOrigin.x, ExteriorOrigin.y, 0f);
+
+            SpriteRenderer sr = GetOrAddComponent<SpriteRenderer>(exterior);
+            sr.sprite = exteriorSprite;
+            sr.sortingOrder = SortingOrderGround;
+
+            for (int i = exterior.transform.childCount - 1; i >= 0; i--)
+            {
+                Transform child = exterior.transform.GetChild(i);
+                if (child.name.StartsWith("BoundaryWall"))
+                {
+                    Object.DestroyImmediate(child.gameObject);
+                }
+            }
+
+            // Stasiun_Luar.png 1540x1834px, PPU 200 -> half extents (3.85, 4.585).
+            const float halfW = 3.85f;
+            const float halfH = 4.585f;
+            const float wallThickness = 0.2f;
+
+            AddBoxBlocker(exterior, "BoundaryWall_Top", new Vector2(0, halfH + wallThickness / 2f), new Vector2(halfW * 2 + wallThickness * 2, wallThickness));
+            AddBoxBlocker(exterior, "BoundaryWall_Bottom", new Vector2(0, -halfH - wallThickness / 2f), new Vector2(halfW * 2 + wallThickness * 2, wallThickness));
+            AddBoxBlocker(exterior, "BoundaryWall_Left", new Vector2(-halfW - wallThickness / 2f, 0), new Vector2(wallThickness, halfH * 2 + wallThickness * 2));
+            AddBoxBlocker(exterior, "BoundaryWall_Right", new Vector2(halfW + wallThickness / 2f, 0), new Vector2(wallThickness, halfH * 2 + wallThickness * 2));
+        }
+
+        // ---------------------------------------------------------------
+        // PINTU (interior <-> eksterior) — lihat SceneDoor.cs. Posisi diambil dari analisis
+        // koridor tengah interior (celah antara VoidBlocker "kanan-bawah"/"kiri-bawah", x
+        // sekitar -1.4..1.4) yang memang dibiarkan terbuka sampai BoundaryWall_Bottom — ini
+        // persis titik di skrinsyot user, di antara dua bingkai pintu koridor paling bawah.
+        // ---------------------------------------------------------------
+        private static void BuildDoors()
+        {
+            GameObject doorsRoot = FindOrCreateRoot("Doors");
+
+            GameObject interiorSpawnGO = FindOrCreateWorldChild(doorsRoot.transform, "InteriorSpawn");
+            interiorSpawnGO.transform.position = new Vector3(0f, -3.8f, 0f);
+
+            GameObject exteriorSpawnGO = FindOrCreateWorldChild(doorsRoot.transform, "ExteriorSpawn");
+            exteriorSpawnGO.transform.position = new Vector3(0f, ExteriorOrigin.y + 3.5f, 0f);
+
+            BuildDoorTrigger(doorsRoot.transform, "Door_KeluarStasiun", new Vector2(0f, -4.55f), new Vector2(1.2f, 0.3f), exteriorSpawnGO.transform, "Keluar dari stasiun?");
+            BuildDoorTrigger(doorsRoot.transform, "Door_MasukStasiun", new Vector2(0f, ExteriorOrigin.y + 5f), new Vector2(1.2f, 0.3f), interiorSpawnGO.transform, "Masuk ke stasiun?");
+        }
+
+        private static void BuildDoorTrigger(Transform parent, string name, Vector2 worldPosition, Vector2 size, Transform destination, string confirmMessage)
+        {
+            GameObject door = FindOrCreateWorldChild(parent, name);
+            door.transform.position = new Vector3(worldPosition.x, worldPosition.y, 0f);
+
+            BoxCollider2D collider = GetOrAddComponent<BoxCollider2D>(door);
+            collider.isTrigger = true;
+            collider.size = size;
+
+            SceneDoor sceneDoor = GetOrAddComponent<SceneDoor>(door);
+            SetSerializedRef(sceneDoor, "_destination", destination);
+            SetSerializedValue(sceneDoor, "_confirmMessage", confirmMessage);
+        }
+
+        // ---------------------------------------------------------------
         // PLAYER
         // ---------------------------------------------------------------
         private static void SetupCameraFollow(Transform target)
@@ -304,11 +395,15 @@ namespace Alif.EditorTools
             }
         }
 
+        // Titik awal Alif waktu pertama kali masuk SampleScene (New Game maupun lewat Chapter
+        // Select) — deket bangku & lemari kaca ruang Display, sesuai posisi yang diminta user.
+        private static readonly Vector3 PlayerSpawnPosition = new Vector3(4.8f, -2.5f, 0f);
+
         private static PlayerController BuildPlayer()
         {
             GameObject player = FindOrCreateRoot("Player");
             player.tag = "Player";
-            player.transform.position = Vector3.zero;
+            player.transform.position = PlayerSpawnPosition;
 
             Rigidbody2D rb = GetOrAddComponent<Rigidbody2D>(player);
             rb.gravityScale = 0f;
@@ -581,6 +676,45 @@ namespace Alif.EditorTools
         }
 
         // ---------------------------------------------------------------
+        // MONOLOG PEMBUKA (jembatan naratif cutscene -> gameplay bebas)
+        // ---------------------------------------------------------------
+        private static void BuildOpeningMonologue(PlayerController playerController)
+        {
+            DialogueData dialogue = GetOrCreateOpeningMonologueDialogue();
+            CharacterData alifData = GetOrCreateAlifCharacterData();
+
+            OpeningMonologueTrigger trigger = GetOrAddComponent<OpeningMonologueTrigger>(playerController.gameObject);
+            SetSerializedRef(trigger, "_dialogue", dialogue);
+            SetSerializedRef(trigger, "_speakerData", alifData);
+        }
+
+        private static DialogueData GetOrCreateOpeningMonologueDialogue()
+        {
+            string path = $"{DialogueDataFolder}/DialogueData_OpeningMonologue.asset";
+            DialogueData data = AssetDatabase.LoadAssetAtPath<DialogueData>(path);
+            if (data != null)
+            {
+                return data;
+            }
+
+            data = ScriptableObject.CreateInstance<DialogueData>();
+            data.Lines.Add(new DialogueLine
+            {
+                SpeakerName = "Alif",
+                Text = "Baiklah... Ayam geprek Bu Siti kedengerannya enak banget sekarang."
+            });
+            data.Lines.Add(new DialogueLine
+            {
+                SpeakerName = "Alif",
+                Text = "Tapi kayaknya aku harus cari jalan keluar dari stasiun ini dulu."
+            });
+
+            EnsureFolder(DialogueDataFolder);
+            AssetDatabase.CreateAsset(data, path);
+            return data;
+        }
+
+        // ---------------------------------------------------------------
         // CANVAS: HUD, INVENTORY, DIALOGUE
         // ---------------------------------------------------------------
         private static void BuildCanvas(PlayerController playerController)
@@ -598,9 +732,30 @@ namespace Alif.EditorTools
             GetOrAddComponent<GraphicRaycaster>(canvasGO);
             UIManager uiManager = GetOrAddComponent<UIManager>(canvasGO);
 
+            // Audio dibangun duluan (sebelum tombol2 lain) supaya AudioManager + clip klik-nya
+            // siap dipakai buat nempelin SFX ke tombol Next/Interact di bawah.
+            (AudioManager audioManager, AudioClip clickSfx) = BuildGameplayAudio(canvasGO.transform);
+
             GameObject hudPanel = BuildHUD(canvasGO.transform);
             GameObject inventoryPanel = BuildInventory(canvasGO.transform);
-            GameObject dialoguePanel = BuildDialoguePanel(canvasGO.transform);
+            (GameObject dialoguePanel, Image dialoguePortraitImage) = BuildDialoguePanel(canvasGO.transform, audioManager, clickSfx);
+
+            // Klik di area manapun SELAIN teks dialog & portrait karakter dihitung "lanjut/tutup"
+            // dialog — lapisan penuh-layar ini ditaruh PALING BELAKANG di antara elemen dialog
+            // (lihat pengurutan sibling index di BuildDialoguePanel) supaya box, tombol Next/Choice,
+            // dan portrait tetap dapat prioritas klik masing-masing; sisanya jatuh ke sini.
+            Button advanceCatcherButton = BuildDialogueAdvanceCatcher(canvasGO.transform, dialoguePortraitImage);
+
+            (GameObject joystickGO, GameObject interactButtonGO) = BuildTouchControls(canvasGO.transform, playerController, audioManager, clickSfx);
+
+            // Tombol pause (pojok kanan-atas) + panel "Lanjut/Keluar" + popup konfirmasi keluar,
+            // juga bisa dipicu tombol back Android/ESC (lihat PauseMenuController).
+            GameObject pauseButtonGO = BuildPauseMenu(canvasGO.transform, audioManager, clickSfx);
+
+            // Popup konfirmasi "Pindah ke ...?" dipakai SceneDoor (lihat TravelConfirmationUI) —
+            // singleton, ditemukan runtime lewat TravelConfirmationUI.Instance, nggak perlu
+            // di-assign ke komponen lain di sini.
+            BuildTravelConfirmationPopup(canvasGO.transform, audioManager, clickSfx);
 
             // DialogueUI diletakkan di root Canvas (selalu aktif) supaya tetap subscribe ke event
             // DialogueManager walaupun panel visualnya (dialoguePanel) sedang disembunyikan.
@@ -608,24 +763,59 @@ namespace Alif.EditorTools
             SetSerializedRef(dialogueUI, "_dialogueBoxRoot", dialoguePanel);
             SetSerializedRef(dialogueUI, "_speakerNameText", dialoguePanel.transform.Find("SpeakerNameText")?.GetComponent<TMP_Text>());
             SetSerializedRef(dialogueUI, "_dialogueText", dialoguePanel.transform.Find("DialogueText")?.GetComponent<TMP_Text>());
-            SetSerializedRef(dialogueUI, "_portraitImage", dialoguePanel.transform.Find("PortraitImage")?.GetComponent<Image>());
+            SetSerializedRef(dialogueUI, "_portraitImage", dialoguePortraitImage);
             SetSerializedRef(dialogueUI, "_nextButton", dialoguePanel.transform.Find("NextButton")?.GetComponent<Button>());
             SetSerializedRef(dialogueUI, "_choiceButtonContainer", dialoguePanel.transform.Find("ChoiceButtonContainer"));
             SetSerializedRef(dialogueUI, "_choiceButtonPrefab", GetOrCreateChoiceButtonPrefab());
+            SetSerializedRef(dialogueUI, "_advanceCatcherButton", advanceCatcherButton);
+            SetSerializedRef(dialogueUI, "_audioManager", audioManager);
+            SetSerializedRef(dialogueUI, "_buttonClickSfx", clickSfx);
+
+            // Kontrol on-screen (joystick, tombol interact "E") & bar inventory sengaja
+            // disembunyikan sementara dialog aktif — nggak relevan (movement udah terkunci) dan
+            // cuma nutup-nutupin layar visual novel.
+            SetSerializedRef(dialogueUI, "_joystickRoot", joystickGO);
+            SetSerializedRef(dialogueUI, "_interactButtonRoot", interactButtonGO);
+            SetSerializedRef(dialogueUI, "_inventoryPanelRoot", inventoryPanel);
+            SetSerializedRef(dialogueUI, "_pauseButtonRoot", pauseButtonGO);
 
             SetSerializedRef(uiManager, "_hudPanel", hudPanel);
             SetSerializedRef(uiManager, "_inventoryPanel", inventoryPanel);
             SetSerializedRef(uiManager, "_dialoguePanel", dialoguePanel);
 
             dialoguePanel.SetActive(false);
+            advanceCatcherButton.gameObject.SetActive(false);
 
-            BuildTouchControls(canvasGO.transform, playerController);
+            // Overlay fade hitam ("layar loading") dipakai SceneDoor buat transisi antar area —
+            // dibuat PALING TERAKHIR supaya render di atas semua elemen lain (HUD, joystick, dsb).
+            BuildLoadingOverlay(canvasGO.transform);
+        }
+
+        private static void BuildLoadingOverlay(Transform canvasTransform)
+        {
+            GameObject overlay = FindOrCreateChild(canvasTransform, "LoadingOverlay");
+            overlay.transform.SetAsLastSibling();
+            RectTransform overlayRT = overlay.GetComponent<RectTransform>();
+            StretchFull(overlayRT);
+            AddImage(overlayRT, Color.black);
+
+            CanvasGroup canvasGroup = GetOrAddComponent<CanvasGroup>(overlay);
+            canvasGroup.alpha = 0f;
+            canvasGroup.blocksRaycasts = false;
+            canvasGroup.interactable = false;
+
+            TextMeshProUGUI loadingText = FindOrCreateText(overlay.transform, "LoadingText", "Memuat...",
+                Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, 22, TextAlignmentOptions.Center);
+            loadingText.fontStyle = FontStyles.Bold;
+
+            SceneFadeController fadeController = GetOrAddComponent<SceneFadeController>(overlay);
+            SetSerializedRef(fadeController, "_fadeCanvasGroup", canvasGroup);
         }
 
         // ---------------------------------------------------------------
         // TOUCH CONTROLS: joystick on-screen + tombol interact
         // ---------------------------------------------------------------
-        private static void BuildTouchControls(Transform canvasTransform, PlayerController playerController)
+        private static (GameObject joystick, GameObject interactButton) BuildTouchControls(Transform canvasTransform, PlayerController playerController, AudioManager audioManager, AudioClip clickSfx)
         {
             Sprite bgSprite = GetOrCreateCircleSprite("Joystick_Background", new Color(1f, 1f, 1f, 0.25f), 128);
             Sprite knobSprite = GetOrCreateCircleSprite("Joystick_Knob", new Color(1f, 1f, 1f, 0.55f), 64);
@@ -658,37 +848,189 @@ namespace Alif.EditorTools
             // Reset listener biar nggak dobel kalau tool ini dijalankan berulang kali.
             interactButton.onClick = new Button.ButtonClickedEvent();
             UnityEventTools.AddPersistentListener(interactButton.onClick, playerController.Interact);
+            AddClickSfxListener(interactButton, audioManager, clickSfx);
 
             TextMeshProUGUI interactLabel = FindOrCreateText(interactGO.transform, "Label", "E",
                 Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, 22, TextAlignmentOptions.Center);
             interactLabel.fontStyle = FontStyles.Bold;
+
+            return (joystickGO, interactGO);
+        }
+
+        // ---------------------------------------------------------------
+        // PAUSE MENU: tombol pause pojok kanan-atas (satu-satunya sudut layar yang masih
+        // kosong) -> panel kecil "Lanjut"/"Keluar". Tombol back Android/ESC (action "Cancel")
+        // juga nyambung ke alur yang sama lewat PauseMenuController.
+        // ---------------------------------------------------------------
+        private static GameObject BuildPauseMenu(Transform canvasTransform, AudioManager audioManager, AudioClip clickSfx)
+        {
+            QuitConfirmationUI quitConfirmation = BuildGameplayQuitConfirmationPopup(canvasTransform, audioManager, clickSfx);
+
+            GameObject pauseButtonGO = FindOrCreateChild(canvasTransform, "PauseButton");
+            RectTransform pauseRT = pauseButtonGO.GetComponent<RectTransform>();
+            SetRect(pauseRT, new Vector2(1, 1), new Vector2(1, 1), new Vector2(1, 1), new Vector2(-16, -16), new Vector2(48, 48));
+            Image pauseImg = AddImage(pauseRT, new Color(0.25f, 0.16f, 0.08f, 0.85f));
+            Button pauseButton = GetOrAddComponent<Button>(pauseButtonGO);
+            pauseButton.targetGraphic = pauseImg;
+            AddClickSfxListener(pauseButton, audioManager, clickSfx);
+
+            FindOrCreateText(pauseButtonGO.transform, "Label", "=",
+                Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, 22, TextAlignmentOptions.Center)
+                .fontStyle = FontStyles.Bold;
+
+            // Panel pause kecil, muncul di tengah waktu tombol pause di atas diklik.
+            GameObject pauseMenuRoot = FindOrCreateChild(canvasTransform, "PauseMenuPanel");
+            RectTransform pausePanelRT = pauseMenuRoot.GetComponent<RectTransform>();
+            StretchFull(pausePanelRT);
+            AddImage(pausePanelRT, new Color(0f, 0f, 0f, 0.6f));
+            pauseMenuRoot.transform.SetAsLastSibling();
+
+            GameObject card = FindOrCreateChild(pauseMenuRoot.transform, "Card");
+            RectTransform cardRT = card.GetComponent<RectTransform>();
+            SetRect(cardRT, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(320, 220));
+            AddImage(cardRT, new Color(0.2f, 0.14f, 0.08f, 0.97f));
+
+            FindOrCreateText(card.transform, "TitleText", "Jeda",
+                new Vector2(0, 1), new Vector2(1, 1), new Vector2(0.5f, 1f), new Vector2(0, -20), new Vector2(-24, 32), 20, TextAlignmentOptions.Center)
+                .fontStyle = FontStyles.Bold;
+
+            GameObject resumeButtonGO = BuildSimpleButton(card.transform, "ResumeButton", "Lanjut");
+            SetRect(resumeButtonGO.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -6), new Vector2(240, 44));
+            AddClickSfxListener(resumeButtonGO.GetComponent<Button>(), audioManager, clickSfx);
+
+            GameObject exitButtonGO = BuildSimpleButton(card.transform, "ExitButton", "Keluar");
+            SetRect(exitButtonGO.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -62), new Vector2(240, 44));
+            AddClickSfxListener(exitButtonGO.GetComponent<Button>(), audioManager, clickSfx);
+
+            pauseMenuRoot.SetActive(false);
+
+            InputActionAsset actions = AssetDatabase.LoadAssetAtPath<InputActionAsset>(InputActionsPath);
+
+            PauseMenuController pauseMenuController = GetOrAddComponent<PauseMenuController>(canvasTransform.gameObject);
+            SetSerializedRef(pauseMenuController, "_inputActions", actions);
+            SetSerializedRef(pauseMenuController, "_pauseMenuRoot", pauseMenuRoot);
+            SetSerializedRef(pauseMenuController, "_pauseButton", pauseButton);
+            SetSerializedRef(pauseMenuController, "_resumeButton", resumeButtonGO.GetComponent<Button>());
+            SetSerializedRef(pauseMenuController, "_exitButton", exitButtonGO.GetComponent<Button>());
+            SetSerializedRef(pauseMenuController, "_quitConfirmation", quitConfirmation);
+
+            return pauseButtonGO;
+        }
+
+        // Popup konfirmasi "Apakah anda yakin mau keluar?" versi gameplay — style-nya konsisten
+        // sama dialogue box (BuildSimpleButton), beda instance dari yang di Main Menu (scene
+        // terpisah). Dipicu tombol "Keluar" di pause menu ATAU tombol back Android/ESC.
+        private static QuitConfirmationUI BuildGameplayQuitConfirmationPopup(Transform canvasTransform, AudioManager audioManager, AudioClip clickSfx)
+        {
+            GameObject overlay = FindOrCreateChild(canvasTransform, "QuitConfirmPopup");
+            RectTransform overlayRT = overlay.GetComponent<RectTransform>();
+            StretchFull(overlayRT);
+            AddImage(overlayRT, new Color(0f, 0f, 0f, 0.6f));
+            overlay.transform.SetAsLastSibling();
+
+            GameObject card = FindOrCreateChild(overlay.transform, "Card");
+            RectTransform cardRT = card.GetComponent<RectTransform>();
+            SetRect(cardRT, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(420, 230));
+            AddImage(cardRT, new Color(0.16f, 0.12f, 0.08f, 0.97f));
+
+            FindOrCreateText(card.transform, "MessageText", "Apakah anda yakin mau keluar?",
+                new Vector2(0, 1), new Vector2(1, 1), new Vector2(0.5f, 1f), new Vector2(0, -28), new Vector2(-32, 64), 20, TextAlignmentOptions.Center)
+                .fontStyle = FontStyles.Bold;
+
+            GameObject cancelButtonGO = BuildSimpleButton(card.transform, "CancelButton", "BATAL");
+            SetRect(cancelButtonGO.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -8), new Vector2(340, 44));
+            Button cancelButton = cancelButtonGO.GetComponent<Button>();
+
+            GameObject confirmButtonGO = BuildSimpleButton(card.transform, "ConfirmButton", "YA, KELUAR");
+            SetRect(confirmButtonGO.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -60), new Vector2(340, 40));
+            Button confirmButton = confirmButtonGO.GetComponent<Button>();
+
+            QuitConfirmationUI quitConfirmation = GetOrAddComponent<QuitConfirmationUI>(overlay);
+            SetSerializedRef(quitConfirmation, "_root", overlay);
+            SetSerializedRef(quitConfirmation, "_confirmButton", confirmButton);
+            SetSerializedRef(quitConfirmation, "_cancelButton", cancelButton);
+
+            AddClickSfxListener(confirmButton, audioManager, clickSfx);
+            AddClickSfxListener(cancelButton, audioManager, clickSfx);
+
+            overlay.SetActive(false);
+
+            return quitConfirmation;
+        }
+
+        // Popup konfirmasi umum "Pindah ke ...?" — dipakai SceneDoor SEBELUM benar-benar
+        // transisi/fade ke area lain (lihat TravelConfirmationUI), biar nggak langsung
+        // "loading" pas Player kesenggol trigger pintu doang.
+        private static void BuildTravelConfirmationPopup(Transform canvasTransform, AudioManager audioManager, AudioClip clickSfx)
+        {
+            GameObject overlay = FindOrCreateChild(canvasTransform, "TravelConfirmPopup");
+            RectTransform overlayRT = overlay.GetComponent<RectTransform>();
+            StretchFull(overlayRT);
+            AddImage(overlayRT, new Color(0f, 0f, 0f, 0.6f));
+            overlay.transform.SetAsLastSibling();
+
+            GameObject card = FindOrCreateChild(overlay.transform, "Card");
+            RectTransform cardRT = card.GetComponent<RectTransform>();
+            SetRect(cardRT, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(420, 230));
+            AddImage(cardRT, new Color(0.16f, 0.12f, 0.08f, 0.97f));
+
+            TMP_Text messageText = FindOrCreateText(card.transform, "MessageText", "Pindah ke area lain?",
+                new Vector2(0, 1), new Vector2(1, 1), new Vector2(0.5f, 1f), new Vector2(0, -28), new Vector2(-32, 64), 20, TextAlignmentOptions.Center);
+            messageText.fontStyle = FontStyles.Bold;
+
+            GameObject cancelButtonGO = BuildSimpleButton(card.transform, "CancelButton", "TIDAK");
+            SetRect(cancelButtonGO.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -60), new Vector2(340, 40));
+            Button cancelButton = cancelButtonGO.GetComponent<Button>();
+
+            GameObject confirmButtonGO = BuildSimpleButton(card.transform, "ConfirmButton", "YA, PINDAH");
+            SetRect(confirmButtonGO.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -8), new Vector2(340, 44));
+            Button confirmButton = confirmButtonGO.GetComponent<Button>();
+
+            TravelConfirmationUI travelConfirmation = GetOrAddComponent<TravelConfirmationUI>(overlay);
+            SetSerializedRef(travelConfirmation, "_root", overlay);
+            SetSerializedRef(travelConfirmation, "_messageText", messageText);
+            SetSerializedRef(travelConfirmation, "_confirmButton", confirmButton);
+            SetSerializedRef(travelConfirmation, "_cancelButton", cancelButton);
+
+            AddClickSfxListener(confirmButton, audioManager, clickSfx);
+            AddClickSfxListener(cancelButton, audioManager, clickSfx);
+
+            overlay.SetActive(false);
         }
 
         private static GameObject BuildHUD(Transform canvasTransform)
         {
             GameObject panel = FindOrCreateChild(canvasTransform, "HUD_Panel");
             RectTransform panelRT = panel.GetComponent<RectTransform>() ?? panel.AddComponent<RectTransform>();
-            SetRect(panelRT, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(20, -20), new Vector2(280, 210));
+            SetRect(panelRT, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(20, -20), new Vector2(280, 200));
             AddImage(panelRT, new Color(0.25f, 0.16f, 0.08f, 0.85f));
+
+            // Jam (jam:menit) sengaja dihapus dari HUD — kalau ada sisa "ClockText" dari build
+            // versi lama, bersihkan supaya nggak jadi GameObject mati yang nggak kepakai.
+            Transform staleClockText = panel.transform.Find("ClockText");
+            if (staleClockText != null)
+            {
+                Object.DestroyImmediate(staleClockText.gameObject);
+            }
 
             TextMeshProUGUI dayWeekText = FindOrCreateText(panel.transform, "DayWeekText", "Tuesday, 1st week",
                 new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, 1), new Vector2(12, -10), new Vector2(-12, 24), 16, TextAlignmentOptions.Left);
 
-            TextMeshProUGUI clockText = FindOrCreateText(panel.transform, "ClockText", "15:03",
-                new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, 1), new Vector2(12, -36), new Vector2(-12, 24), 16, TextAlignmentOptions.Left);
-
             // Tiga bar diberi label kecil di atasnya (dulu cuma Energy sendirian jadi nggak
             // perlu label; sekarang ada 3 bar sekaligus, tanpa label bakal ambigu).
-            Slider energySlider = BuildLabeledSlider(panel.transform, "Energy", "Energi", -58, new Color(0.45f, 0.75f, 0.35f, 1f));
-            Slider financialLogicSlider = BuildLabeledSlider(panel.transform, "FinancialLogic", "Logika Finansial", -92, new Color(0.35f, 0.6f, 0.85f, 1f));
-            Slider shariaComplianceSlider = BuildLabeledSlider(panel.transform, "ShariaCompliance", "Kepatuhan Syariah", -126, new Color(0.85f, 0.65f, 0.25f, 1f));
+            Slider energySlider = BuildLabeledSlider(panel.transform, "Energy", "Energi", -34, new Color(0.45f, 0.75f, 0.35f, 1f));
+            Slider financialLogicSlider = BuildLabeledSlider(panel.transform, "FinancialLogic", "Logika Finansial", -68, new Color(0.35f, 0.6f, 0.85f, 1f));
+            Slider shariaComplianceSlider = BuildLabeledSlider(panel.transform, "ShariaCompliance", "Kepatuhan Syariah", -102, new Color(0.85f, 0.65f, 0.25f, 1f));
 
-            TextMeshProUGUI moneyText = FindOrCreateText(panel.transform, "MoneyText", "150",
-                new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 0), new Vector2(12, 10), new Vector2(-12, 24), 16, TextAlignmentOptions.Left);
+            FindOrCreateText(panel.transform, "MoneyLabel", "Uang",
+                new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 0), new Vector2(12, 32), new Vector2(-12, 14), 11, TextAlignmentOptions.Left)
+                .color = new Color(1f, 1f, 1f, 0.75f);
+
+            TextMeshProUGUI moneyText = FindOrCreateText(panel.transform, "MoneyText", "Rp 150",
+                new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 0), new Vector2(12, 8), new Vector2(-12, 22), 16, TextAlignmentOptions.Left);
 
             HUDController hud = GetOrAddComponent<HUDController>(panel);
             SetSerializedRef(hud, "_dayWeekText", dayWeekText);
-            SetSerializedRef(hud, "_clockText", clockText);
             SetSerializedRef(hud, "_energySlider", energySlider);
             SetSerializedRef(hud, "_financialLogicSlider", financialLogicSlider);
             SetSerializedRef(hud, "_shariaComplianceSlider", shariaComplianceSlider);
@@ -792,23 +1134,31 @@ namespace Alif.EditorTools
             return slotUI;
         }
 
-        private static GameObject BuildDialoguePanel(Transform canvasTransform)
+        private static (GameObject, Image) BuildDialoguePanel(Transform canvasTransform, AudioManager audioManager, AudioClip clickSfx)
         {
             GameObject panel = FindOrCreateChild(canvasTransform, "Dialogue_Panel");
             RectTransform panelRT = panel.GetComponent<RectTransform>() ?? panel.AddComponent<RectTransform>();
             SetRect(panelRT, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0, 110), new Vector2(900, 180));
-            AddImage(panelRT, new Color(0f, 0f, 0f, 0.8f));
+            Image panelImage = AddImage(panelRT, new Color(0f, 0f, 0f, 0.8f));
 
-            // Portrait pembicara, di kiri. Diisi/di-toggle runtime oleh DialogueUI berdasarkan
-            // CharacterData.Portrait dari DialogueManager.CurrentSpeakerPortrait.
-            GameObject portraitGO = FindOrCreateChild(panel.transform, "PortraitImage");
-            RectTransform portraitRT = portraitGO.GetComponent<RectTransform>();
-            SetRect(portraitRT, new Vector2(0, 0), new Vector2(0, 1), new Vector2(0, 0.5f), new Vector2(16, 0), new Vector2(140, -16));
-            Image portraitImage = AddImage(portraitRT, Color.white);
-            portraitImage.preserveAspect = true;
-            portraitImage.enabled = false;
+            // Panel background sendiri juga bisa diklik buat "lanjut" (area box yang nggak ke-
+            // tutup teks/tombol) — wiring listener-nya dilakukan runtime di DialogueUI karena
+            // butuh cek kondisi (jangan lanjut kalau lagi nunjukin choices). Transition None biar
+            // background nggak ikut nge-tint pas ditekan (dia dekorasi, bukan tombol visual).
+            Button panelButton = GetOrAddComponent<Button>(panel);
+            panelButton.transition = Selectable.Transition.None;
+            panelButton.targetGraphic = panelImage;
 
-            const float textLeft = 172f;
+            // Sisa "PortraitImage" dari build versi lama (dulu kecil, di dalam box kiri) —
+            // bersihkan biar nggak nyisa GameObject mati; portrait-nya sekarang elemen terpisah
+            // di luar box (lihat DialoguePortrait di bawah).
+            Transform stalePortrait = panel.transform.Find("PortraitImage");
+            if (stalePortrait != null)
+            {
+                Object.DestroyImmediate(stalePortrait.gameObject);
+            }
+
+            const float textLeft = 24f; // dulu 172 (nyisain ruang portrait kecil di kiri box) — portrait udah pindah keluar.
 
             FindOrCreateText(panel.transform, "SpeakerNameText", "Nama NPC",
                 new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, 1), new Vector2(textLeft, -12), new Vector2(-16, 26), 18, TextAlignmentOptions.Left)
@@ -820,6 +1170,7 @@ namespace Alif.EditorTools
             GameObject nextButtonGO = BuildSimpleButton(panel.transform, "NextButton", "Lanjut >");
             RectTransform nextRT = nextButtonGO.GetComponent<RectTransform>();
             SetRect(nextRT, new Vector2(1, 0), new Vector2(1, 0), new Vector2(1, 0), new Vector2(-16, 12), new Vector2(110, 32));
+            AddClickSfxListener(nextButtonGO.GetComponent<Button>(), audioManager, clickSfx);
 
             GameObject choiceContainer = FindOrCreateChild(panel.transform, "ChoiceButtonContainer");
             RectTransform choiceRT = choiceContainer.GetComponent<RectTransform>() ?? choiceContainer.AddComponent<RectTransform>();
@@ -829,7 +1180,98 @@ namespace Alif.EditorTools
             vlg.childForceExpandWidth = true;
             vlg.childForceExpandHeight = false;
 
-            return panel;
+            // Portrait pembicara — sekarang BESAR & di kanan LUAR box (gaya visual novel:
+            // karakter berdiri nongol di atas-belakang box dialog), bukan thumbnail kecil di
+            // dalam box kiri lagi. Sibling dari Dialogue_Panel (bukan child) supaya nggak
+            // ke-clip tinggi box yang cuma 180px. Diisi/di-toggle runtime oleh DialogueUI
+            // berdasarkan CharacterData.Portrait dari DialogueManager.CurrentSpeakerPortrait.
+            GameObject portraitGO = FindOrCreateChild(canvasTransform, "DialoguePortrait");
+            RectTransform portraitRT = portraitGO.GetComponent<RectTransform>();
+            SetRect(portraitRT, new Vector2(1, 0), new Vector2(1, 0), new Vector2(1, 0), new Vector2(-40, 100), new Vector2(340, 480));
+            Image portraitImage = AddImage(portraitRT, Color.white);
+            portraitImage.preserveAspect = true;
+            portraitImage.enabled = false;
+
+            // BUG yang bikin NextButton "hilang": portrait dibuat SETELAH panel jadi kalau
+            // sibling-nya dibiarkan apa adanya dia ke-render DI ATAS panel (sibling belakangan =
+            // digambar belakangan = di depan), nutupin NextButton yang posisinya nempel di
+            // pojok kanan-bawah panel (persis di bawah area portrait). Pindahkan portrait ke
+            // sibling index panel SEKARANG (dorong panel maju satu index) supaya urutannya jadi
+            // portrait dulu (di belakang), baru panel + tombol2-nya (di depan, kebaca & keklik).
+            portraitGO.transform.SetSiblingIndex(panel.transform.GetSiblingIndex());
+
+            return (panel, portraitImage);
+        }
+
+        // Bunyi klik ditambahkan sebagai persistent listener KEDUA di tiap tombol (Button.onClick
+        // mendukung banyak listener) — jadi nggak ganggu listener lain yang sudah ada. Sama persis
+        // kayak AlifMainMenuBuilder.AddClickSfxListener, cuma diduplikasi di sini karena scoped
+        // private ke class masing-masing.
+        private static void AddClickSfxListener(Button button, AudioManager audioManager, AudioClip clickSfx)
+        {
+            if (button == null || audioManager == null || clickSfx == null)
+            {
+                return;
+            }
+
+            UnityEventTools.AddObjectPersistentListener(button.onClick, audioManager.PlaySfx, clickSfx);
+        }
+
+        // ---------------------------------------------------------------
+        // AUDIO GAMEPLAY — SFX klik tombol (di-generate lewat "Alif > 6) Generate Placeholder
+        // Audio"). Beda instance dari AudioManager Main Menu (scene terpisah, kebutuhan beda).
+        // ---------------------------------------------------------------
+        private const string ClickSfxClipPath = "Assets/Audio/SFX_ButtonClick.wav";
+
+        private static (AudioManager, AudioClip) BuildGameplayAudio(Transform canvasTransform)
+        {
+            GameObject audioGO = FindOrCreateChild(canvasTransform, "Audio");
+
+            GameObject sfxGO = FindOrCreateChild(audioGO.transform, "SfxSource");
+            AudioSource sfxSource = GetOrAddComponent<AudioSource>(sfxGO);
+            sfxSource.playOnAwake = false;
+            sfxSource.loop = false;
+            sfxSource.volume = 0.8f;
+
+            AudioManager audioManager = GetOrAddComponent<AudioManager>(audioGO);
+            SetSerializedRef(audioManager, "_sfxSource", sfxSource);
+
+            AudioClip clickSfx = AssetDatabase.LoadAssetAtPath<AudioClip>(ClickSfxClipPath);
+            if (clickSfx == null)
+            {
+                Debug.LogWarning("[Alif] SFX klik tombol belum digenerate — jalankan menu 'Alif > 6) Generate Placeholder Audio' dulu, lalu build ulang scene ini.");
+            }
+
+            return (audioManager, clickSfx);
+        }
+
+        // ---------------------------------------------------------------
+        // KLIK-DI-LUAR-UNTUK-LANJUT: lapisan penuh-layar transparan yang nangkep klik di mana
+        // aja SELAIN teks dialog & portrait (keduanya raycast target sendiri tanpa listener,
+        // jadi klik di situ ke-serap diam-diam, nggak ngapa-ngapain) atau tombol Next/Choice
+        // (yang tetap dapat prioritas karena jadi child Dialogue_Panel, digambar di depan).
+        // ---------------------------------------------------------------
+        private static Button BuildDialogueAdvanceCatcher(Transform canvasTransform, Image dialoguePortraitImage)
+        {
+            GameObject catcherGO = FindOrCreateChild(canvasTransform, "DialogueAdvanceCatcher");
+            RectTransform catcherRT = catcherGO.GetComponent<RectTransform>();
+            StretchFull(catcherRT);
+
+            Image catcherImage = AddImage(catcherRT, new Color(0f, 0f, 0f, 0f));
+
+            Button catcherButton = GetOrAddComponent<Button>(catcherGO);
+            catcherButton.transition = Selectable.Transition.None;
+            catcherButton.targetGraphic = catcherImage;
+
+            // Taruh TEPAT di sibling index DialoguePortrait sekarang (dorong portrait & panel
+            // maju), jadi urutan akhirnya: catcher (paling belakang) -> portrait -> panel
+            // (paling depan). Portrait & panel sudah saling terurut benar duluan di
+            // BuildDialoguePanel; ini cuma nyisipin catcher di posisi paling belakang dari
+            // ketiganya, BUKAN di antara portrait & panel (kalau salah taruh di situ, catcher
+            // malah nutupin portrait dan klik di karakter jadi ke-anggap "klik area lain").
+            catcherGO.transform.SetSiblingIndex(dialoguePortraitImage.transform.GetSiblingIndex());
+
+            return catcherButton;
         }
 
         private static Button GetOrCreateChoiceButtonPrefab()
@@ -1021,6 +1463,12 @@ namespace Alif.EditorTools
             tmp.color = Color.white;
             tmp.alignment = alignment;
 
+            TMP_FontAsset poppins = AlifFontSetup.FontAssetInstance();
+            if (poppins != null)
+            {
+                tmp.font = poppins;
+            }
+
             return tmp;
         }
 
@@ -1065,6 +1513,15 @@ namespace Alif.EditorTools
             SerializedProperty prop = so.FindProperty(fieldName);
             if (prop == null) return;
             prop.vector3Value = value;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void SetSerializedValue(Object target, string fieldName, string value)
+        {
+            var so = new SerializedObject(target);
+            SerializedProperty prop = so.FindProperty(fieldName);
+            if (prop == null) return;
+            prop.stringValue = value;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
@@ -1147,7 +1604,7 @@ namespace Alif.EditorTools
             return AssetDatabase.LoadAssetAtPath<Sprite>(relativePath);
         }
 
-        private static Sprite GetOrCreateCircleSprite(string name, Color color, int size)
+        internal static Sprite GetOrCreateCircleSprite(string name, Color color, int size)
         {
             string relativePath = $"Assets/Sprites/UI/{name}.png";
             Sprite existing = AssetDatabase.LoadAssetAtPath<Sprite>(relativePath);

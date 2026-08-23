@@ -6,6 +6,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using TMPro;
+using Alif.Core;
 using Alif.UI;
 
 namespace Alif.EditorTools
@@ -24,6 +25,8 @@ namespace Alif.EditorTools
 
         private const string BackgroundSpritePath = "Assets/Sprites/Backgrounds/KosKosan_Halaman.png";
         private const string LogoSpritePath = "Assets/Sprites/UI/Logo_Alif.png";
+        private const string BgmClipPath = "Assets/Audio/BGM_MainMenu.wav";
+        private const string ClickSfxClipPath = "Assets/Audio/SFX_ButtonClick.wav";
 
         private static readonly Color OrangeButton = new Color(0.93f, 0.53f, 0.16f, 1f);
         private static readonly Color OrangeButtonDisabled = new Color(0.6f, 0.6f, 0.6f, 1f);
@@ -96,18 +99,72 @@ namespace Alif.EditorTools
             Button continueButton = BuildMenuButton(canvasGO.transform, "ContinueButton", "LANJUTKAN", -84f);
             Button quitButton = BuildMenuButton(canvasGO.transform, "QuitButton", "KELUAR", -152f, QuitButton, new Vector2(200, 44), 16f);
 
+            AudioManager audioManager = BuildAudio(canvasGO.transform);
+            AudioClip clickSfx = AssetDatabase.LoadAssetAtPath<AudioClip>(ClickSfxClipPath);
+
+            QuitConfirmationUI quitConfirmation = BuildQuitConfirmationPopup(canvasGO.transform, audioManager, clickSfx);
+
             MainMenuController controller = GetOrAddComponent<MainMenuController>(canvasGO);
             SetSerializedRef(controller, "_newGameButton", newGameButton);
             SetSerializedRef(controller, "_continueButton", continueButton);
+            SetSerializedRef(controller, "_audioManager", audioManager);
+            SetSerializedRef(controller, "_backgroundMusic", AssetDatabase.LoadAssetAtPath<AudioClip>(BgmClipPath));
+            SetSerializedRef(controller, "_quitConfirmation", quitConfirmation);
 
             newGameButton.onClick = new Button.ButtonClickedEvent();
             UnityEventTools.AddPersistentListener(newGameButton.onClick, controller.OnNewGameClicked);
+            AddClickSfxListener(newGameButton, audioManager, clickSfx);
 
             continueButton.onClick = new Button.ButtonClickedEvent();
             UnityEventTools.AddPersistentListener(continueButton.onClick, controller.OnContinueClicked);
+            AddClickSfxListener(continueButton, audioManager, clickSfx);
 
             quitButton.onClick = new Button.ButtonClickedEvent();
             UnityEventTools.AddPersistentListener(quitButton.onClick, controller.OnQuitClicked);
+            AddClickSfxListener(quitButton, audioManager, clickSfx);
+        }
+
+        // Bunyi klik ditambahkan sebagai persistent listener KEDUA di tiap tombol (Button.onClick
+        // mendukung banyak listener) — jadi nggak ganggu listener navigasi yang sudah ada.
+        private static void AddClickSfxListener(Button button, AudioManager audioManager, AudioClip clickSfx)
+        {
+            if (audioManager == null || clickSfx == null)
+            {
+                return;
+            }
+
+            UnityEventTools.AddObjectPersistentListener(button.onClick, audioManager.PlaySfx, clickSfx);
+        }
+
+        // ---------------------------------------------------------------
+        // AUDIO — BGM menu + SFX klik tombol, di-generate "Alif > 6) Generate Placeholder Audio".
+        // ---------------------------------------------------------------
+        private static AudioManager BuildAudio(Transform canvasTransform)
+        {
+            GameObject audioGO = FindOrCreateChild(canvasTransform, "Audio");
+
+            GameObject musicGO = FindOrCreateChild(audioGO.transform, "MusicSource");
+            AudioSource musicSource = GetOrAddComponent<AudioSource>(musicGO);
+            musicSource.playOnAwake = false;
+            musicSource.loop = true;
+            musicSource.volume = 0.5f;
+
+            GameObject sfxGO = FindOrCreateChild(audioGO.transform, "SfxSource");
+            AudioSource sfxSource = GetOrAddComponent<AudioSource>(sfxGO);
+            sfxSource.playOnAwake = false;
+            sfxSource.loop = false;
+            sfxSource.volume = 0.8f;
+
+            AudioManager audioManager = GetOrAddComponent<AudioManager>(audioGO);
+            SetSerializedRef(audioManager, "_musicSource", musicSource);
+            SetSerializedRef(audioManager, "_sfxSource", sfxSource);
+
+            if (AssetDatabase.LoadAssetAtPath<AudioClip>(BgmClipPath) == null)
+            {
+                Debug.LogWarning($"[Alif] Audio belum digenerate — jalankan menu 'Alif > 6) Generate Placeholder Audio' dulu, lalu build ulang scene ini.");
+            }
+
+            return audioManager;
         }
 
         private static void CleanAllRootObjects()
@@ -148,11 +205,16 @@ namespace Alif.EditorTools
             GameObject bg = FindOrCreateChild(canvasTransform, "Background");
             RectTransform rt = bg.GetComponent<RectTransform>();
             StretchFull(rt);
+            // Overscale dikit (8%) supaya ada "slack" buat AmbientImageMotion pan+zoom pelan
+            // tanpa nyingkap tepi gambar (area di luar frame layar).
+            rt.localScale = new Vector3(1.08f, 1.08f, 1f);
 
             Image img = GetOrAddComponent<Image>(bg);
             img.sprite = bgSprite;
             img.preserveAspect = false; // full-bleed, boleh sedikit stretch — background art bukan pixel-art presisi.
             img.color = Color.white;
+
+            GetOrAddComponent<AmbientImageMotion>(bg);
         }
 
         // ---------------------------------------------------------------
@@ -222,17 +284,20 @@ namespace Alif.EditorTools
 
         // ---------------------------------------------------------------
         // LANGUAGE PILL (pojok kiri atas) — dekoratif, project belum punya sistem localization.
+        // Cuma ikon bendera bulat, tanpa label teks "INDONESIA".
         // ---------------------------------------------------------------
         private static void BuildLanguagePill(Transform canvasTransform)
         {
             GameObject pill = FindOrCreateChild(canvasTransform, "LanguagePill");
             RectTransform pillRT = pill.GetComponent<RectTransform>();
-            SetRect(pillRT, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(16, -16), new Vector2(150, 36));
-            AddImage(pillRT, PillBackground);
+            SetRect(pillRT, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(16, -16), new Vector2(44, 44));
+
+            Image pillImg = AddImage(pillRT, PillBackground);
+            pillImg.sprite = GetOrCreateCircleSprite("LanguagePillCircle", Color.white, 128);
 
             GameObject flag = FindOrCreateChild(pill.transform, "FlagIcon");
             RectTransform flagRT = flag.GetComponent<RectTransform>();
-            SetRect(flagRT, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(10, 0), new Vector2(22, 16));
+            SetRect(flagRT, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(22, 16));
             AddImage(flagRT, new Color(0.8f, 0.1f, 0.1f, 1f));
 
             GameObject flagWhite = FindOrCreateChild(flag.transform, "White");
@@ -240,10 +305,54 @@ namespace Alif.EditorTools
             SetRect(flagWhiteRT, new Vector2(0, 0), new Vector2(1, 0.5f), new Vector2(0.5f, 0), Vector2.zero, Vector2.zero);
             AddImage(flagWhiteRT, Color.white);
 
-            TextMeshProUGUI label = FindOrCreateText(pill.transform, "Label", "INDONESIA",
-                new Vector2(0, 0), new Vector2(1, 1), new Vector2(0.5f, 0.5f), new Vector2(14, 0), new Vector2(-14, 0), 13, TextAlignmentOptions.Left);
-            label.color = PillText;
-            label.fontStyle = FontStyles.Bold;
+            // Sisa "Label" dari build versi lama (kalau ada) — bersihkan biar nggak nyisa GameObject mati.
+            Transform staleLabel = pill.transform.Find("Label");
+            if (staleLabel != null)
+            {
+                Object.DestroyImmediate(staleLabel.gameObject);
+            }
+        }
+
+        // ---------------------------------------------------------------
+        // POPUP KONFIRMASI KELUAR — "Apakah anda yakin mau keluar?" (Ya, Keluar / Batal).
+        // Dipakai tombol KELUAR sebelum Application.Quit() beneran dieksekusi, lihat
+        // MainMenuController.OnQuitClicked & QuitConfirmationUI.
+        // ---------------------------------------------------------------
+        private static QuitConfirmationUI BuildQuitConfirmationPopup(Transform canvasTransform, AudioManager audioManager, AudioClip clickSfx)
+        {
+            GameObject overlay = FindOrCreateChild(canvasTransform, "QuitConfirmPopup");
+            RectTransform overlayRT = overlay.GetComponent<RectTransform>();
+            StretchFull(overlayRT);
+            AddImage(overlayRT, new Color(0f, 0f, 0f, 0.6f));
+            // Paling belakangan dibangun di antara elemen menu, tapi pastikan tetap di depan
+            // (di bawah/nutupin semua tombol menu) selama build ini berjalan berkali-kali.
+            overlay.transform.SetAsLastSibling();
+
+            GameObject card = FindOrCreateChild(overlay.transform, "Card");
+            RectTransform cardRT = card.GetComponent<RectTransform>();
+            SetRect(cardRT, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(420, 230));
+            AddImage(cardRT, new Color(0.16f, 0.12f, 0.08f, 0.97f));
+
+            FindOrCreateText(card.transform, "MessageText", "Apakah anda yakin mau keluar?",
+                new Vector2(0, 1), new Vector2(1, 1), new Vector2(0.5f, 1f), new Vector2(0, -28), new Vector2(-32, 64), 20, TextAlignmentOptions.Center)
+                .fontStyle = FontStyles.Bold;
+
+            // "Batal" (aman, dominan) di atas — "Ya, Keluar" (destruktif) di bawah & warna
+            // kurang menonjol, sama filosofinya kayak QuitButton di menu utama.
+            Button cancelButton = BuildMenuButton(card.transform, "CancelButton", "BATAL", -8f, OrangeButton, new Vector2(340, 44), 16f);
+            Button confirmButton = BuildMenuButton(card.transform, "ConfirmButton", "YA, KELUAR", -60f, QuitButton, new Vector2(340, 40), 15f);
+
+            QuitConfirmationUI quitConfirmation = GetOrAddComponent<QuitConfirmationUI>(overlay);
+            SetSerializedRef(quitConfirmation, "_root", overlay);
+            SetSerializedRef(quitConfirmation, "_confirmButton", confirmButton);
+            SetSerializedRef(quitConfirmation, "_cancelButton", cancelButton);
+
+            AddClickSfxListener(confirmButton, audioManager, clickSfx);
+            AddClickSfxListener(cancelButton, audioManager, clickSfx);
+
+            overlay.SetActive(false);
+
+            return quitConfirmation;
         }
 
         // ---------------------------------------------------------------
@@ -306,5 +415,6 @@ namespace Alif.EditorTools
             float fontSize, TextAlignmentOptions alignment)
             => AlifDemoSceneBuilder.FindOrCreateText(parent, name, defaultText, anchorMin, anchorMax, pivot, anchoredPos, sizeDelta, fontSize, alignment);
         private static void SetSerializedRef(Object target, string fieldName, Object value) => AlifDemoSceneBuilder.SetSerializedRef(target, fieldName, value);
+        private static Sprite GetOrCreateCircleSprite(string name, Color color, int size) => AlifDemoSceneBuilder.GetOrCreateCircleSprite(name, color, size);
     }
 }

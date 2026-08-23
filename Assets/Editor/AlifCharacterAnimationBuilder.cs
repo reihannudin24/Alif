@@ -26,6 +26,7 @@ namespace Alif.EditorTools
         private const string CharactersRoot = "Assets/Sprites/Characters";
         private const string AnimationsRoot = "Assets/Animations";
         private const string CharacterDataFolder = "Assets/ScriptableObjects/Characters";
+        private const string IllustratedPortraitsFolder = "Assets/Sprites/Portraits";
 
         private const string PlayerCharacterFolder = "alif";
 
@@ -212,7 +213,11 @@ namespace Alif.EditorTools
 
             EditorUtility.SetDirty(controller);
 
-            Sprite portrait = AssetDatabase.LoadAssetAtPath<Sprite>($"{charFolder}/Idle/rotations/south.png");
+            // Prioritaskan portrait ilustrasi halus (buat dialogue box, besar & jelas) kalau ada;
+            // fallback ke sprite pixel-art south idle (dulu satu-satunya opsi, kecil & blocky)
+            // buat karakter yang belum dikasih ilustrasi portrait-nya.
+            Sprite portrait = LoadIllustratedPortrait($"{IllustratedPortraitsFolder}/{folder}.png")
+                ?? AssetDatabase.LoadAssetAtPath<Sprite>($"{charFolder}/Idle/rotations/south.png");
 
             string dataPath = $"{CharacterDataFolder}/CharacterData_{folder}.asset";
             CharacterData data = AssetDatabase.LoadAssetAtPath<CharacterData>(dataPath);
@@ -228,6 +233,38 @@ namespace Alif.EditorTools
             data.Portrait = portrait;
             data.AnimatorController = controller;
             EditorUtility.SetDirty(data);
+        }
+
+        // File baru di Assets/Sprites/Portraits/ SEHARUSNYA otomatis kena
+        // AlifBackgroundTexturePostprocessor.OnPreprocessTexture (spriteMode Single, dst) —
+        // tapi ternyata nggak selalu ke-apply pas import pertama kali (sama kasusnya kayak
+        // Logo_Alif.png dulu, kemungkinan race/urutan import batch-mode). Jadi di sini di-cek
+        // ulang & dipaksa benerin manual kalau ternyata masih salah (mis. spriteMode ke-detect
+        // "Multiple" gara-gara auto-slice per pulau alpha bawaan Unity 2D project).
+        private static Sprite LoadIllustratedPortrait(string path)
+        {
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            if (importer == null)
+            {
+                return null;
+            }
+
+            bool alreadyCorrect = importer.textureType == TextureImporterType.Sprite
+                && importer.spriteImportMode == SpriteImportMode.Single
+                && importer.filterMode == FilterMode.Bilinear;
+
+            if (!alreadyCorrect)
+            {
+                importer.textureType = TextureImporterType.Sprite;
+                importer.spriteImportMode = SpriteImportMode.Single;
+                importer.filterMode = FilterMode.Bilinear;
+                importer.alphaIsTransparency = true;
+                importer.mipmapEnabled = false;
+                importer.SaveAndReimport();
+                AssetDatabase.Refresh();
+            }
+
+            return AssetDatabase.LoadAssetAtPath<Sprite>(path);
         }
 
         // ---------------------------------------------------------------

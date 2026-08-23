@@ -19,6 +19,20 @@ namespace Alif.Core
             _target = target;
         }
 
+        /// <summary>
+        /// Langsung posisikan kamera ke target TANPA Lerp — dipakai setelah teleport instan
+        /// (mis. SceneDoor) supaya kamera nggak keliatan "diseret" ngejar jarak jauh sekaligus.
+        /// </summary>
+        public void SnapToTarget()
+        {
+            if (_target == null)
+            {
+                return;
+            }
+
+            transform.position = _target.position + _offset;
+        }
+
         private void LateUpdate()
         {
             if (_target == null)
