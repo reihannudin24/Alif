@@ -177,7 +177,9 @@ dua skor independen seperti desain lama, nonaktifkan `Use Shared Balance` pada `
 Builder juga membuat collider non-trigger untuk benda solid di **depan Stasiun**, **depan
 Warung Bu Siti**, dan **dalam Warung Bu Siti**. Collider mengikuti badan benda: meja hanya
 memblok daun mejanya, bangku ruang tunggu terpisah per bangku, dan kursi bundar memakai radius
-kecil. Karena itu celah/lantai di antara furnitur tetap bisa dipakai. Bangunan/dinding, pohon,
+kecil. Player juga memakai collider kecil di area kaki, bukan seluruh badan sprite. Karena itu
+celah/lantai di antara furnitur tetap bisa dipakai dan Alif dapat mendekati objek secara wajar.
+Bangunan/dinding, pohon,
 tiang, kasir, grill, counter dapur, steamer, dan papan menu tetap solid; lantai, paving, aspal,
 serta jalur pintu tidak diberi collider. Semua definisi berada di `AlifDemoSceneBuilder` pada
 daftar `*PropBlockers`; ubah daftar itu jika tata letak background diganti.

@@ -295,36 +295,37 @@ namespace Alif.EditorTools
 
         // Collider detail untuk tiga peta chapter 1. Semua angka adalah koordinat lokal peta
         // (sudah mempertimbangkan pivot Center dan PPU 200), sehingga otomatis ikut skala
-        // background masing-masing. Hanya benda padat yang didaftarkan; lantai, paving, aspal,
-        // dan jalur pintu sengaja TIDAK masuk daftar agar tetap dapat dilalui pemain.
+        // background masing-masing. Collider sengaja mengikuti inti benda yang menyentuh lantai
+        // (kaki meja, alas pohon, kaki tiang), bukan seluruh gambar sprite/canopy/bayangan.
+        // Lantai, paving, aspal, dan jalur pintu sengaja TIDAK masuk daftar agar tetap dilalui.
         private static readonly (string name, Vector2 center, Vector2 size)[] StasiunFrontPropBlockers =
         {
             // Tepi bawah sengaja berhenti di atas spawn keluar stasiun (local Y 0.7),
             // sehingga Alif tidak muncul menabrak collider bangunan saat pindah area.
-            ("BangunanStasiun", new Vector2(0f, 1.68f), new Vector2(5.45f, 1.34f)),
-            ("BangkuKanan", new Vector2(2.05f, -0.68f), new Vector2(0.94f, 0.32f)),
-            ("PohonKiri", new Vector2(-3.28f, -0.28f), new Vector2(0.38f, 0.72f)),
-            ("TiangListrikKiri", new Vector2(-3.25f, -0.13f), new Vector2(0.23f, 0.86f)),
-            ("TiangListrikTengahKiri", new Vector2(-1.31f, -0.20f), new Vector2(0.23f, 0.82f)),
-            ("PohonTengahKiri", new Vector2(-0.89f, -0.50f), new Vector2(0.38f, 0.70f)),
-            ("PohonTengah", new Vector2(0.64f, -0.48f), new Vector2(0.38f, 0.70f)),
-            ("TiangListrikTengahKanan", new Vector2(1.08f, -0.18f), new Vector2(0.23f, 0.82f)),
-            ("TiangListrikKanan", new Vector2(3.27f, -0.16f), new Vector2(0.23f, 0.86f)),
-            ("PohonKanan", new Vector2(3.54f, -0.49f), new Vector2(0.38f, 0.70f)),
+            ("BangunanStasiun", new Vector2(0f, 1.78f), new Vector2(5.24f, 1.14f)),
+            ("BangkuKanan", new Vector2(2.05f, -0.68f), new Vector2(0.62f, 0.16f)),
+            ("PohonKiri", new Vector2(-3.28f, -0.60f), new Vector2(0.18f, 0.18f)),
+            ("TiangListrikKiri", new Vector2(-3.25f, -0.55f), new Vector2(0.12f, 0.16f)),
+            ("TiangListrikTengahKiri", new Vector2(-1.31f, -0.58f), new Vector2(0.12f, 0.16f)),
+            ("PohonTengahKiri", new Vector2(-0.89f, -0.78f), new Vector2(0.18f, 0.18f)),
+            ("PohonTengah", new Vector2(0.64f, -0.76f), new Vector2(0.18f, 0.18f)),
+            ("TiangListrikTengahKanan", new Vector2(1.08f, -0.56f), new Vector2(0.12f, 0.16f)),
+            ("TiangListrikKanan", new Vector2(3.27f, -0.55f), new Vector2(0.12f, 0.16f)),
+            ("PohonKanan", new Vector2(3.54f, -0.76f), new Vector2(0.18f, 0.18f)),
         };
 
         private static readonly (string name, Vector2 center, Vector2 size)[] WarungFrontPropBlockers =
         {
             // Bangunan/atap menutup area yang bukan lantai. Jalur paving dan aspal di depan
             // tetap terbuka, termasuk titik trigger masuk warung yang berada di jalan.
-            ("BangunanWarung", new Vector2(0f, 1.95f), new Vector2(3.78f, 2.48f)),
-            ("MejaLuar", new Vector2(2.56f, 1.31f), new Vector2(1.25f, 1.00f)),
-            ("PangganganLuar", new Vector2(1.70f, 0.82f), new Vector2(0.66f, 0.62f)),
-            ("PohonKiriBawah", new Vector2(-3.80f, 1.80f), new Vector2(0.42f, 0.78f)),
-            ("PohonKiriAtas", new Vector2(-2.86f, 2.68f), new Vector2(0.42f, 0.84f)),
-            ("PohonKiriTengah", new Vector2(-2.20f, 1.48f), new Vector2(0.40f, 0.78f)),
-            ("PohonKanan", new Vector2(3.00f, 2.35f), new Vector2(0.52f, 0.98f)),
-            ("PalemTengahJalan", new Vector2(0.15f, -2.26f), new Vector2(0.42f, 0.76f)),
+            ("BangunanWarung", new Vector2(0f, 2.02f), new Vector2(3.54f, 2.26f)),
+            ("MejaLuar", new Vector2(2.56f, 1.31f), new Vector2(0.66f, 0.38f)),
+            ("PangganganLuar", new Vector2(1.70f, 0.82f), new Vector2(0.46f, 0.38f)),
+            ("PohonKiriBawah", new Vector2(-3.80f, 1.48f), new Vector2(0.18f, 0.18f)),
+            ("PohonKiriAtas", new Vector2(-2.86f, 2.33f), new Vector2(0.18f, 0.18f)),
+            ("PohonKiriTengah", new Vector2(-2.20f, 1.14f), new Vector2(0.18f, 0.18f)),
+            ("PohonKanan", new Vector2(3.00f, 1.95f), new Vector2(0.20f, 0.20f)),
+            ("PalemTengahJalan", new Vector2(0.15f, -2.54f), new Vector2(0.18f, 0.18f)),
         };
 
         private static readonly (string name, Vector2 center, Vector2 size)[] WarungInteriorPropBlockers =
@@ -333,29 +334,29 @@ namespace Alif.EditorTools
             // screenshot ketika Alif bisa berdiri di atas grill atau masuk ke balik kasir.
             ("DindingBelakangKiri", new Vector2(-2.45f, 2.78f), new Vector2(3.10f, 1.23f)),
             ("DindingBelakangKanan", new Vector2(1.65f, 2.78f), new Vector2(4.70f, 1.23f)),
-            ("CounterKasir", new Vector2(-3.08f, 1.72f), new Vector2(1.86f, 0.92f)),
-            ("PilarDapur", new Vector2(-0.72f, 2.02f), new Vector2(0.46f, 2.42f)),
-            ("GrillDanCounterMasak", new Vector2(1.02f, 1.68f), new Vector2(4.02f, 1.02f)),
-            ("SteamerKanan", new Vector2(3.73f, 1.55f), new Vector2(0.42f, 0.92f)),
-            ("CounterSajiKanan", new Vector2(2.90f, 0.44f), new Vector2(3.24f, 0.82f)),
-            ("PilarTengah", new Vector2(-0.72f, -0.19f), new Vector2(0.48f, 1.98f)),
+            ("CounterKasir", new Vector2(-3.08f, 1.72f), new Vector2(1.58f, 0.58f)),
+            ("PilarDapur", new Vector2(-0.72f, 2.02f), new Vector2(0.34f, 2.22f)),
+            ("GrillDanCounterMasak", new Vector2(1.02f, 1.68f), new Vector2(3.78f, 0.70f)),
+            ("SteamerKanan", new Vector2(3.73f, 1.55f), new Vector2(0.28f, 0.66f)),
+            ("CounterSajiKanan", new Vector2(2.90f, 0.44f), new Vector2(3.04f, 0.56f)),
+            ("PilarTengah", new Vector2(-0.72f, -0.19f), new Vector2(0.34f, 1.78f)),
 
             // Collider meja mengikuti daun meja saja, bukan satu kotak besar yang menyatukan
             // meja dan kursi. Lorong di antara meja-kursi jadi bisa dilewati seperti visualnya.
-            ("MejaMakanKiriAtas", new Vector2(-3.35f, 0.25f), new Vector2(0.88f, 0.46f)),
-            ("MejaMakanTengahAtas", new Vector2(-1.60f, 0.24f), new Vector2(0.54f, 0.78f)),
-            ("MejaMakanKiriTengah", new Vector2(-3.35f, -0.92f), new Vector2(0.88f, 0.46f)),
-            ("MejaMakanTengah", new Vector2(-1.72f, -0.92f), new Vector2(0.54f, 0.74f)),
-            ("MejaMakanKiriBawah", new Vector2(-3.20f, -2.02f), new Vector2(0.54f, 0.70f)),
-            ("MejaMakanTengahBawah", new Vector2(-1.66f, -2.02f), new Vector2(0.54f, 0.70f)),
-            ("KursiBundarTengah", new Vector2(-1.72f, -1.32f), new Vector2(0.28f, 0.28f)),
-            ("KursiBundarBawah", new Vector2(-0.96f, -2.26f), new Vector2(0.28f, 0.28f)),
+            ("MejaMakanKiriAtas", new Vector2(-3.35f, 0.25f), new Vector2(0.64f, 0.30f)),
+            ("MejaMakanTengahAtas", new Vector2(-1.60f, 0.24f), new Vector2(0.34f, 0.60f)),
+            ("MejaMakanKiriTengah", new Vector2(-3.35f, -0.92f), new Vector2(0.64f, 0.30f)),
+            ("MejaMakanTengah", new Vector2(-1.72f, -0.92f), new Vector2(0.34f, 0.56f)),
+            ("MejaMakanKiriBawah", new Vector2(-3.20f, -2.02f), new Vector2(0.34f, 0.52f)),
+            ("MejaMakanTengahBawah", new Vector2(-1.66f, -2.02f), new Vector2(0.34f, 0.52f)),
+            ("KursiBundarTengah", new Vector2(-1.72f, -1.32f), new Vector2(0.18f, 0.18f)),
+            ("KursiBundarBawah", new Vector2(-0.96f, -2.26f), new Vector2(0.18f, 0.18f)),
             ("PapanMenu", new Vector2(1.25f, -1.01f), new Vector2(0.34f, 0.66f)),
             // Dua bangku dibuat terpisah supaya celah visual di tengahnya tetap menjadi jalan.
-            ("BangkuRuangTungguKiri", new Vector2(2.12f, -1.10f), new Vector2(0.72f, 0.34f)),
-            ("BangkuRuangTungguKanan", new Vector2(2.96f, -1.10f), new Vector2(0.72f, 0.34f)),
-            ("TanamanRuangTunggu", new Vector2(3.72f, -1.18f), new Vector2(0.42f, 0.58f)),
-            ("BangkuKananBawah", new Vector2(3.84f, -2.05f), new Vector2(0.32f, 0.96f)),
+            ("BangkuRuangTungguKiri", new Vector2(2.12f, -1.10f), new Vector2(0.52f, 0.20f)),
+            ("BangkuRuangTungguKanan", new Vector2(2.96f, -1.10f), new Vector2(0.52f, 0.20f)),
+            ("TanamanRuangTunggu", new Vector2(3.72f, -1.42f), new Vector2(0.18f, 0.18f)),
+            ("BangkuKananBawah", new Vector2(3.84f, -2.05f), new Vector2(0.20f, 0.64f)),
         };
 
         private static void BuildBackgroundColliders(GameObject background)
@@ -979,7 +980,12 @@ namespace Alif.EditorTools
             rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
 
             CapsuleCollider2D collider = GetOrAddComponent<CapsuleCollider2D>(player);
-            collider.size = new Vector2(0.7f, 0.9f);
+            // Top-down: yang bertabrakan dengan dunia hanya "kaki" Alif, bukan seluruh
+            // gambar badannya. Collider lama 0.7 x 0.9 membuat setiap prop terasa punya
+            // zona tak terlihat yang besar dan menutup celah antar meja.
+            collider.direction = CapsuleDirection2D.Vertical;
+            collider.size = new Vector2(0.32f, 0.24f);
+            collider.offset = new Vector2(0f, -0.34f);
 
             SpriteRenderer sr = GetOrAddComponent<SpriteRenderer>(player);
             Sprite southIdle = AssetDatabase.LoadAssetAtPath<Sprite>($"{PlayerSpriteFolder}/Idle/rotations/south.png");
