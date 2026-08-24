@@ -16,6 +16,8 @@ namespace Alif.UI
     {
         [Header("Root")]
         [SerializeField] private GameObject _dialogueBoxRoot;
+        [Tooltip("RectTransform Dialogue_Panel — tingginya diubah dinamis (lihat ResizePanelForChoices) supaya tombol pilihan nggak pernah overflow ke luar box.")]
+        [SerializeField] private RectTransform _panelRect;
 
         [Header("Line Display")]
         [SerializeField] private TMP_Text _speakerNameText;
@@ -24,9 +26,19 @@ namespace Alif.UI
         [SerializeField] private Button _nextButton;
 
         [Header("Choices")]
-        [Tooltip("Prefab tombol pilihan, harus punya komponen Button + TMP_Text sebagai child.")]
+        [Tooltip("Prefab tombol pilihan, harus punya komponen Button + TMP_Text + LayoutElement sebagai child.")]
         [SerializeField] private Button _choiceButtonPrefab;
         [SerializeField] private Transform _choiceButtonContainer;
+        [Tooltip("Tinggi Dialogue_Panel saat TIDAK ada pilihan (baris dialog biasa dengan tombol Lanjut).")]
+        [SerializeField] private float _normalPanelHeight = 180f;
+        [Tooltip("Ruang di atas container pilihan yang disisakan buat nama pembicara + baris prompt (mis. \"Pilih respons Alif:\").")]
+        [SerializeField] private float _choiceTopReservedSpace = 78f;
+        [SerializeField] private float _choiceBottomPadding = 16f;
+        [SerializeField] private float _choiceButtonSpacing = 8f;
+        [Tooltip("Batas atas tinggi panel walau teks pilihan sangat panjang/banyak, supaya nggak sampai keluar layar.")]
+        [SerializeField] private float _maxChoicePanelHeight = 460f;
+        [SerializeField] private float _minChoiceButtonHeight = 44f;
+        [SerializeField] private float _choiceButtonVerticalPadding = 16f;
 
         [Header("Klik Di Luar Untuk Lanjut")]
         [Tooltip("Lapisan penuh-layar transparan di belakang portrait — klik di sini (bukan di teks/portrait/tombol) dihitung sama kayak klik Next.")]
@@ -223,16 +235,38 @@ namespace Alif.UI
                 return;
             }
 
+            // Lebar container SUDAH valid sekarang walau belum ada layout pass (anchor-nya
+            // stretch horizontal terhadap panel), jadi bisa langsung dipakai buat mengukur
+            // berapa tinggi tiap tombol butuh SEBELUM tombolnya benar-benar di-layout —
+            // menghindari delay 1 frame yang biasanya muncul kalau andalkan ContentSizeFitter.
+            RectTransform containerRect = _choiceButtonContainer as RectTransform;
+            float availableWidth = containerRect != null ? containerRect.rect.width : 800f;
+
+            float totalContentHeight = 0f;
+
             foreach (DialogueChoice choice in choices)
             {
                 Button choiceButton = Instantiate(_choiceButtonPrefab, _choiceButtonContainer);
                 choiceButton.gameObject.SetActive(true);
 
                 TMP_Text label = choiceButton.GetComponentInChildren<TMP_Text>();
+                float buttonHeight = _minChoiceButtonHeight;
                 if (label != null)
                 {
                     label.text = choice.ChoiceText;
+
+                    float textWidth = Mathf.Max(40f, availableWidth - label.margin.x - label.margin.z);
+                    Vector2 preferred = label.GetPreferredValues(textWidth, 0f);
+                    buttonHeight = Mathf.Max(_minChoiceButtonHeight, preferred.y + _choiceButtonVerticalPadding);
                 }
+
+                LayoutElement layoutElement = choiceButton.GetComponent<LayoutElement>();
+                if (layoutElement != null)
+                {
+                    layoutElement.preferredHeight = buttonHeight;
+                }
+
+                totalContentHeight += buttonHeight;
 
                 // Simpan referensi choice lewat closure supaya klik tombol memanggil choice yang benar.
                 choiceButton.onClick.AddListener(() =>
@@ -243,6 +277,34 @@ namespace Alif.UI
 
                 _spawnedChoiceButtons.Add(choiceButton.gameObject);
             }
+
+            if (choices.Count > 1)
+            {
+                totalContentHeight += _choiceButtonSpacing * (choices.Count - 1);
+            }
+
+            ResizePanelForChoices(totalContentHeight);
+        }
+
+        /// <summary>
+        /// Panel dialog anchor-nya di bawah layar (pivot bottom) jadi membesarkan sizeDelta.y
+        /// tumbuh ke ATAS, bukan menutupi HUD — dipanggil dengan tinggi total konten pilihan
+        /// (0 kalau nggak ada pilihan sama sekali, otomatis ke-clamp balik ke _normalPanelHeight).
+        /// </summary>
+        private void ResizePanelForChoices(float choicesContentHeight)
+        {
+            if (_panelRect == null)
+            {
+                return;
+            }
+
+            float targetHeight = Mathf.Clamp(
+                _choiceTopReservedSpace + choicesContentHeight + _choiceBottomPadding,
+                _normalPanelHeight, _maxChoicePanelHeight);
+
+            Vector2 size = _panelRect.sizeDelta;
+            size.y = targetHeight;
+            _panelRect.sizeDelta = size;
         }
 
         private void ClearChoiceButtons()
@@ -253,6 +315,7 @@ namespace Alif.UI
             }
 
             _spawnedChoiceButtons.Clear();
+            ResizePanelForChoices(0f);
         }
 
         private void HandleNextClicked()

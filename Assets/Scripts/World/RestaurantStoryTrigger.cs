@@ -1,7 +1,10 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Alif.Characters;
 using Alif.Dialogue;
+using Alif.Player;
 using Alif.Systems;
+using Alif.UI;
 
 namespace Alif.World
 {
@@ -25,6 +28,7 @@ namespace Alif.World
         }
 
         private const string OrderEventPrefix = "warung.order.";
+        private const string ChapterEndingSceneName = "Chapter1Ending";
 
         [Header("Dialogue")]
         [SerializeField] private DialogueData _orderDialogue;
@@ -41,8 +45,15 @@ namespace Alif.World
         [SerializeField] private int _esTehPrice = 6000;
         [SerializeField] private float _energyRestoredAfterConflict = 12f;
 
+        [Header("Raka")]
+        [Tooltip("Raka nonaktif dari awal (belum kenal Alif) — baru dimunculkan begitu Alif duduk menunggu pesanan, lihat RequestSeat/BeginConflictWithTimeSkip.")]
+        [SerializeField] private GameObject _rakaObject;
+        [SerializeField] private PlayerController _playerController;
+        [SerializeField] private string _seatTimeSkipMessage = "Beberapa saat kemudian...";
+
         private StoryState _state = StoryState.NeedOrder;
         private bool _subscribed;
+        private bool _endingTransitionStarted;
 
         private void Start()
         {
@@ -93,8 +104,41 @@ namespace Alif.World
             if (_state == StoryState.Ordered)
             {
                 _state = StoryState.ConflictPlaying;
-                DialogueManager.Instance.StartDialogue(_conflictDialogue, _alifData);
+                BeginConflictWithTimeSkip();
             }
+        }
+
+        /// <summary>
+        /// Raka belum pernah muncul di scene sebelum titik ini (nonaktif sejak dibangun scene
+        /// builder). Begitu Alif duduk, layar menghitam dulu ("Beberapa saat kemudian..."),
+        /// Raka baru diaktifkan/muncul sedang berhadapan dengan Bu Siti SELAGI layar masih hitam,
+        /// baru dialog konflik dimulai setelah layar terang lagi — supaya kemunculannya nggak
+        /// keliatan "pop-in" mendadak di depan mata pemain.
+        /// </summary>
+        private void BeginConflictWithTimeSkip()
+        {
+            if (SceneFadeController.Instance != null)
+            {
+                SceneFadeController.Instance.PlayTimeSkip(_seatTimeSkipMessage, _playerController,
+                    () =>
+                    {
+                        if (_rakaObject != null)
+                        {
+                            _rakaObject.SetActive(true);
+                        }
+                    },
+                    () => DialogueManager.Instance.StartDialogue(_conflictDialogue, _alifData));
+                return;
+            }
+
+            // Fallback kalau SceneFadeController belum ada di scene (mis. scene custom tanpa HUD
+            // lengkap) — tetap munculkan Raka & lanjut cerita walau tanpa transisi layar hitam.
+            if (_rakaObject != null)
+            {
+                _rakaObject.SetActive(true);
+            }
+
+            DialogueManager.Instance.StartDialogue(_conflictDialogue, _alifData);
         }
 
         /// <summary>Dipanggil dari papan menu. Ini hanya menampilkan menu, tanpa membuat pesanan.</summary>
@@ -177,6 +221,26 @@ namespace Alif.World
             {
                 EnergySystem.Instance.RestoreEnergy(_energyRestoredAfterConflict);
             }
+
+            StartChapterEnding();
+        }
+
+        private void StartChapterEnding()
+        {
+            if (_endingTransitionStarted)
+            {
+                return;
+            }
+
+            _endingTransitionStarted = true;
+            if (!Application.CanStreamedLevelBeLoaded(ChapterEndingSceneName))
+            {
+                Debug.LogError($"[Alif] Scene ending chapter '{ChapterEndingSceneName}' belum tersedia di Build Settings.");
+                _endingTransitionStarted = false;
+                return;
+            }
+
+            SceneManager.LoadScene(ChapterEndingSceneName);
         }
 
         private int GetPrice(string eventId)
@@ -191,47 +255,4 @@ namespace Alif.World
         }
     }
 
-    /// <summary>
-    /// Adapter kecil untuk objek interaksi di restoran. Kasir, meja, dan papan menu semuanya
-    /// meneruskan aksi ke satu RestaurantStoryTrigger yang sama.
-    /// </summary>
-    public class RestaurantStoryPoint : MonoBehaviour, IInteractable
-    {
-        public enum PointType
-        {
-            Cashier,
-            Seat,
-            Menu
-        }
-
-        [SerializeField] private RestaurantStoryTrigger _story;
-        [SerializeField] private PointType _pointType;
-
-        public void Interact()
-        {
-            if (_story == null)
-            {
-                _story = FindAnyObjectByType<RestaurantStoryTrigger>();
-            }
-
-            if (_story == null)
-            {
-                Debug.LogWarning("[Alif] RestaurantStoryTrigger tidak ditemukan.");
-                return;
-            }
-
-            switch (_pointType)
-            {
-                case PointType.Cashier:
-                    _story.RequestOrder();
-                    break;
-                case PointType.Menu:
-                    _story.RequestMenu();
-                    break;
-                default:
-                    _story.RequestSeat();
-                    break;
-            }
-        }
-    }
 }

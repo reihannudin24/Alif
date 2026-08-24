@@ -19,10 +19,13 @@ namespace Alif.UI
 
         [Header("Energy Display")]
         [SerializeField] private Slider _energySlider;
+        [SerializeField] private TMP_Text _energyPercentText;
 
         [Header("Score Display")]
         [SerializeField] private Slider _financialLogicSlider;
+        [SerializeField] private TMP_Text _financialLogicPercentText;
         [SerializeField] private Slider _shariaComplianceSlider;
+        [SerializeField] private TMP_Text _shariaCompliancePercentText;
 
         [Header("Currency Display")]
         [SerializeField] private TMP_Text _moneyText;
@@ -96,6 +99,8 @@ namespace Alif.UI
             {
                 _energySlider.value = percent01;
             }
+
+            SetPercentText(_energyPercentText, percent01);
         }
 
         private void HandleMoneyChanged(int amount)
@@ -112,6 +117,8 @@ namespace Alif.UI
             {
                 _financialLogicSlider.value = percent01;
             }
+
+            SetPercentText(_financialLogicPercentText, percent01);
         }
 
         private void HandleShariaComplianceChanged(float percent01)
@@ -120,6 +127,18 @@ namespace Alif.UI
             {
                 _shariaComplianceSlider.value = percent01;
             }
+
+            SetPercentText(_shariaCompliancePercentText, percent01);
+        }
+
+        private static void SetPercentText(TMP_Text text, float percent01)
+        {
+            if (text == null)
+            {
+                return;
+            }
+
+            text.text = $"{Mathf.RoundToInt(percent01 * 100f)}%";
         }
     }
 }

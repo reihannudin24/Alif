@@ -12,10 +12,6 @@ namespace Alif.UI
     /// </summary>
     public class MainMenuController : MonoBehaviour
     {
-        private const string HasSaveKey = "Alif_HasSave";
-        private const string HighestChapterUnlockedKey = "Alif_HighestChapterUnlocked";
-        private const string SelectedChapterKey = "Alif_SelectedChapter";
-
         [SerializeField] private Button _newGameButton;
         [SerializeField] private Button _continueButton;
         [SerializeField] private string _chapterSelectSceneName = "ChapterSelect";
@@ -35,7 +31,7 @@ namespace Alif.UI
 
             if (_continueButton != null)
             {
-                _continueButton.interactable = PlayerPrefs.GetInt(HasSaveKey, 0) == 1;
+                _continueButton.interactable = PlayerPrefs.GetInt(ChapterProgress.HasSaveKey, 0) == 1;
             }
 
             if (_audioManager != null)
@@ -46,10 +42,7 @@ namespace Alif.UI
 
         public void OnNewGameClicked()
         {
-            PlayerPrefs.SetInt(HasSaveKey, 1);
-            PlayerPrefs.SetInt(HighestChapterUnlockedKey, 1);
-            PlayerPrefs.SetInt(SelectedChapterKey, 1);
-            PlayerPrefs.Save();
+            ChapterProgress.StartNewGame();
             SceneManager.LoadScene(_chapter1CutsceneSceneName);
         }
 

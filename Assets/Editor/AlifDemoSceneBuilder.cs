@@ -41,7 +41,9 @@ namespace Alif.EditorTools
         // begitu Player "keluar" stasiun.
         private const string ExteriorBackgroundSpritePath = "Assets/Sprites/Backgrounds/Stasiun_Depan.jpg";
         private const string WarungDepanSpritePath = "Assets/Sprites/Backgrounds/WarungBuSiti_Depan.jpg";
-        private const string WarungDalamSpritePath = "Assets/Sprites/Backgrounds/WarungBuSiti_Interior.jpg";
+        // Asset PNG asli dari desain interior Warung Bu Siti. Pakai PNG agar detail pixel-art,
+        // teks menu, dan garis furnitur tidak terkena artefak kompresi JPEG.
+        private const string WarungDalamSpritePath = "Assets/Sprites/Backgrounds/WarungBuSiti_Interior.png";
         private const string TargetScenePath = "Assets/Scenes/SampleScene.unity";
 
         // Area eksterior ditaruh jauh di bawah interior (bukan scene terpisah, biar CameraFollow
@@ -152,6 +154,14 @@ namespace Alif.EditorTools
         [MenuItem("Alif/2) Build Demo Scene")]
         public static void BuildDemoScene()
         {
+            Scene activeScene = SceneManager.GetActiveScene();
+            if (activeScene.path != TargetScenePath)
+            {
+                Debug.LogError($"[Alif] Build Demo Scene dibatalkan: scene aktif '{activeScene.path}' bukan '{TargetScenePath}'. " +
+                               "Buka SampleScene terlebih dahulu agar MainMenu atau scene lain tidak tertimpa.");
+                return;
+            }
+
             // 0. Bersihkan total semua GameObject hasil generate sebelumnya dulu. Setelah 10+ kali
             // rebuild dengan skrip yang terus berubah (rename field, ganti tipe komponen, dst),
             // pendekatan "reuse kalau sudah ada" mulai nyisain sampah (referensi script yang jadi
@@ -194,7 +204,7 @@ namespace Alif.EditorTools
 
             // 5a. Chapter 1: Bu Siti sebagai kasir, Raka di dalam warung, serta titik meja
             // yang baru memicu konflik setelah pemain benar-benar memesan makanan.
-            BuildWarungRestaurantStory();
+            BuildWarungRestaurantStory(playerController);
 
             // 5b. Bangku/kursi yang bisa di-interact (nggak bisa ditembus + munculin monolog Alif).
             BuildBenches();
@@ -293,16 +303,56 @@ namespace Alif.EditorTools
             (new Vector2(1.56f, 2.195f), new Vector2(1.32f, 1.15f)),       // panel dinding kanan Toilet (disempitkan, dulu nutup gate Informasi<->Toilet)
         };
 
+        // Whitelist lantai Stasiun Interior. Kotak-kotak ini saling overlap di ambang pintu;
+        // collider solid di atasnya tetap menutup tembok, loket, bangku, ATM, dan furnitur.
+        // Dengan begitu void hitam tidak perlu ditutup oleh satu collider raksasa yang rawan
+        // ikut memakan ubin lantai di sebelahnya.
+        //
+        // "Toilet" (kuadran kanan-atas, sebelah Informasi) sebelumnya tidak terdaftar sama
+        // sekali di sini — Player jadi macet di ambang pintunya walau tidak ada tembok fisik,
+        // karena footprint tujuan gagal ContainsFootprint (tidak ada whitelist yang menutupinya).
+        // Ukuran tiap kotak juga sedikit dilebihkan (+0.2 per sumbu, center tetap) supaya ambang
+        // pintu antar-ruangan overlap lebih lega — collider solid tetap jadi otoritas akhir untuk
+        // tembok, jadi pelebaran whitelist ini tidak bisa bikin Player menembus dinding manapun.
+        private static readonly (string name, Vector2 center, Vector2 size)[] StationInteriorWalkableAreas =
+        {
+            ("Informasi", new Vector2(-3.10f, 1.66f), new Vector2(4.90f, 2.48f)),
+            ("Toilet", new Vector2(3.20f, 1.66f), new Vector2(4.70f, 2.48f)),
+            ("KoridorTengah", new Vector2(0.15f, -0.85f), new Vector2(2.40f, 7.90f)),
+            ("LoketKarcis", new Vector2(-3.10f, -2.18f), new Vector2(4.90f, 3.20f)),
+            ("RuangTunggu", new Vector2(3.20f, -2.18f), new Vector2(4.70f, 3.20f)),
+        };
+
+        // Area krem berpola ubin di depan stasiun, plus jalan aspal di bawahnya (diminta bisa
+        // dijalanin juga). Atap/badan gedung dan area di luar gambar tetap tidak termasuk lantai
+        // yang boleh diinjak. Batas "Jalan" dianalisis dari sampel piksel Stasiun_Depan.jpg
+        // (aspal ~y 610-820px dari 873px, PPU 200, pivot Center) — pas di bawah trotoar Plaza.
+        private static readonly (string name, Vector2 center, Vector2 size)[] StationFrontWalkableAreas =
+        {
+            ("Plaza", new Vector2(0f, 0.22f), new Vector2(7.72f, 2.18f)),
+            ("Jalan", new Vector2(0f, -1.39f), new Vector2(7.72f, 1.10f)),
+        };
+
         // Collider detail untuk tiga peta chapter 1. Semua angka adalah koordinat lokal peta
         // (sudah mempertimbangkan pivot Center dan PPU 200), sehingga otomatis ikut skala
         // background masing-masing. Collider sengaja mengikuti inti benda yang menyentuh lantai
         // (kaki meja, alas pohon, kaki tiang), bukan seluruh gambar sprite/canopy/bayangan.
         // Lantai, paving, aspal, dan jalur pintu sengaja TIDAK masuk daftar agar tetap dilalui.
+        // Footprint lain wajib solid supaya sprite karakter tidak tampak mengambang di atas prop.
         private static readonly (string name, Vector2 center, Vector2 size)[] StasiunFrontPropBlockers =
         {
-            // Tepi bawah sengaja berhenti di atas spawn keluar stasiun (local Y 0.7),
-            // sehingga Alif tidak muncul menabrak collider bangunan saat pindah area.
-            ("BangunanStasiun", new Vector2(0f, 1.78f), new Vector2(5.24f, 1.14f)),
+            // Facade dipisah tiga agar badan bangunan solid sampai garis lantainya, tetapi
+            // koridor pintu tengah tetap terbuka. Satu kotak lama berhenti terlalu tinggi,
+            // sehingga kaki Alif bisa masuk ke dinding dan sprite-nya terlihat mengambang.
+            ("BangunanAtas", new Vector2(0f, 1.79f), new Vector2(5.24f, 0.80f)),
+            ("FacadeKiri", new Vector2(-1.75f, 1.00f), new Vector2(2.50f, 0.82f)),
+            ("FacadeKanan", new Vector2(1.65f, 1.00f), new Vector2(2.30f, 0.82f)),
+            ("LampuTrotoarKiri", new Vector2(-3.46f, 0.91f), new Vector2(0.16f, 0.20f)),
+            ("PalemAtasKiri", new Vector2(-3.14f, 0.84f), new Vector2(0.20f, 0.20f)),
+            ("PalemPintuKiri", new Vector2(-0.89f, 0.82f), new Vector2(0.20f, 0.20f)),
+            ("PalemPintuKanan", new Vector2(0.88f, 0.82f), new Vector2(0.20f, 0.20f)),
+            ("PalemAtasKanan", new Vector2(2.31f, 0.80f), new Vector2(0.20f, 0.20f)),
+            ("PalemUjungKanan", new Vector2(3.59f, 0.79f), new Vector2(0.20f, 0.20f)),
             ("BangkuKanan", new Vector2(2.05f, -0.68f), new Vector2(0.62f, 0.16f)),
             ("PohonKiri", new Vector2(-3.28f, -0.60f), new Vector2(0.18f, 0.18f)),
             ("TiangListrikKiri", new Vector2(-3.25f, -0.55f), new Vector2(0.12f, 0.16f)),
@@ -316,11 +366,24 @@ namespace Alif.EditorTools
 
         private static readonly (string name, Vector2 center, Vector2 size)[] WarungFrontPropBlockers =
         {
-            // Bangunan/atap menutup area yang bukan lantai. Jalur paving dan aspal di depan
-            // tetap terbuka, termasuk titik trigger masuk warung yang berada di jalan.
-            ("BangunanWarung", new Vector2(0f, 2.02f), new Vector2(3.54f, 2.26f)),
-            ("MejaLuar", new Vector2(2.56f, 1.31f), new Vector2(0.66f, 0.38f)),
-            ("PangganganLuar", new Vector2(1.70f, 0.82f), new Vector2(0.46f, 0.38f)),
+            // Atap/facade dan counter dibuat terpisah agar pintu tengah tetap terbuka. Batas
+            // bawah mengikuti kaki meja/pilar, bukan tepi awning, supaya Alif tidak bisa naik
+            // ke meja seperti pada screenshot.
+            ("AtapWarung", new Vector2(0.05f, 2.52f), new Vector2(3.82f, 1.82f)),
+            ("CounterKiri", new Vector2(-0.98f, 0.78f), new Vector2(1.58f, 0.92f)),
+            ("CounterKanan", new Vector2(0.86f, 0.78f), new Vector2(1.10f, 0.92f)),
+            ("PilarKiri", new Vector2(-1.55f, 0.70f), new Vector2(0.18f, 1.15f)),
+            ("PilarPintuKiri", new Vector2(-0.27f, 0.68f), new Vector2(0.16f, 0.92f)),
+            ("PilarPintuKanan", new Vector2(0.42f, 0.68f), new Vector2(0.16f, 0.92f)),
+            ("PilarKanan", new Vector2(1.35f, 0.62f), new Vector2(0.16f, 1.18f)),
+            ("MejaLuar", new Vector2(2.53f, 1.16f), new Vector2(0.70f, 0.54f)),
+            ("PangganganLuar", new Vector2(1.70f, 0.68f), new Vector2(0.48f, 0.58f)),
+            ("MejaSampingPanggangan", new Vector2(2.06f, 0.60f), new Vector2(0.28f, 0.54f)),
+            ("BangkuBiru", new Vector2(2.02f, 1.18f), new Vector2(0.20f, 0.20f)),
+            ("BangkuCokelat", new Vector2(3.01f, 1.17f), new Vector2(0.20f, 0.20f)),
+            ("BangkuDepanKiri", new Vector2(0.20f, 0.57f), new Vector2(0.20f, 0.20f)),
+            ("BangkuDepanTengah", new Vector2(0.65f, 0.37f), new Vector2(0.20f, 0.20f)),
+            ("BangkuDepanKanan", new Vector2(1.04f, 0.34f), new Vector2(0.20f, 0.20f)),
             ("PohonKiriBawah", new Vector2(-3.80f, 1.48f), new Vector2(0.18f, 0.18f)),
             ("PohonKiriAtas", new Vector2(-2.86f, 2.33f), new Vector2(0.18f, 0.18f)),
             ("PohonKiriTengah", new Vector2(-2.20f, 1.14f), new Vector2(0.18f, 0.18f)),
@@ -330,6 +393,11 @@ namespace Alif.EditorTools
 
         private static readonly (string name, Vector2 center, Vector2 size)[] WarungInteriorPropBlockers =
         {
+            // Dua bidang hitam di bawah gambar bukan lantai. Hanya koridor pintu di tengah
+            // yang dibiarkan terbuka.
+            ("VoidKiriBawah", new Vector2(-2.36f, -2.88f), new Vector2(3.26f, 1.04f)),
+            ("VoidKananBawah", new Vector2(2.35f, -2.88f), new Vector2(3.30f, 1.04f)),
+
             // Dinding belakang dan semua counter dapur/kasir: ini mencegah kasus pada
             // screenshot ketika Alif bisa berdiri di atas grill atau masuk ke balik kasir.
             ("DindingBelakangKiri", new Vector2(-2.45f, 2.78f), new Vector2(3.10f, 1.23f)),
@@ -344,11 +412,24 @@ namespace Alif.EditorTools
             // Collider meja mengikuti daun meja saja, bukan satu kotak besar yang menyatukan
             // meja dan kursi. Lorong di antara meja-kursi jadi bisa dilewati seperti visualnya.
             ("MejaMakanKiriAtas", new Vector2(-3.35f, 0.25f), new Vector2(0.64f, 0.30f)),
+            ("KursiKiriAtasA", new Vector2(-3.62f, 0.66f), new Vector2(0.20f, 0.20f)),
+            ("KursiKiriAtasB", new Vector2(-3.16f, 0.66f), new Vector2(0.20f, 0.20f)),
+            ("KursiKiriAtasC", new Vector2(-3.66f, -0.06f), new Vector2(0.20f, 0.20f)),
+            ("KursiKiriAtasD", new Vector2(-3.22f, -0.06f), new Vector2(0.20f, 0.20f)),
             ("MejaMakanTengahAtas", new Vector2(-1.60f, 0.24f), new Vector2(0.34f, 0.60f)),
+            ("KursiTengahAtasKiri", new Vector2(-2.02f, 0.22f), new Vector2(0.20f, 0.24f)),
+            ("KursiTengahAtasKanan", new Vector2(-1.18f, 0.22f), new Vector2(0.20f, 0.24f)),
             ("MejaMakanKiriTengah", new Vector2(-3.35f, -0.92f), new Vector2(0.64f, 0.30f)),
+            ("KursiKiriTengahA", new Vector2(-3.62f, -0.52f), new Vector2(0.20f, 0.20f)),
+            ("KursiKiriTengahB", new Vector2(-3.16f, -0.52f), new Vector2(0.20f, 0.20f)),
+            ("KursiKiriTengahC", new Vector2(-3.66f, -1.22f), new Vector2(0.20f, 0.20f)),
+            ("KursiKiriTengahD", new Vector2(-3.22f, -1.22f), new Vector2(0.20f, 0.20f)),
             ("MejaMakanTengah", new Vector2(-1.72f, -0.92f), new Vector2(0.34f, 0.56f)),
             ("MejaMakanKiriBawah", new Vector2(-3.20f, -2.02f), new Vector2(0.34f, 0.52f)),
+            ("KursiKiriBawahKiri", new Vector2(-3.64f, -2.02f), new Vector2(0.20f, 0.24f)),
+            ("KursiKiriBawahKanan", new Vector2(-2.78f, -2.02f), new Vector2(0.20f, 0.24f)),
             ("MejaMakanTengahBawah", new Vector2(-1.66f, -2.02f), new Vector2(0.34f, 0.52f)),
+            ("KursiTengahBawahKiri", new Vector2(-2.08f, -2.02f), new Vector2(0.20f, 0.24f)),
             ("KursiBundarTengah", new Vector2(-1.72f, -1.32f), new Vector2(0.18f, 0.18f)),
             ("KursiBundarBawah", new Vector2(-0.96f, -2.26f), new Vector2(0.18f, 0.18f)),
             ("PapanMenu", new Vector2(1.25f, -1.01f), new Vector2(0.34f, 0.66f)),
@@ -365,7 +446,7 @@ namespace Alif.EditorTools
             for (int i = background.transform.childCount - 1; i >= 0; i--)
             {
                 Transform child = background.transform.GetChild(i);
-                if (child.name.StartsWith("VoidBlocker") || child.name.StartsWith("BoundaryWall"))
+                if (child.name.StartsWith("VoidBlocker") || child.name.StartsWith("BoundaryWall") || child.name.StartsWith("WalkableArea"))
                 {
                     Object.DestroyImmediate(child.gameObject);
                 }
@@ -377,6 +458,8 @@ namespace Alif.EditorTools
                 AddBoxBlocker(background, $"VoidBlocker_{i}", center, size);
             }
 
+            AddWalkableAreas(background, StationInteriorWalkableAreas);
+
             // Boundary luar: 4 dinding tipis di tepi gambar, biar Player nggak bisa keluar
             // dari keseluruhan gambar sama sekali (bukan cuma void di dalamnya).
             const float halfW = 5.555f;
@@ -387,6 +470,8 @@ namespace Alif.EditorTools
             AddBoxBlocker(background, "BoundaryWall_Bottom", new Vector2(0, -halfH - wallThickness / 2f), new Vector2(halfW * 2 + wallThickness * 2, wallThickness));
             AddBoxBlocker(background, "BoundaryWall_Left", new Vector2(-halfW - wallThickness / 2f, 0), new Vector2(wallThickness, halfH * 2 + wallThickness * 2));
             AddBoxBlocker(background, "BoundaryWall_Right", new Vector2(halfW + wallThickness / 2f, 0), new Vector2(wallThickness, halfH * 2 + wallThickness * 2));
+
+            AddCameraBounds(background, Vector2.zero, new Vector2(halfW, halfH));
         }
 
         private static void AddBoxBlocker(GameObject parent, string name, Vector2 localPosition, Vector2 size)
@@ -405,6 +490,34 @@ namespace Alif.EditorTools
             {
                 (string name, Vector2 center, Vector2 size) = blockers[i];
                 AddBoxBlocker(parent, $"PropBlocker_{name}", center, size);
+            }
+        }
+
+        // Dipasang satu per background root (bukan child) supaya CameraFollow bisa menemukan
+        // batas area yang sedang ditempati Player dan tidak pernah menampilkan hitam kosong di
+        // luar gambar — lihat CameraBounds.cs. center/halfExtents di sini SUDAH dalam world
+        // space (sudah memperhitungkan origin & scale area), bukan koordinat lokal seperti
+        // PropBlocker/WalkableArea.
+        private static void AddCameraBounds(GameObject root, Vector2 center, Vector2 halfExtents)
+        {
+            CameraBounds bounds = GetOrAddComponent<CameraBounds>(root);
+            SetSerializedValue(bounds, "_center", center);
+            SetSerializedValue(bounds, "_halfExtents", halfExtents);
+        }
+
+        private static void AddWalkableAreas(GameObject parent, (string name, Vector2 center, Vector2 size)[] areas)
+        {
+            for (int i = 0; i < areas.Length; i++)
+            {
+                (string name, Vector2 center, Vector2 size) = areas[i];
+                GameObject area = new GameObject($"WalkableArea_{name}");
+                area.transform.SetParent(parent.transform, false);
+                area.transform.localPosition = center;
+
+                BoxCollider2D collider = area.AddComponent<BoxCollider2D>();
+                collider.size = size;
+                collider.isTrigger = true;
+                area.AddComponent<WalkableArea>();
             }
         }
 
@@ -438,7 +551,7 @@ namespace Alif.EditorTools
             for (int i = exterior.transform.childCount - 1; i >= 0; i--)
             {
                 Transform child = exterior.transform.GetChild(i);
-                if (child.name.StartsWith("BoundaryWall") || child.name.StartsWith("PropBlocker"))
+                if (child.name.StartsWith("BoundaryWall") || child.name.StartsWith("PropBlocker") || child.name.StartsWith("WalkableArea"))
                 {
                     Object.DestroyImmediate(child.gameObject);
                 }
@@ -454,6 +567,8 @@ namespace Alif.EditorTools
             AddBoxBlocker(exterior, "BoundaryWall_Left", new Vector2(-halfW - wallThickness / 2f, 0), new Vector2(wallThickness, halfH * 2 + wallThickness * 2));
             AddBoxBlocker(exterior, "BoundaryWall_Right", new Vector2(halfW + wallThickness / 2f, 0), new Vector2(wallThickness, halfH * 2 + wallThickness * 2));
             AddPropBlockers(exterior, StasiunFrontPropBlockers);
+            AddWalkableAreas(exterior, StationFrontWalkableAreas);
+            AddCameraBounds(exterior, ExteriorOrigin, new Vector2(halfW, halfH) * StasiunDepanScale);
         }
 
         // ---------------------------------------------------------------
@@ -478,7 +593,7 @@ namespace Alif.EditorTools
         // Alur interaksi sengaja dipisah jadi Kasir -> Meja. Dengan demikian dialog konflik
         // tidak mungkin berjalan saat Alif baru masuk warung; pemain harus memilih makanan,
         // menyelesaikan pembayaran, lalu duduk menunggu pesanan terlebih dahulu.
-        private static void BuildWarungRestaurantStory()
+        private static void BuildWarungRestaurantStory(PlayerController playerController)
         {
             CharacterData alif = GetOrCreateAlifCharacterData();
             CharacterData buSiti = AssetDatabase.LoadAssetAtPath<CharacterData>($"{CharacterDataFolder}/CharacterData_bu_siti.asset");
@@ -517,12 +632,74 @@ namespace Alif.EditorTools
             // Posisi ditentukan terhadap peta WarungBuSiti_Interior (origin 40,-40; scale 1.3).
             // Bu Siti ada di depan kasir. Raka diposisikan di ubin kosong, bukan di atas counter.
             BuildRestaurantCharacter(storyRoot.transform, "BuSiti_Kasir", buSiti, new Vector2(37.25f, -38.35f), story, RestaurantStoryPoint.PointType.Cashier, true);
-            BuildRestaurantCharacter(storyRoot.transform, "Raka_Tamu", raka, new Vector2(40.90f, -40.72f), null, RestaurantStoryPoint.PointType.Cashier, false);
-            BuildRestaurantSeat(storyRoot.transform, story, new Vector2(39.45f, -40.85f));
+
+            // Raka belum "kenal" Alif di awal cerita — nonaktif dari awal scene, baru diaktifkan
+            // RestaurantStoryTrigger.BeginConflictWithTimeSkip() begitu Alif duduk menunggu
+            // pesanan (selagi layar hitam "Beberapa saat kemudian..."), bukan langsung terlihat
+            // begitu Alif masuk warung.
+            GameObject rakaGO = BuildRestaurantCharacter(storyRoot.transform, "Raka_Tamu", raka, new Vector2(40.90f, -40.72f), null, RestaurantStoryPoint.PointType.Cashier, false);
+            rakaGO.SetActive(false);
+
+            // Sebelumnya (39.45,-40.85) kegeser terlalu dekat ke PilarTengah (local -0.72,-0.19
+            // di WarungInteriorPropBlockers) — panah "InteractionArrow"-nya jadi nampak nempel
+            // di pilar/tembok, bukan di meja. Digeser ke meja "MejaMakanTengahAtas" (local
+            // -1.60,0.24) yang beneran ada di dekat jendela sesuai dialog Bu Siti ("meja dekat
+            // jendela") dan cukup jauh dari pilar.
+            BuildRestaurantSeat(storyRoot.transform, story, new Vector2(37.92f, -39.69f));
             BuildRestaurantMenu(storyRoot.transform, story, new Vector2(41.62f, -41.98f));
+            BuildWarungGrillAroma(storyRoot.transform);
+
+            SetSerializedRef(story, "_rakaObject", rakaGO);
+            SetSerializedRef(story, "_playerController", playerController);
         }
 
-        private static void BuildRestaurantCharacter(Transform parent, string name, CharacterData characterData, Vector2 position,
+        // Titik interact di depan panggangan sate/ayam geprek Warung Dalam — cuma monolog Alif
+        // soal wangi masakannya, nggak ada efek gameplay. Posisi ada di dalam footprint
+        // "GrillDanCounterMasak" (WarungInteriorPropBlockers) yang sudah solid, jadi Player nggak
+        // perlu bisa berdiri tepat di titik ini — cukup dalam radius interact dari tepi counter.
+        private static readonly Vector2 WarungGrillInteractPosition = new Vector2(40.0f, -37.82f);
+
+        private static void BuildWarungGrillAroma(Transform parent)
+        {
+            DialogueData dialogue = GetOrCreateGrillAromaDialogue();
+            CharacterData alifData = GetOrCreateAlifCharacterData();
+
+            GameObject grill = FindOrCreateWorldChild(parent, "GrillMasakan_Interact");
+            grill.transform.position = new Vector3(WarungGrillInteractPosition.x, WarungGrillInteractPosition.y, 0f);
+            grill.layer = LayerIndexInteractable;
+
+            BoxCollider2D collider = GetOrAddComponent<BoxCollider2D>(grill);
+            collider.size = new Vector2(1.0f, 0.35f);
+
+            InteractableObject interactable = GetOrAddComponent<InteractableObject>(grill);
+            SetSerializedRef(interactable, "_dialogue", dialogue);
+            SetSerializedRef(interactable, "_speakerData", alifData);
+
+            AddInteractionArrow(grill.transform, new Vector2(0f, 0.4f));
+        }
+
+        private static DialogueData GetOrCreateGrillAromaDialogue()
+        {
+            string path = $"{DialogueDataFolder}/DialogueData_GrillAroma.asset";
+            DialogueData data = AssetDatabase.LoadAssetAtPath<DialogueData>(path);
+            if (data != null)
+            {
+                return data;
+            }
+
+            data = ScriptableObject.CreateInstance<DialogueData>();
+            data.Lines.Add(new DialogueLine
+            {
+                SpeakerName = "Alif",
+                Text = "Wangi banget... ayam geprek dan sate yang lagi dipanggang ini bikin makin lapar."
+            });
+
+            EnsureFolder(DialogueDataFolder);
+            AssetDatabase.CreateAsset(data, path);
+            return data;
+        }
+
+        private static GameObject BuildRestaurantCharacter(Transform parent, string name, CharacterData characterData, Vector2 position,
             RestaurantStoryTrigger story, RestaurantStoryPoint.PointType pointType, bool isInteractable)
         {
             GameObject character = FindOrCreateWorldChild(parent, name);
@@ -542,7 +719,7 @@ namespace Alif.EditorTools
             if (!isInteractable)
             {
                 character.layer = 0;
-                return;
+                return character;
             }
 
             character.layer = LayerIndexInteractable;
@@ -550,6 +727,7 @@ namespace Alif.EditorTools
             SetSerializedRef(point, "_story", story);
             SetSerializedValue(point, "_pointType", (int)pointType);
             AddInteractionArrow(character.transform, new Vector2(0f, 1.0f));
+            return character;
         }
 
         private static void BuildRestaurantSeat(Transform parent, RestaurantStoryTrigger story, Vector2 position)
@@ -870,6 +1048,8 @@ namespace Alif.EditorTools
             {
                 AddPropBlockers(root, WarungInteriorPropBlockers);
             }
+
+            AddCameraBounds(root, origin, new Vector2(halfW, halfH) * scale);
         }
 
         // ---------------------------------------------------------------
@@ -909,12 +1089,12 @@ namespace Alif.EditorTools
 
             // --- Warung Bu Siti Depan <-> Dalam (interact di depan warung) ---
             GameObject warungLuarSpawnGO = FindOrCreateWorldChild(doorsRoot.transform, "WarungLuarSpawn");
-            warungLuarSpawnGO.transform.position = new Vector3(WarungDepanOrigin.x - 0.5f * WarungDepanScale, WarungDepanOrigin.y - 1.4f * WarungDepanScale, 0f);
+            warungLuarSpawnGO.transform.position = new Vector3(WarungDepanOrigin.x + 0.08f * WarungDepanScale, WarungDepanOrigin.y + 0.18f * WarungDepanScale, 0f);
 
             GameObject warungDalamSpawnGO = FindOrCreateWorldChild(doorsRoot.transform, "WarungDalamSpawn");
             warungDalamSpawnGO.transform.position = new Vector3(WarungDalamOrigin.x - 0.5f * WarungDalamScale, WarungDalamOrigin.y - 2.6f * WarungDalamScale, 0f);
 
-            BuildDoorTrigger(doorsRoot.transform, "Door_MasukWarung", new Vector2(WarungDepanOrigin.x - 0.5f * WarungDepanScale, WarungDepanOrigin.y - 1.0f * WarungDepanScale), new Vector2(1.0f, 0.4f) * WarungDepanScale, warungDalamSpawnGO.transform, "Masuk ke Warung Bu Siti?");
+            BuildDoorTrigger(doorsRoot.transform, "Door_MasukWarung", new Vector2(WarungDepanOrigin.x + 0.08f * WarungDepanScale, WarungDepanOrigin.y + 0.48f * WarungDepanScale), new Vector2(0.48f, 0.34f) * WarungDepanScale, warungDalamSpawnGO.transform, "Masuk ke Warung Bu Siti?");
             BuildDoorTrigger(doorsRoot.transform, "Door_KeluarWarung", new Vector2(WarungDalamOrigin.x - 0.5f * WarungDalamScale, WarungDalamOrigin.y - 2.9f * WarungDalamScale), new Vector2(1.0f, 0.4f) * WarungDalamScale, warungLuarSpawnGO.transform, "Keluar dari Warung Bu Siti?");
         }
 
@@ -978,6 +1158,7 @@ namespace Alif.EditorTools
             rb.gravityScale = 0f;
             rb.freezeRotation = true;
             rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            rb.interpolation = RigidbodyInterpolation2D.Interpolate;
 
             CapsuleCollider2D collider = GetOrAddComponent<CapsuleCollider2D>(player);
             // Top-down: yang bertabrakan dengan dunia hanya "kaki" Alif, bukan seluruh
@@ -1405,6 +1586,7 @@ namespace Alif.EditorTools
             // DialogueManager walaupun panel visualnya (dialoguePanel) sedang disembunyikan.
             DialogueUI dialogueUI = GetOrAddComponent<DialogueUI>(canvasGO);
             SetSerializedRef(dialogueUI, "_dialogueBoxRoot", dialoguePanel);
+            SetSerializedRef(dialogueUI, "_panelRect", dialoguePanel.GetComponent<RectTransform>());
             SetSerializedRef(dialogueUI, "_speakerNameText", dialoguePanel.transform.Find("SpeakerNameText")?.GetComponent<TMP_Text>());
             SetSerializedRef(dialogueUI, "_dialogueText", dialoguePanel.transform.Find("DialogueText")?.GetComponent<TMP_Text>());
             SetSerializedRef(dialogueUI, "_portraitImage", dialoguePortraitImage);
@@ -1412,6 +1594,13 @@ namespace Alif.EditorTools
             SetSerializedRef(dialogueUI, "_choiceButtonContainer", dialoguePanel.transform.Find("ChoiceButtonContainer"));
             SetSerializedRef(dialogueUI, "_choiceButtonPrefab", GetOrCreateChoiceButtonPrefab());
             SetSerializedRef(dialogueUI, "_advanceCatcherButton", advanceCatcherButton);
+            SetSerializedValue(dialogueUI, "_normalPanelHeight", NormalPanelHeight);
+            SetSerializedValue(dialogueUI, "_choiceTopReservedSpace", ChoiceTopReservedSpace);
+            SetSerializedValue(dialogueUI, "_choiceBottomPadding", ChoiceBottomPadding);
+            SetSerializedValue(dialogueUI, "_choiceButtonSpacing", ChoiceButtonSpacing);
+            SetSerializedValue(dialogueUI, "_maxChoicePanelHeight", MaxChoicePanelHeight);
+            SetSerializedValue(dialogueUI, "_minChoiceButtonHeight", MinChoiceButtonHeight);
+            SetSerializedValue(dialogueUI, "_choiceButtonVerticalPadding", ChoiceButtonVerticalPadding);
             SetSerializedRef(dialogueUI, "_audioManager", audioManager);
             SetSerializedRef(dialogueUI, "_buttonClickSfx", clickSfx);
 
@@ -1456,6 +1645,7 @@ namespace Alif.EditorTools
 
             SceneFadeController fadeController = GetOrAddComponent<SceneFadeController>(overlay);
             SetSerializedRef(fadeController, "_fadeCanvasGroup", canvasGroup);
+            SetSerializedRef(fadeController, "_fadeText", loadingText);
         }
 
         // ---------------------------------------------------------------
@@ -1736,10 +1926,12 @@ namespace Alif.EditorTools
                 new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, 1), new Vector2(12, -10), new Vector2(-12, 24), 16, TextAlignmentOptions.Left);
 
             // Tiga bar diberi label kecil di atasnya (dulu cuma Energy sendirian jadi nggak
-            // perlu label; sekarang ada 3 bar sekaligus, tanpa label bakal ambigu).
-            Slider energySlider = BuildLabeledSlider(panel.transform, "Energy", "Energi", -34, new Color(0.45f, 0.75f, 0.35f, 1f));
-            Slider financialLogicSlider = BuildLabeledSlider(panel.transform, "FinancialLogic", "Logika Finansial", -68, new Color(0.35f, 0.6f, 0.85f, 1f));
-            Slider shariaComplianceSlider = BuildLabeledSlider(panel.transform, "ShariaCompliance", "Kepatuhan Syariah", -102, new Color(0.85f, 0.65f, 0.25f, 1f));
+            // perlu label; sekarang ada 3 bar sekaligus, tanpa label bakal ambigu). Tiap label
+            // juga dikasih angka persentase di ujung kanan baris yang sama — bar visual doang
+            // susah dibedain pas nilainya udah tinggal sedikit (misal energi kritis).
+            (Slider energySlider, TextMeshProUGUI energyPercentText) = BuildLabeledSlider(panel.transform, "Energy", "Energi", -34, new Color(0.45f, 0.75f, 0.35f, 1f));
+            (Slider financialLogicSlider, TextMeshProUGUI financialLogicPercentText) = BuildLabeledSlider(panel.transform, "FinancialLogic", "Logika Finansial", -68, new Color(0.35f, 0.6f, 0.85f, 1f));
+            (Slider shariaComplianceSlider, TextMeshProUGUI shariaCompliancePercentText) = BuildLabeledSlider(panel.transform, "ShariaCompliance", "Kepatuhan Syariah", -102, new Color(0.85f, 0.65f, 0.25f, 1f));
 
             TextMeshProUGUI balanceHint = FindOrCreateText(panel.transform, "BalanceHint", "NERACA: 100% TOTAL • IDEAL 50% / 50%",
                 new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, 1), new Vector2(12, -136), new Vector2(-12, 14), 9, TextAlignmentOptions.Left);
@@ -1755,8 +1947,11 @@ namespace Alif.EditorTools
             HUDController hud = GetOrAddComponent<HUDController>(panel);
             SetSerializedRef(hud, "_dayWeekText", dayWeekText);
             SetSerializedRef(hud, "_energySlider", energySlider);
+            SetSerializedRef(hud, "_energyPercentText", energyPercentText);
             SetSerializedRef(hud, "_financialLogicSlider", financialLogicSlider);
+            SetSerializedRef(hud, "_financialLogicPercentText", financialLogicPercentText);
             SetSerializedRef(hud, "_shariaComplianceSlider", shariaComplianceSlider);
+            SetSerializedRef(hud, "_shariaCompliancePercentText", shariaCompliancePercentText);
             SetSerializedRef(hud, "_moneyText", moneyText);
 
             return panel;
@@ -1783,11 +1978,18 @@ namespace Alif.EditorTools
         // Label kecil + progress bar di bawahnya, dipakai buat Energy, Financial Logic (skor
         // logika bisnis argumen pemain di minigame AI Detektif), dan Sharia Compliance (skor
         // bebas Riba/Gharar/Maysir) — beda warna fill per bar biar gampang dibedain sekilas.
-        private static Slider BuildLabeledSlider(Transform parent, string name, string label, float topY, Color fillColor)
+        private static (Slider slider, TextMeshProUGUI percentText) BuildLabeledSlider(Transform parent, string name, string label, float topY, Color fillColor)
         {
             FindOrCreateText(parent, $"{name}Label", label,
-                new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, 1), new Vector2(12, topY), new Vector2(-12, 14), 11, TextAlignmentOptions.Left)
+                new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, 1), new Vector2(12, topY), new Vector2(-68, 14), 11, TextAlignmentOptions.Left)
                 .color = new Color(1f, 1f, 1f, 0.75f);
+
+            // Angka persentase di ujung kanan baris label yang sama — HUDController mengisi ini
+            // tiap kali sistem terkait berubah (lihat Handle*Changed).
+            TextMeshProUGUI percentText = FindOrCreateText(parent, $"{name}PercentText", "100%",
+                new Vector2(1, 1), new Vector2(1, 1), new Vector2(1, 1), new Vector2(-12, topY), new Vector2(50, 14), 11, TextAlignmentOptions.Right);
+            percentText.color = new Color(1f, 1f, 1f, 0.92f);
+            percentText.fontStyle = FontStyles.Bold;
 
             GameObject sliderGO = FindOrCreateChild(parent, $"{name}Slider");
             RectTransform sliderRT = sliderGO.GetComponent<RectTransform>() ?? sliderGO.AddComponent<RectTransform>();
@@ -1821,7 +2023,7 @@ namespace Alif.EditorTools
 
             slider.fillRect = fillRT;
 
-            return slider;
+            return (slider, percentText);
         }
 
         private static GameObject BuildInventory(Transform canvasTransform)
@@ -1875,11 +2077,23 @@ namespace Alif.EditorTools
             return slotUI;
         }
 
+        // Nilai-nilai ini juga di-set ke field DialogueUI yang sama namanya (lihat pemanggilan
+        // SetSerializedValue di BuildCanvas) supaya panel dialog & tombol pilihan selalu sinkron
+        // dengan layout yang dibangun di sini — satu sumber angka, bukan dua yang harus diubah
+        // manual berbarengan tiap kali di-tweak.
+        private const float ChoiceTopReservedSpace = 78f; // ruang di atas container: nama pembicara + baris "Pilih respons Alif:".
+        private const float ChoiceButtonSpacing = 8f;
+        private const float ChoiceBottomPadding = 16f;
+        private const float NormalPanelHeight = 180f;
+        private const float MaxChoicePanelHeight = 460f;
+        private const float MinChoiceButtonHeight = 44f;
+        private const float ChoiceButtonVerticalPadding = 16f;
+
         private static (GameObject, Image) BuildDialoguePanel(Transform canvasTransform, AudioManager audioManager, AudioClip clickSfx)
         {
             GameObject panel = FindOrCreateChild(canvasTransform, "Dialogue_Panel");
             RectTransform panelRT = panel.GetComponent<RectTransform>() ?? panel.AddComponent<RectTransform>();
-            SetRect(panelRT, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0, 110), new Vector2(900, 180));
+            SetRect(panelRT, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0, 110), new Vector2(900, NormalPanelHeight));
             Image panelImage = AddImage(panelRT, new Color(0f, 0f, 0f, 0.8f));
 
             // Panel background sendiri juga bisa diklik buat "lanjut" (area box yang nggak ke-
@@ -1913,11 +2127,20 @@ namespace Alif.EditorTools
             SetRect(nextRT, new Vector2(1, 0), new Vector2(1, 0), new Vector2(1, 0), new Vector2(-16, 12), new Vector2(110, 32));
             AddClickSfxListener(nextButtonGO.GetComponent<Button>(), audioManager, clickSfx);
 
+            // Container-nya sengaja anchor top-left TANPA stretch vertikal (anchorMin.y ==
+            // anchorMax.y) — dulu ini fixed 60px dari bawah panel, jadi begitu ada 3 pilihan
+            // (ukuran normal cerita chapter 1), tombol2-nya overflow ke LUAR box dialog dan
+            // kelihatan sebagai teks polos nempel di atas dunia game (nggak ada kotak/warna
+            // sama sekali). Sekarang tingginya di-hitung & di-set manual dari DialogueUI
+            // (lihat ResizePanelForChoices) berdasarkan jumlah & panjang teks tiap pilihan,
+            // lalu panel dialog-nya ikut membesar ke atas supaya semuanya tetap di dalam box.
             GameObject choiceContainer = FindOrCreateChild(panel.transform, "ChoiceButtonContainer");
             RectTransform choiceRT = choiceContainer.GetComponent<RectTransform>() ?? choiceContainer.AddComponent<RectTransform>();
-            SetRect(choiceRT, new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 0), new Vector2(textLeft, 12), new Vector2(-32 - (textLeft - 16), 60));
+            SetRect(choiceRT, new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, 1), new Vector2(textLeft, -ChoiceTopReservedSpace), new Vector2(-(textLeft + 16), 0));
             VerticalLayoutGroup vlg = GetOrAddComponent<VerticalLayoutGroup>(choiceContainer);
-            vlg.spacing = 4f;
+            vlg.spacing = ChoiceButtonSpacing;
+            vlg.childControlWidth = true;
+            vlg.childControlHeight = true;
             vlg.childForceExpandWidth = true;
             vlg.childForceExpandHeight = false;
 
@@ -2015,22 +2238,43 @@ namespace Alif.EditorTools
             return catcherButton;
         }
 
+        // Rebuild PENUH tiap kali dipanggil (bukan cuma "kalau belum ada") — style lama (kotak
+        // abu polos 200x28, teks center, nggak ada padding) itu sebabnya waktu ada 3 pilihan
+        // panjang, tombolnya kepotong/numpuk jadi teks polos tanpa kotak. Style baru: warna
+        // senada HUD (coklat hangat), teks rata-kiri + word-wrap + padding, tinggi minimum lebih
+        // besar (dipakai LayoutElement, tinggi aktualnya dihitung ulang per baris di DialogueUI
+        // berdasarkan panjang teks — lihat ResizePanelForChoices), dan warna hover/pressed biar
+        // ada umpan balik visual pas disentuh.
         private static Button GetOrCreateChoiceButtonPrefab()
         {
-            Button existing = AssetDatabase.LoadAssetAtPath<GameObject>(ChoicePrefabPath)?.GetComponent<Button>();
-            if (existing != null)
-            {
-                return existing;
-            }
+            GameObject existingAsset = AssetDatabase.LoadAssetAtPath<GameObject>(ChoicePrefabPath);
+            GameObject temp = existingAsset != null ? Object.Instantiate(existingAsset) : new GameObject("ChoiceButtonTemplate", typeof(RectTransform));
+            temp.name = "ChoiceButtonTemplate";
 
-            GameObject temp = new GameObject("ChoiceButtonTemplate", typeof(RectTransform));
-            RectTransform rt = temp.GetComponent<RectTransform>();
-            rt.sizeDelta = new Vector2(200, 28);
-            AddImage(rt, new Color(0.3f, 0.3f, 0.3f, 0.9f));
-            Button button = temp.AddComponent<Button>();
+            RectTransform rt = temp.GetComponent<RectTransform>() ?? temp.AddComponent<RectTransform>();
+            rt.sizeDelta = new Vector2(820, MinChoiceButtonHeight);
+
+            Image bgImage = AddImage(rt, new Color(0.36f, 0.24f, 0.14f, 0.95f));
+
+            Button button = GetOrAddComponent<Button>(temp);
+            button.targetGraphic = bgImage;
+            button.transition = Selectable.Transition.ColorTint;
+            ColorBlock colors = button.colors;
+            colors.normalColor = new Color(0.36f, 0.24f, 0.14f, 0.95f);
+            colors.highlightedColor = new Color(0.52f, 0.36f, 0.20f, 1f);
+            colors.pressedColor = new Color(0.24f, 0.15f, 0.08f, 1f);
+            colors.selectedColor = colors.highlightedColor;
+            colors.fadeDuration = 0.08f;
+            button.colors = colors;
+
+            LayoutElement layoutElement = GetOrAddComponent<LayoutElement>(temp);
+            layoutElement.minHeight = MinChoiceButtonHeight;
 
             TextMeshProUGUI label = FindOrCreateText(temp.transform, "Label", "Pilihan",
-                new Vector2(0, 0), new Vector2(1, 1), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, 14, TextAlignmentOptions.Center);
+                new Vector2(0, 0), new Vector2(1, 1), new Vector2(0, 0.5f), Vector2.zero, Vector2.zero, 14, TextAlignmentOptions.MidlineLeft);
+            label.enableWordWrapping = true;
+            label.margin = new Vector4(16, 8, 16, 8);
+            label.raycastTarget = false;
 
             EnsureFolder("Assets/Prefabs/UI");
             GameObject prefab = PrefabUtility.SaveAsPrefabAsset(temp, ChoicePrefabPath);
@@ -2272,6 +2516,15 @@ namespace Alif.EditorTools
             SerializedProperty prop = so.FindProperty(fieldName);
             if (prop == null) return;
             prop.vector3Value = value;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void SetSerializedValue(Object target, string fieldName, Vector2 value)
+        {
+            var so = new SerializedObject(target);
+            SerializedProperty prop = so.FindProperty(fieldName);
+            if (prop == null) return;
+            prop.vector2Value = value;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 

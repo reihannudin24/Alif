@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using TMPro;
+using Alif.Core;
 
 namespace Alif.UI
 {
@@ -55,6 +56,10 @@ namespace Alif.UI
         [SerializeField] private GameObject _introTextRoot;
         [SerializeField] private TMP_Text _introText;
         [SerializeField] private string _nextSceneName = "SampleScene";
+        [Header("Chapter completion")]
+        [Tooltip("0 untuk cutscene pembuka. Isi nomor chapter untuk cutscene penutup.")]
+        [SerializeField] private int _completedChapterNumber;
+        [SerializeField] private bool _unlockNextChapterOnFinish;
 
         private int _sceneIndex;
         private int _partIndex;
@@ -87,7 +92,7 @@ namespace Alif.UI
             _sceneIndex++;
             if (_sceneIndex >= _scenes.Length)
             {
-                SceneManager.LoadScene(_nextSceneName);
+                FinishCutscene();
                 return;
             }
 
@@ -96,6 +101,22 @@ namespace Alif.UI
 
         public void OnSkipClicked()
         {
+            FinishCutscene();
+        }
+
+        private void FinishCutscene()
+        {
+            if (_completedChapterNumber > 0)
+            {
+                ChapterProgress.CompleteChapter(_completedChapterNumber, _unlockNextChapterOnFinish);
+            }
+
+            if (string.IsNullOrEmpty(_nextSceneName) || !Application.CanStreamedLevelBeLoaded(_nextSceneName))
+            {
+                Debug.LogError($"[Alif] Scene tujuan cutscene '{_nextSceneName}' tidak tersedia di Build Settings.");
+                return;
+            }
+
             SceneManager.LoadScene(_nextSceneName);
         }
 

@@ -3,6 +3,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using Alif.Characters;
 using Alif.UI;
+using Alif.World;
 
 namespace Alif.Player
 {
@@ -57,6 +58,8 @@ namespace Alif.Player
         private InputAction _interactAction;
         private Vector2 _moveInput;
         private FacingDirection _currentFacing = FacingDirection.South;
+        private Vector2 _feetOffset;
+        private Vector2 _feetHalfExtents = new Vector2(0.16f, 0.12f);
 
         // Bendera sederhana untuk mengunci input pergerakan, misalnya saat dialog sedang berlangsung.
         private bool _movementLocked = false;
@@ -64,6 +67,18 @@ namespace Alif.Player
         private void Awake()
         {
             _rigidbody = GetComponent<Rigidbody2D>();
+
+            CapsuleCollider2D feetCollider = GetComponent<CapsuleCollider2D>();
+            if (feetCollider != null)
+            {
+                _feetOffset = feetCollider.offset;
+                _feetHalfExtents = feetCollider.size * 0.5f;
+            }
+
+            // Physics2D biasanya berjalan 50 Hz, sedangkan render umumnya 60 Hz atau lebih.
+            // Tanpa interpolation, sprite terlihat melompat antar-tick saat berjalan dan
+            // kamera yang mengikuti Player ikut tampak tersendat.
+            _rigidbody.interpolation = RigidbodyInterpolation2D.Interpolate;
 
             if (_playerAnimation == null)
             {
@@ -144,9 +159,52 @@ namespace Alif.Player
                 return;
             }
 
-            // Normalize supaya gerak diagonal tidak lebih cepat dari gerak lurus.
+            // Normalize supaya gerak diagonal tidak lebih cepat dari gerak lurus. WalkableArea
+            // menjadi whitelist lantai; collider physics biasa tetap menangani tembok/objek.
             Vector2 velocity = _moveInput.normalized * _moveSpeed;
+            velocity = ConstrainVelocityToWalkableFloor(velocity);
             _rigidbody.linearVelocity = velocity;
+        }
+
+        private Vector2 ConstrainVelocityToWalkableFloor(Vector2 requestedVelocity)
+        {
+            if (requestedVelocity.sqrMagnitude < 0.0001f)
+            {
+                return Vector2.zero;
+            }
+
+            Vector2 currentFeet = _rigidbody.position + _feetOffset;
+
+            // Hanya aktif ketika Player sedang berada di map yang punya whitelist lantai.
+            // Area lain yang belum dimigrasikan tetap berjalan dengan collider lamanya.
+            if (!WalkableArea.ContainsPoint(currentFeet))
+            {
+                return requestedVelocity;
+            }
+
+            Vector2 displacement = requestedVelocity * Time.fixedDeltaTime;
+            if (WalkableArea.ContainsFootprint(currentFeet + displacement, _feetHalfExtents))
+            {
+                return requestedVelocity;
+            }
+
+            // Coba tiap sumbu terpisah supaya Player tetap bisa meluncur menyusuri tepi lantai,
+            // alih-alih terasa tersangkut total ketika input diagonal menyentuh batas.
+            Vector2 xVelocity = new Vector2(requestedVelocity.x, 0f);
+            Vector2 yVelocity = new Vector2(0f, requestedVelocity.y);
+            bool canMoveX = Mathf.Abs(xVelocity.x) > 0.0001f
+                && WalkableArea.ContainsFootprint(currentFeet + xVelocity * Time.fixedDeltaTime, _feetHalfExtents);
+            bool canMoveY = Mathf.Abs(yVelocity.y) > 0.0001f
+                && WalkableArea.ContainsFootprint(currentFeet + yVelocity * Time.fixedDeltaTime, _feetHalfExtents);
+
+            if (canMoveX && canMoveY)
+            {
+                return Mathf.Abs(requestedVelocity.x) >= Mathf.Abs(requestedVelocity.y) ? xVelocity : yVelocity;
+            }
+
+            if (canMoveX) return xVelocity;
+            if (canMoveY) return yVelocity;
+            return Vector2.zero;
         }
 
         /// <summary>
@@ -213,7 +271,17 @@ namespace Alif.Player
 
             foreach (Collider2D hit in hits)
             {
-                float distance = Vector2.Distance(transform.position, hit.transform.position);
+                // Layer saja tidak cukup: collider dekorasi yang keliru masuk layer Interactable
+                // tidak boleh "mencuri" target terdekat dari Bu Siti/NPC yang valid.
+                if (GetInteractable(hit) == null)
+                {
+                    continue;
+                }
+
+                // Ukur ke tepi collider, bukan pivot. Ini membuat interaksi pada kasir/meja besar
+                // tetap bekerja ketika Player sudah dekat sisi visualnya.
+                Vector2 closestPoint = hit.ClosestPoint(transform.position);
+                float distance = Vector2.Distance(transform.position, closestPoint);
                 if (distance < nearestDistance)
                 {
                     nearestDistance = distance;
@@ -235,7 +303,7 @@ namespace Alif.Player
                 return;
             }
 
-            IInteractable interactable = nearest.GetComponent<IInteractable>();
+            IInteractable interactable = GetInteractable(nearest);
             interactable?.Interact();
         }
 
@@ -308,14 +376,30 @@ namespace Alif.Player
                 return;
             }
 
-            float distance = Vector2.Distance(transform.position, hit.transform.position);
+            IInteractable interactable = GetInteractable(hit);
+            if (interactable == null)
+            {
+                return;
+            }
+
+            float distance = Vector2.Distance(transform.position, hit.ClosestPoint(transform.position));
             if (distance > _interactRadius)
             {
                 return;
             }
 
-            IInteractable interactable = hit.GetComponent<IInteractable>();
             interactable?.Interact();
+        }
+
+        private static IInteractable GetInteractable(Collider2D collider)
+        {
+            if (collider == null)
+            {
+                return null;
+            }
+
+            IInteractable interactable = collider.GetComponent<IInteractable>();
+            return interactable ?? collider.GetComponentInParent<IInteractable>();
         }
 
         /// <summary>

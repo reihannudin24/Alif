@@ -1,0 +1,463 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7e7e8abb4e4b043c08377bbf1eb960b6, type: 3}
+  m_Name: DialogueData_Chapter2_DimasPinjol
+  m_EditorClassIdentifier: Assembly-CSharp::Alif.Dialogue.DialogueData
+  Lines:
+  - SpeakerName: Narator
+    SpeakerData: {fileID: 0}
+    Text: '[Di dalam kamar, Dimas menutup pintu pelan. Ia duduk di tepi kursi sambil
+      menggenggam ponsel, lalu menunjukkan layar aplikasi kepada Alif.]'
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Dimas
+    SpeakerData: {fileID: 11400000, guid: b029c455191ad4c42b0dcaa19f995a4c, type: 2}
+    Text: Makasih sudah mau masuk, Lif. Aku sebenarnya malu cerita, tapi sejak tadi
+      kepalaku buntu.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Nggak apa-apa. Kita lihat pelan-pelan. Kamu sedang butuh apa, dan seberapa
+      mendesak?
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Dimas
+    SpeakerData: {fileID: 11400000, guid: b029c455191ad4c42b0dcaa19f995a4c, type: 2}
+    Text: Besok aku harus ikut perjalanan wajib ke Jogja. Ongkos, penginapan, sama
+      kebutuhan di sana kurang tepat Rp2.000.000. Kalau nggak ikut, urusan kampusku
+      bisa tertunda.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Dimas
+    SpeakerData: {fileID: 11400000, guid: b029c455191ad4c42b0dcaa19f995a4c, type: 2}
+    Text: Di aplikasi ini ada 'Dana Kilat'. Katanya cukup KTP, cair beberapa menit.
+      Aku tinggal tekan ajukan dan izinkan akses kontak.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Apa respons pertama Alif?
+    Choices:
+    - ChoiceText: Tenangkan Dimas, lalu tanyakan kebutuhan dan tenggatnya satu per
+        satu.
+      NextLineIndex: 6
+      AffinityChange: 0
+      FinancialLogicChange: 4
+      ShariaComplianceChange: 4
+      BalanceCorrection: 6
+      EventId: 
+      OutcomeText: Pendekatan tenang membuka ruang untuk keputusan yang jernih.
+    - ChoiceText: Langsung bilang semua pinjaman pasti buruk tanpa melihat situasinya.
+      NextLineIndex: 7
+      AffinityChange: 0
+      FinancialLogicChange: 0
+      ShariaComplianceChange: 2
+      BalanceCorrection: -4
+      EventId: 
+      OutcomeText: Niatnya mencegah, tetapi Dimas belum merasa didengar.
+    - ChoiceText: Suruh Dimas ambil saja karena kebutuhan besok mendesak.
+      NextLineIndex: 8
+      AffinityChange: 0
+      FinancialLogicChange: -6
+      ShariaComplianceChange: -6
+      BalanceCorrection: 0
+      EventId: 
+      OutcomeText: Kecepatan dipilih tanpa memahami biaya dan risikonya.
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: 'Aku paham kamu panik. Sebelum menekan apa pun, kita pisahkan dulu: kebutuhan
+      wajib, waktunya, dan pilihan yang masih tersedia.'
+    Choices: []
+    NextLineIndex: 9
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Dimas, jangan. Pokoknya pinjaman begitu jelek. Tapi... maaf, aku tetap
+      perlu dengar dulu apa yang membuatmu terdesak.
+    Choices: []
+    NextLineIndex: 9
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Kalau hanya melihat tenggat, tombol cair memang terasa paling cepat. Tapi
+      keputusan dua juta rupiah nggak aman kalau kontraknya belum dibaca.
+    Choices: []
+    NextLineIndex: 9
+  - SpeakerName: Dimas
+    SpeakerData: {fileID: 11400000, guid: b029c455191ad4c42b0dcaa19f995a4c, type: 2}
+    Text: Yang bikin aku ragu, di bawahnya tertulis denda keterlambatan dua persen
+      per hari. Kalau telat, dendanya ditambahkan ke tagihan berikutnya.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Nah, itu bukan catatan kecil. Dua persen dari Rp2.000.000 berarti Rp40.000
+      pada hari pertama keterlambatan. Kalau denda masuk ke saldo lalu dihitung lagi,
+      bebannya bisa terus membesar.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Dalam muamalah, tambahan yang disyaratkan karena penundaan pembayaran adalah
+      riba nasi'ah. Secara finansial pun, dendanya membuat masalah jangka pendek
+      berubah menjadi utang yang sulit dikendalikan.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Bagian mana yang sebaiknya diperiksa lebih dulu?
+    Choices:
+    - ChoiceText: Jumlah cair, total pembayaran, jatuh tempo, denda, izin data, dan
+        identitas penyedia.
+      NextLineIndex: 13
+      AffinityChange: 0
+      FinancialLogicChange: 6
+      ShariaComplianceChange: 5
+      BalanceCorrection: 5
+      EventId: 
+      OutcomeText: Kontrak dinilai dari keseluruhan kewajiban dan risikonya.
+    - ChoiceText: Cukup lihat tulisan 'cair cepat' dan testimoni pengguna.
+      NextLineIndex: 14
+      AffinityChange: 0
+      FinancialLogicChange: -5
+      ShariaComplianceChange: -3
+      BalanceCorrection: 0
+      EventId: 
+      OutcomeText: Iklan bukan pengganti rincian kontrak.
+    - ChoiceText: Hanya cek apakah cicilan pertama terlihat murah.
+      NextLineIndex: 15
+      AffinityChange: 0
+      FinancialLogicChange: 1
+      ShariaComplianceChange: -2
+      BalanceCorrection: -2
+      EventId: 
+      OutcomeText: Cicilan awal saja belum menunjukkan total kewajiban.
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Kita cek semuanya, bukan cuma nominal yang masuk. Yang penting adalah total
+      kewajiban, kapan harus lunas, apa akibat telat, dan data apa yang kita serahkan.
+    Choices: []
+    NextLineIndex: 16
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Testimoni bisa dipilih oleh pembuat iklan. Kita tetap harus membaca kontrak
+      dan memeriksa penyedianya, bukan percaya pada kesan cepat.
+    Choices: []
+    NextLineIndex: 16
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Cicilan pertama bisa tampak ringan, padahal biaya lain tersembunyi di halaman
+      berikutnya. Kita hitung total sampai lunas.
+    Choices: []
+    NextLineIndex: 16
+  - SpeakerName: Narator
+    SpeakerData: {fileID: 0}
+    Text: '[Alif mengambil kertas. Ia meminta Dimas membuka rincian perjalanan, bukan
+      aplikasi pinjaman.]'
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Sekarang kita buat anggaran minimum. Transportasi berapa? Penginapan bisa
+      berbagi? Ada biaya yang bisa ditunda atau dibayar setelah pulang?
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Dimas
+    SpeakerData: {fileID: 11400000, guid: b029c455191ad4c42b0dcaa19f995a4c, type: 2}
+    Text: Transportasi Rp650.000, penginapan dan kegiatan Rp900.000, makan serta
+      cadangan Rp450.000. Totalnya memang dua juta.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Cadangan Rp450.000 bisa kita pecah lagi. Kita cari nominal yang benar-benar
+      harus ada malam ini, bukan langsung menutup semuanya dengan utang mahal.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Rencana darurat 24 jam yang paling solutif?
+    Choices:
+    - ChoiceText: Hubungi panitia untuk keringanan, cek bantuan kampus, dan negosiasikan
+        komponen yang bisa ditunda.
+      NextLineIndex: 21
+      AffinityChange: 0
+      FinancialLogicChange: 6
+      ShariaComplianceChange: 4
+      BalanceCorrection: 5
+      EventId: 
+      OutcomeText: Masalah diselesaikan dari sumber kebutuhannya terlebih dahulu.
+    - ChoiceText: Batalkan perjalanan tanpa menghubungi siapa pun.
+      NextLineIndex: 22
+      AffinityChange: 0
+      FinancialLogicChange: -2
+      ShariaComplianceChange: 1
+      BalanceCorrection: -3
+      EventId: 
+      OutcomeText: Menghindari utang, tetapi mengabaikan alternatif dan konsekuensi
+        akademik.
+    - ChoiceText: Ajukan pinjol dulu, baru pikirkan cara membayar setelah pulang.
+      NextLineIndex: 23
+      AffinityChange: 0
+      FinancialLogicChange: -7
+      ShariaComplianceChange: -7
+      BalanceCorrection: 0
+      EventId: 
+      OutcomeText: Utang diambil sebelum ada arus kas untuk melunasinya.
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Pertama, telepon panitia malam ini. Minta rincian wajib, skema bayar bertahap,
+      dana darurat mahasiswa, atau rekomendasi bantuan resmi.
+    Choices: []
+    NextLineIndex: 24
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Membatalkan mendadak mungkin mencegah utang, tetapi bisa merusak urusan
+      kampus. Kita tanyakan alternatifnya dulu sebelum menyerah.
+    Choices: []
+    NextLineIndex: 24
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: "Kalau belum tahu sumber pelunasan, pinjaman hanya memindahkan panik hari
+      ini ke hari berikutnya\u2014ditambah denda."
+    Choices: []
+    NextLineIndex: 24
+  - SpeakerName: Dimas
+    SpeakerData: {fileID: 11400000, guid: b029c455191ad4c42b0dcaa19f995a4c, type: 2}
+    Text: Kalau bantuan kampus nggak cukup, aku masih kekurangan. Masa aku harus
+      minta satu orang menanggung dua juta penuh?
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Tidak harus satu sumber. Solusi yang sehat boleh berupa gabungan beberapa
+      langkah kecil, selama nominal, waktu, dan kewajibannya transparan.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Sumber dana alternatif mana yang paling aman?
+    Choices:
+    - ChoiceText: Gabungkan tabungan, pengurangan biaya, bantuan kampus, dan qard
+        hasan tertulis dari keluarga/teman.
+      NextLineIndex: 27
+      AffinityChange: 0
+      FinancialLogicChange: 5
+      ShariaComplianceChange: 6
+      BalanceCorrection: 6
+      EventId: 
+      OutcomeText: Sumber transparan digabung tanpa tambahan karena waktu.
+    - ChoiceText: Cari aplikasi lain yang bunganya sedikit lebih rendah.
+      NextLineIndex: 28
+      AffinityChange: 0
+      FinancialLogicChange: -2
+      ShariaComplianceChange: -5
+      BalanceCorrection: -2
+      EventId: 
+      OutcomeText: Bunga lebih rendah belum menghilangkan akad dan risiko yang bermasalah.
+    - ChoiceText: Pinjam diam-diam dari banyak teman tanpa mencatat jatuh temponya.
+      NextLineIndex: 29
+      AffinityChange: 0
+      FinancialLogicChange: -4
+      ShariaComplianceChange: 0
+      BalanceCorrection: -4
+      EventId: 
+      OutcomeText: Tanpa catatan, hubungan dan kemampuan bayar tetap berisiko.
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: "Gunakan tabungan yang aman, kurangi biaya nonwajib, ajukan bantuan resmi,
+      lalu bila perlu minta qard hasan\u2014pinjaman pokok tanpa tambahan\u2014dengan
+      jadwal pengembalian tertulis."
+    Choices: []
+    NextLineIndex: 30
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Mengganti aplikasi tidak otomatis menyelesaikan masalah. Kita perlu memastikan
+      akadnya bebas tambahan karena waktu dan penyedianya jelas serta resmi.
+    Choices: []
+    NextLineIndex: 30
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Bantuan teman tetap harus jujur dan tercatat. Tulis siapa memberi berapa,
+      kapan dikembalikan, dan jangan menjanjikan tambahan.
+    Choices: []
+    NextLineIndex: 30
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Kamu juga bisa menawarkan pekerjaan sementara yang realistis setelah pulang,
+      menjual barang yang memang tidak dipakai, atau bertanya ke koperasi syariah
+      resmi. Tapi jangan menjual alat utama kuliah dan jangan membuat janji pendapatan
+      palsu.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Dimas
+    SpeakerData: {fileID: 11400000, guid: b029c455191ad4c42b0dcaa19f995a4c, type: 2}
+    Text: Aku takut kalau cerita ke keluarga, mereka mengira aku nggak bisa mengatur
+      hidup.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Bagaimana Alif membantu Dimas meminta pertolongan?
+    Choices:
+    - ChoiceText: 'Susun pesan jujur: kebutuhan, rincian Rp2.000.000, upaya yang
+        sudah dilakukan, dan jadwal pengembalian.'
+      NextLineIndex: 33
+      AffinityChange: 0
+      FinancialLogicChange: 4
+      ShariaComplianceChange: 5
+      BalanceCorrection: 5
+      EventId: 
+      OutcomeText: Transparansi menjaga kepercayaan dan batas kemampuan.
+    - ChoiceText: Sembunyikan alasan sebenarnya supaya lebih cepat diberi uang.
+      NextLineIndex: 34
+      AffinityChange: 0
+      FinancialLogicChange: -5
+      ShariaComplianceChange: -5
+      BalanceCorrection: 0
+      EventId: 
+      OutcomeText: Informasi yang disembunyikan merusak amanah.
+    - ChoiceText: Minta Alif berbohong dan mengaku uang itu untuk dirinya.
+      NextLineIndex: 35
+      AffinityChange: 0
+      FinancialLogicChange: -6
+      ShariaComplianceChange: -6
+      BalanceCorrection: 0
+      EventId: 
+      OutcomeText: Masalah baru tercipta dari kebohongan.
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: 'Kita bilang apa adanya: perlu dua juta, rinciannya begini, sudah mencoba
+      keringanan, dan akan mengembalikan sesuai kemampuan yang benar-benar ada.'
+    Choices: []
+    NextLineIndex: 36
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Kalau alasannya disamarkan, orang membantu tanpa informasi yang cukup.
+      Itu bukan awal yang baik untuk menyelesaikan amanah.
+    Choices: []
+    NextLineIndex: 36
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Aku bisa menemani, tapi tidak akan berbohong. Bantuan yang sehat harus
+      dimulai dari cerita yang benar.
+    Choices: []
+    NextLineIndex: 36
+  - SpeakerName: Narator
+    SpeakerData: {fileID: 0}
+    Text: '[Dimas membuka kembali halaman pengajuan. Jempolnya berhenti tepat di
+      atas tombol ''Ajukan Rp2.000.000''.]'
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Dimas
+    SpeakerData: {fileID: 11400000, guid: b029c455191ad4c42b0dcaa19f995a4c, type: 2}
+    Text: Jadi... aku batalkan sekarang? Data KTP-ku belum kukirim, tapi aplikasinya
+      sudah minta akses kontak dan galeri.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Tindakan penutup yang tepat?
+    Choices:
+    - ChoiceText: Batalkan pengajuan, jangan unggah KTP, cabut izin aplikasi, simpan
+        bukti, lalu jalankan daftar solusi bersama.
+      NextLineIndex: 39
+      AffinityChange: 0
+      FinancialLogicChange: 6
+      ShariaComplianceChange: 6
+      BalanceCorrection: 7
+      EventId: 
+      OutcomeText: Risiko dihentikan dan diganti dengan langkah nyata.
+    - ChoiceText: Rebut ponsel Dimas dan hapus semuanya tanpa penjelasan.
+      NextLineIndex: 40
+      AffinityChange: 0
+      FinancialLogicChange: 0
+      ShariaComplianceChange: 2
+      BalanceCorrection: -3
+      EventId: 
+      OutcomeText: Bahaya dihentikan, tetapi Dimas tidak belajar mengambil keputusan
+        mandiri.
+    - ChoiceText: Biarkan Dimas mencoba sekali agar kapok.
+      NextLineIndex: 41
+      AffinityChange: 0
+      FinancialLogicChange: -8
+      ShariaComplianceChange: -8
+      BalanceCorrection: 0
+      EventId: 
+      OutcomeText: Membiarkan kerugian bukan cara aman untuk belajar.
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Ya. Batalkan sebelum dikirim, cabut izin kontak dan galeri, simpan tangkapan
+      layar syaratnya, lalu kita telepon panitia dan bagian kemahasiswaan sekarang.
+    Choices: []
+    NextLineIndex: 42
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Aku nggak akan mengambil keputusan atas namamu. Aku jelaskan risikonya,
+      lalu kamu sendiri yang menekan batal supaya keputusan ini benar-benar kamu
+      pahami.
+    Choices: []
+    NextLineIndex: 42
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Belajar tidak harus lewat kerugian dua juta dan data pribadi. Kita bisa
+      berhenti sebelum terlambat dan tetap menyusun jalan keluar.
+    Choices: []
+    NextLineIndex: 42
+  - SpeakerName: Dimas
+    SpeakerData: {fileID: 11400000, guid: b029c455191ad4c42b0dcaa19f995a4c, type: 2}
+    Text: Oke. Pengajuannya kubatalkan. Izin kontak dan galeri juga sudah kucabut.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Narator
+    SpeakerData: {fileID: 0}
+    Text: '[Dimas menghubungi panitia. Ia mendapat opsi membayar biaya kegiatan bertahap
+      dan formulir bantuan mahasiswa. Kekurangan dana menjadi jauh lebih kecil.]'
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Dimas
+    SpeakerData: {fileID: 11400000, guid: b029c455191ad4c42b0dcaa19f995a4c, type: 2}
+    Text: Ternyata penginapan bisa patungan dan biaya kegiatan boleh dicicil tanpa
+      tambahan. Aku akan pakai tabungan, mengurangi uang cadangan, lalu bicara jujur
+      ke keluarga untuk sisanya.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: "Bagus. Catat semua sumber dan tanggal pengembalian. Kalau ada qard hasan,
+      yang kembali hanya pokok yang disepakati\u2014bukan tambahan karena waktu."
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Dimas
+    SpeakerData: {fileID: 11400000, guid: b029c455191ad4c42b0dcaa19f995a4c, type: 2}
+    Text: Makasih, Lif. Kamu nggak cuma melarang. Kamu bantu aku menemukan langkah
+      yang bisa benar-benar kulakukan malam ini.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Kita memang harus menghindari riba, tapi orang yang sedang terdesak juga
+      perlu jalan keluar. Besok aku bantu cek lagi anggarannya sebelum kamu berangkat.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Narator
+    SpeakerData: {fileID: 0}
+    Text: '[Malam itu, tombol pinjaman cepat tidak pernah ditekan. Dimas memilih
+      transparansi, pertolongan yang aman, dan rencana bayar yang sesuai kemampuan.]'
+    Choices: []
+    NextLineIndex: -1
+  OnCompleteEventId: chapter2.dimas_pinjol_resolved

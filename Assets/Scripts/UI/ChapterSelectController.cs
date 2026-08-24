@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Alif.Core;
 
 namespace Alif.UI
 {
@@ -11,38 +12,59 @@ namespace Alif.UI
     /// </summary>
     public class ChapterSelectController : MonoBehaviour
     {
-        private const string HighestChapterUnlockedKey = "Alif_HighestChapterUnlocked";
-        private const string SelectedChapterKey = "Alif_SelectedChapter";
-        private const string GameplaySceneName = "SampleScene";
         private const string MainMenuSceneName = "MainMenu";
 
         [SerializeField] private ChapterCardUI[] _chapterCards;
+        [Header("Chapter entry scenes")]
+        [SerializeField] private string _chapter1SceneName = "Chapter1Cutscene";
+        [SerializeField] private string _chapter2SceneName = "Chapter2Cutscene";
 
         private void Start()
         {
-            int highestUnlocked = PlayerPrefs.GetInt(HighestChapterUnlockedKey, 1);
             foreach (ChapterCardUI card in _chapterCards)
             {
-                card.SetLocked(card.ChapterNumber > highestUnlocked);
+                if (card == null)
+                {
+                    continue;
+                }
+
+                bool lockedByProgress = !ChapterProgress.IsUnlocked(card.ChapterNumber);
+                bool chapterHasNoScene = string.IsNullOrEmpty(GetChapterSceneName(card.ChapterNumber));
+                card.SetLocked(lockedByProgress || chapterHasNoScene);
             }
         }
 
         public void OnChapterClicked(int chapterNumber)
         {
-            int highestUnlocked = PlayerPrefs.GetInt(HighestChapterUnlockedKey, 1);
-            if (chapterNumber > highestUnlocked)
+            if (!ChapterProgress.IsUnlocked(chapterNumber))
             {
                 return;
             }
 
-            PlayerPrefs.SetInt(SelectedChapterKey, chapterNumber);
-            PlayerPrefs.Save();
-            SceneManager.LoadScene(GameplaySceneName);
+            string sceneName = GetChapterSceneName(chapterNumber);
+            if (string.IsNullOrEmpty(sceneName) || !Application.CanStreamedLevelBeLoaded(sceneName))
+            {
+                Debug.LogWarning($"[Alif] Chapter {chapterNumber} belum punya scene entry yang tersedia.");
+                return;
+            }
+
+            ChapterProgress.SelectChapter(chapterNumber);
+            SceneManager.LoadScene(sceneName);
         }
 
         public void OnBackClicked()
         {
             SceneManager.LoadScene(MainMenuSceneName);
+        }
+
+        private string GetChapterSceneName(int chapterNumber)
+        {
+            switch (chapterNumber)
+            {
+                case 1: return _chapter1SceneName;
+                case 2: return _chapter2SceneName;
+                default: return string.Empty;
+            }
         }
     }
 }

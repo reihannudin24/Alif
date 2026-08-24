@@ -12,10 +12,19 @@ EditorBuildSettings:
     path: Assets/Scenes/Chapter1Cutscene.unity
     guid: 361990f3ca1424fe4a833b41073e79e5
   - enabled: 1
+    path: Assets/Scenes/Chapter1Ending.unity
+    guid: 12a389e9ca90a4e3d980598ee7f9ad1f
+  - enabled: 1
     path: Assets/Scenes/ChapterSelect.unity
     guid: df3ec8f44e2c94b759bba08e8ee0ac62
   - enabled: 1
+    path: Assets/Scenes/Chapter2Cutscene.unity
+    guid: 2ef6deacee6da4bc1b9e1f2650240d8d
+  - enabled: 1
     path: Assets/Scenes/SampleScene.unity
     guid: 8c9cfa26abfee488c85f1582747f6a02
+  - enabled: 1
+    path: Assets/Scenes/Chapter2Gameplay.unity
+    guid: 62bd6de614ee0428ab9a2676a2f102ac
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}

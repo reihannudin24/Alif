@@ -25,6 +25,8 @@ namespace Alif.EditorTools
     {
         private const string TargetScenePath = "Assets/Scenes/Chapter1Cutscene.unity";
         private const string ArtFolder = "Assets/Sprites/Cutscenes/Chapter1";
+        private const string Chapter1EndingScenePath = "Assets/Scenes/Chapter1Ending.unity";
+        private const string Chapter2CutsceneScenePath = "Assets/Scenes/Chapter2Cutscene.unity";
         private const int MaxSlots = 3;
 
         private struct PartDef
@@ -106,19 +108,67 @@ namespace Alif.EditorTools
             }),
         };
 
+        private static readonly SceneDef[] Chapter1EndingScenes =
+        {
+            new SceneDef(
+                "Warung Bu Siti, menjelang malam.\n\n" +
+                "Tekanan untuk menandatangani kontrak telah berlalu. Bu Siti memilih berhenti, memeriksa angka, dan mencari jalan yang transparan."),
+            new SceneDef(new[]
+            {
+                new PartDef("Assets/Sprites/Backgrounds/WarungBuSiti_Interior.png", new Vector2(0, 0.5f), new Vector2(1, 1),
+                    "Bu Siti", "Ibu tidak akan lagi mengambil keputusan karena panik. Mulai besok, semua pemasukan, kebutuhan, dan akad akan Ibu catat dengan jelas."),
+                new PartDef("Assets/Sprites/Backgrounds/WarungBuSiti_Depan.jpg", new Vector2(0, 0), new Vector2(1, 0.5f),
+                    "Alif (Batin)", "Masalah hari ini selesai, tetapi perjalananku memahami amanah dalam setiap keputusan baru saja dimulai."),
+            }),
+            new SceneDef(
+                "CHAPTER 1 SELESAI\n\n" +
+                "Alif membantu Bu Siti menolak janji hasil pasti dan memilih langkah usaha yang lebih jujur, terukur, dan bertanggung jawab.\n\n" +
+                "Chapter 2 — Jebakan Riba — telah terbuka."),
+        };
+
+        private static readonly SceneDef[] Chapter2IntroScenes =
+        {
+            new SceneDef(
+                "Chapter 2 — Jebakan Riba\n\n" +
+                "Beberapa hari setelah persoalan Bu Siti selesai, Alif kembali menjalani harinya di Solo.\n\n" +
+                "Sebuah pertemuan tak sengaja akan membawanya pada persoalan baru: jalan keluar cepat yang menyimpan beban panjang."),
+            new SceneDef(new[]
+            {
+                new PartDef("Assets/Sprites/Backgrounds/KosKosan_Halaman.png", new Vector2(0, 0), new Vector2(1, 1),
+                    "Narator", "Menjelang sore, Alif melintasi sebuah jalan kecil di depan deretan kos mahasiswa."),
+            }),
+            new SceneDef(new[]
+            {
+                new PartDef("Assets/Sprites/Backgrounds/KosKosan_Halaman.png", new Vector2(0, 0.5f), new Vector2(1, 1),
+                    "Narator", "Di depan gerbang, Dimas berdiri mondar-mandir. Tatapannya terpaku pada ponsel dan wajahnya terlihat bingung."),
+                new PartDef("Assets/Sprites/Characters/alif/Idle/rotations/east.png", new Vector2(0, 0), new Vector2(0.5f, 0.5f),
+                    "Alif", "Dimas? Dari tadi kamu kelihatan gelisah. Ada masalah?"),
+                new PartDef("Assets/Sprites/Characters/dimas/Idle/rotations/south.png", new Vector2(0.5f, 0), new Vector2(1, 0.5f),
+                    "Dimas", "Lif... kebetulan banget kamu lewat. Aku perlu pendapatmu, tapi nggak enak ngomong di luar."),
+            }),
+            new SceneDef(new[]
+            {
+                new PartDef("Assets/Sprites/Backgrounds/KosKosan_Lantai1.png", new Vector2(0, 0.5f), new Vector2(1, 1),
+                    "Dimas", "Masuk ke kamarku sebentar, ya. Aku sedang butuh Rp2.000.000 dan hampir mengajukan pinjaman online."),
+                new PartDef("Assets/Sprites/Backgrounds/KosKosan_Interior.png", new Vector2(0, 0), new Vector2(1, 0.5f),
+                    "Alif", "Baik. Jangan tekan tombol pengajuan dulu. Kita baca syaratnya dan cari jalan keluar yang aman bersama-sama."),
+            }),
+        };
+
         [MenuItem("Alif/5) Build Chapter 1 Cutscene Scene")]
         public static void BuildCutsceneScene()
         {
-            OpenOrCreateTargetScene();
-            BuildCutsceneInActiveScene();
-
-            AssetDatabase.SaveAssets();
-            EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
-            EditorSceneManager.SaveOpenScenes();
-
-            RegisterInBuildSettings();
+            BuildAndSaveCutscene(TargetScenePath, Scenes, ArtFolder, "SampleScene", 0, false);
 
             Debug.Log("[Alif] Chapter 1 Cutscene scene selesai dibangun & disimpan.");
+        }
+
+        [MenuItem("Alif/7) Build Chapter 1 Ending + Chapter 2 Intro")]
+        public static void BuildChapterTransitions()
+        {
+            BuildAndSaveCutscene(Chapter1EndingScenePath, Chapter1EndingScenes, string.Empty, "ChapterSelect", 1, true);
+            BuildAndSaveCutscene(Chapter2CutsceneScenePath, Chapter2IntroScenes, string.Empty, "Chapter2Gameplay", 0, false);
+            Debug.Log("[Alif] Chapter 1 Ending dan Chapter 2 Intro selesai dibangun & disimpan.");
         }
 
         /// <summary>Entry point buat CLI (-executeMethod) — pola sama seperti builder lain.</summary>
@@ -127,20 +177,39 @@ namespace Alif.EditorTools
             BuildCutsceneScene();
         }
 
-        private static void OpenOrCreateTargetScene()
+        public static void BuildAllChapterCutscenesCLI()
         {
-            if (File.Exists(TargetScenePath))
+            BuildCutsceneScene();
+            BuildChapterTransitions();
+        }
+
+        private static void BuildAndSaveCutscene(string targetScenePath, SceneDef[] sceneDefinitions, string artFolder,
+            string nextSceneName, int completedChapterNumber, bool unlockNextChapter)
+        {
+            OpenOrCreateTargetScene(targetScenePath);
+            BuildCutsceneInActiveScene(sceneDefinitions, artFolder, nextSceneName, completedChapterNumber, unlockNextChapter);
+
+            AssetDatabase.SaveAssets();
+            EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+            EditorSceneManager.SaveOpenScenes();
+            RegisterInBuildSettings(targetScenePath);
+        }
+
+        private static void OpenOrCreateTargetScene(string targetScenePath)
+        {
+            if (File.Exists(targetScenePath))
             {
-                EditorSceneManager.OpenScene(TargetScenePath);
+                EditorSceneManager.OpenScene(targetScenePath);
                 return;
             }
 
             AlifDemoSceneBuilder.EnsureFolder("Assets/Scenes");
             var newScene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            EditorSceneManager.SaveScene(newScene, TargetScenePath);
+            EditorSceneManager.SaveScene(newScene, targetScenePath);
         }
 
-        private static void BuildCutsceneInActiveScene()
+        private static void BuildCutsceneInActiveScene(SceneDef[] sceneDefinitions, string artFolder, string nextSceneName,
+            int completedChapterNumber, bool unlockNextChapter)
         {
             var scene = SceneManager.GetActiveScene();
             foreach (GameObject root in scene.GetRootGameObjects())
@@ -178,7 +247,8 @@ namespace Alif.EditorTools
             AlifDemoSceneBuilder.SetSerializedRef(controller, "_dialogueText", dialogueText);
             AlifDemoSceneBuilder.SetSerializedRef(controller, "_introTextRoot", introTextRoot);
             AlifDemoSceneBuilder.SetSerializedRef(controller, "_introText", introText);
-            SetScenesArray(controller);
+            SetControllerSettings(controller, nextSceneName, completedChapterNumber, unlockNextChapter);
+            SetScenesArray(controller, sceneDefinitions, artFolder);
 
             nextButton.onClick = new Button.ButtonClickedEvent();
             UnityEventTools.AddPersistentListener(nextButton.onClick, controller.OnNextClicked);
@@ -329,17 +399,27 @@ namespace Alif.EditorTools
             return button;
         }
 
-        private static void SetScenesArray(CutscenePlayerController controller)
+        private static void SetControllerSettings(CutscenePlayerController controller, string nextSceneName,
+            int completedChapterNumber, bool unlockNextChapter)
+        {
+            var so = new SerializedObject(controller);
+            so.FindProperty("_nextSceneName").stringValue = nextSceneName;
+            so.FindProperty("_completedChapterNumber").intValue = completedChapterNumber;
+            so.FindProperty("_unlockNextChapterOnFinish").boolValue = unlockNextChapter;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void SetScenesArray(CutscenePlayerController controller, SceneDef[] sceneDefinitions, string artFolder)
         {
             var so = new SerializedObject(controller);
             SerializedProperty scenesProp = so.FindProperty("_scenes");
-            scenesProp.arraySize = Scenes.Length;
+            scenesProp.arraySize = sceneDefinitions.Length;
 
-            for (int s = 0; s < Scenes.Length; s++)
+            for (int s = 0; s < sceneDefinitions.Length; s++)
             {
-                PartDef[] parts = Scenes[s].Parts;
+                PartDef[] parts = sceneDefinitions[s].Parts;
                 SerializedProperty sceneProp = scenesProp.GetArrayElementAtIndex(s);
-                sceneProp.FindPropertyRelative("IntroText").stringValue = Scenes[s].IntroText;
+                sceneProp.FindPropertyRelative("IntroText").stringValue = sceneDefinitions[s].IntroText;
 
                 SerializedProperty partsProp = sceneProp.FindPropertyRelative("Parts");
                 partsProp.arraySize = parts.Length;
@@ -347,10 +427,11 @@ namespace Alif.EditorTools
                 for (int p = 0; p < parts.Length; p++)
                 {
                     PartDef def = parts[p];
-                    Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>($"{ArtFolder}/{def.File}");
+                    string spritePath = def.File.StartsWith("Assets/") ? def.File : $"{artFolder}/{def.File}";
+                    Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(spritePath);
                     if (sprite == null)
                     {
-                        Debug.LogWarning($"[Alif] Cutscene sprite tidak ditemukan: '{ArtFolder}/{def.File}'.");
+                        Debug.LogWarning($"[Alif] Cutscene sprite tidak ditemukan: '{spritePath}'.");
                     }
 
                     SerializedProperty partProp = partsProp.GetArrayElementAtIndex(p);
@@ -365,15 +446,16 @@ namespace Alif.EditorTools
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        private static void RegisterInBuildSettings()
+        private static void RegisterInBuildSettings(string targetScenePath)
         {
             var scenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
-            scenes.RemoveAll(s => s.path == TargetScenePath);
+            scenes.RemoveAll(s => s.path == targetScenePath);
 
-            // Selipkan tepat setelah MainMenu, sebelum ChapterSelect/SampleScene.
-            int insertIndex = scenes.FindIndex(s => s.path == "Assets/Scenes/MainMenu.unity");
-            insertIndex = insertIndex >= 0 ? insertIndex + 1 : 0;
-            scenes.Insert(insertIndex, new EditorBuildSettingsScene(TargetScenePath, true));
+            // Cutscene disisipkan sebelum ChapterSelect/SampleScene agar semua scene transisi
+            // selalu ikut build, tanpa bergantung pada urutan menu builder dijalankan.
+            int insertIndex = scenes.FindIndex(s => s.path == "Assets/Scenes/ChapterSelect.unity");
+            insertIndex = insertIndex >= 0 ? insertIndex : scenes.Count;
+            scenes.Insert(insertIndex, new EditorBuildSettingsScene(targetScenePath, true));
 
             EditorBuildSettings.scenes = scenes.ToArray();
         }
