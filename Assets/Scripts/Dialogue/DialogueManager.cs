@@ -30,6 +30,18 @@ namespace Alif.Dialogue
         public bool IsDialogueActive { get; private set; }
 
         /// <summary>
+        /// Baris yang sedang ditampilkan saat ini, atau null kalau tidak ada dialog aktif.
+        /// Dipakai DialogueUI untuk menampilkan ULANG baris yang sedang berjalan bila UI-nya
+        /// terlambat subscribe (manager bertahan lintas scene via DontDestroyOnLoad) atau
+        /// setelah domain reload di tengah Play Mode — tanpa ini pemain bisa terkunci oleh
+        /// dialog yang kotaknya tidak pernah muncul.
+        /// </summary>
+        public DialogueLine CurrentLine => IsDialogueActive && _currentDialogue != null &&
+            _currentLineIndex >= 0 && _currentLineIndex < _currentDialogue.Lines.Count
+            ? _currentDialogue.Lines[_currentLineIndex]
+            : null;
+
+        /// <summary>
         /// Portrait pembicara saat ini (dari CharacterData yang di-pass ke StartDialogue),
         /// dibaca DialogueUI untuk ditampilkan di dialogue box. Null kalau dialog nggak
         /// punya speakerData (misal monolog tanpa portrait).
@@ -75,6 +87,8 @@ namespace Alif.Dialogue
             _currentSpeakerData = speakerData;
             _currentLineIndex = 0;
             IsDialogueActive = true;
+            // Managers survive scene changes; their original player reference does not.
+            if (_playerController == null) _playerController = FindFirstObjectByType<PlayerController>();
 
             if (GameManager.Instance != null)
             {
@@ -83,7 +97,7 @@ namespace Alif.Dialogue
 
             if (_playerController != null)
             {
-                _playerController.SetMovementLocked(true);
+                _playerController.SetMovementLocked(this, true);
             }
 
             OnDialogueStarted?.Invoke();
@@ -106,7 +120,7 @@ namespace Alif.Dialogue
         /// </summary>
         public void AdvanceDialogue()
         {
-            if (!IsDialogueActive)
+            if (!IsDialogueActive || GameManager.Instance?.CurrentState == GameManager.GameState.Paused)
             {
                 return;
             }
@@ -137,7 +151,7 @@ namespace Alif.Dialogue
         /// </summary>
         public void SelectChoice(DialogueChoice choice)
         {
-            if (!IsDialogueActive || choice == null)
+            if (!IsDialogueActive || choice == null || GameManager.Instance?.CurrentState == GameManager.GameState.Paused)
             {
                 return;
             }
@@ -199,7 +213,7 @@ namespace Alif.Dialogue
 
             if (_playerController != null)
             {
-                _playerController.SetMovementLocked(false);
+                _playerController.SetMovementLocked(this, false);
             }
 
             OnDialogueEnded?.Invoke();

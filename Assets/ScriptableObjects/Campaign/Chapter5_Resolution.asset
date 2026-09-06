@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7e7e8abb4e4b043c08377bbf1eb960b6, type: 3}
+  m_Name: Chapter5_Resolution
+  m_EditorClassIdentifier: Assembly-CSharp::Alif.Dialogue.DialogueData
+  Lines:
+  - SpeakerName: Dimas
+    SpeakerData: {fileID: 11400000, guid: b029c455191ad4c42b0dcaa19f995a4c, type: 2}
+    Text: Aku tidak mentransfer uang. Kita sudah menyimpan bukti penawarannya.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Naya
+    SpeakerData: {fileID: 11400000, guid: 047c6120d2a134db8a75c78182f2e37e, type: 2}
+    Text: Kita akan memeriksa dan melaporkannya melalui kanal resmi OJK, tanpa menyebarkan
+      data pribadi.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Raka
+    SpeakerData: {fileID: 11400000, guid: bbc7ebd26e1234001ad59f735c01e6d7, type: 2}
+    Text: Aku dulu ingin jawaban yang cepat. Sekarang aku memilih pertanyaan yang
+      tepat.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Perjalanan ini berakhir, tetapi kebiasaan membaca syarat, memeriksa bukti,
+      dan menjaga kejujuran tetap kita bawa pulang.
+    Choices: []
+    NextLineIndex: -1
+  OnCompleteEventId: 

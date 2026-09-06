@@ -1373,7 +1373,7 @@ MonoBehaviour:
   _dialogueText: {fileID: 387664126}
   _introTextRoot: {fileID: 1672809879}
   _introText: {fileID: 1955705554}
-  _nextSceneName: Chapter2Gameplay
+  _nextSceneName: AdventureChapter2
   _completedChapterNumber: 0
   _unlockNextChapterOnFinish: 0
 --- !u!114 &1310462958

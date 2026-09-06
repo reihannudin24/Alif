@@ -23,6 +23,16 @@ namespace Alif.World
         // Cegah popup muncul berulang tiap frame selama Player masih nyender di dalam trigger —
         // reset lagi begitu Player keluar (OnTriggerExit2D), jadi bisa dicoba ulang.
         private bool _promptShown;
+        private Alif.Adventure.AdventureGame _adventure;
+        public Transform Destination => _destination;
+        public int SourceArea { get; private set; }
+        public int DestinationArea { get; private set; }
+        public void Bind(Alif.Adventure.AdventureGame game, int source, int destination)
+        {
+            _adventure = game;
+            SourceArea = source;
+            DestinationArea = destination;
+        }
 
         private void OnTriggerEnter2D(Collider2D other)
         {
@@ -39,6 +49,13 @@ namespace Alif.World
 
             _promptShown = true;
 
+            if (_adventure != null)
+            {
+                if (_adventure.CanExplore) _adventure.Travel(this);
+                else _promptShown = false;
+                return;
+            }
+
             if (TravelConfirmationUI.Instance == null)
             {
                 // Fallback kalau popup belum ke-setup di scene ini — pindah langsung tanpa
@@ -47,11 +64,11 @@ namespace Alif.World
                 return;
             }
 
-            player.SetMovementLocked(true);
+            player.SetMovementLocked(this, true);
             TravelConfirmationUI.Instance.Show(
                 _confirmMessage,
                 onConfirmed: () => Travel(other),
-                onCancelled: () => player.SetMovementLocked(false));
+                onCancelled: () => player.SetMovementLocked(this, false));
         }
 
         private void OnTriggerExit2D(Collider2D other)
@@ -87,7 +104,7 @@ namespace Alif.World
 
             if (player != null)
             {
-                player.SetMovementLocked(false);
+                player.SetMovementLocked(this, false);
             }
         }
     }

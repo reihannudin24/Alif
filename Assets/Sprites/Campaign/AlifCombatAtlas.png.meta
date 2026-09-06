@@ -1,0 +1,486 @@
+fileFormatVersion: 2
+guid: 9c46d2227f75246af99cde5b002ae5bc
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 4477739511796182674
+    second: AlifCombatAtlas_0
+  - first:
+      213: 3910652314932145439
+    second: AlifCombatAtlas_1
+  - first:
+      213: -3046228752496007506
+    second: AlifCombatAtlas_2
+  - first:
+      213: 685838631786647566
+    second: AlifCombatAtlas_3
+  - first:
+      213: -2374518537329550582
+    second: AlifCombatAtlas_4
+  - first:
+      213: -220785523177218945
+    second: AlifCombatAtlas_5
+  - first:
+      213: 1285777781501764843
+    second: AlifCombatAtlas_6
+  - first:
+      213: 6095187564193831405
+    second: AlifCombatAtlas_7
+  - first:
+      213: 6034306904224184646
+    second: AlifCombatAtlas_8
+  - first:
+      213: -6633818886853997445
+    second: AlifCombatAtlas_9
+  - first:
+      213: -2602815351763166783
+    second: AlifCombatAtlas_10
+  - first:
+      213: 4567016137634065739
+    second: AlifCombatAtlas_11
+  - first:
+      213: 4822125396462981935
+    second: AlifCombatAtlas_12
+  - first:
+      213: -5368382131109625558
+    second: AlifCombatAtlas_13
+  - first:
+      213: -7177410567367056669
+    second: AlifCombatAtlas_14
+  - first:
+      213: -7333307035310722385
+    second: AlifCombatAtlas_15
+  - first:
+      213: -4006468229849790167
+    second: AlifCombatAtlas_16
+  - first:
+      213: -7505609706947113767
+    second: AlifCombatAtlas_17
+  - first:
+      213: -2462124071192039547
+    second: AlifCombatAtlas_18
+  - first:
+      213: 8867106730237839844
+    second: AlifCombatAtlas_19
+  - first:
+      213: 7032952234525241866
+    second: AlifCombatAtlas_20
+  - first:
+      213: 5454690615743985453
+    second: AlifCombatAtlas_21
+  - first:
+      213: -867881557159807453
+    second: AlifCombatAtlas_22
+  - first:
+      213: -8684155253865366436
+    second: AlifCombatAtlas_23
+  - first:
+      213: -3144675301845674712
+    second: AlifCombatAtlas_24
+  - first:
+      213: -1988308914943696128
+    second: AlifCombatAtlas_25
+  - first:
+      213: 2618359692519526374
+    second: AlifCombatAtlas_26
+  - first:
+      213: -5621867607611219241
+    second: AlifCombatAtlas_27
+  - first:
+      213: -1653578618328868352
+    second: AlifCombatAtlas_28
+  - first:
+      213: -5998775304912686846
+    second: AlifCombatAtlas_29
+  - first:
+      213: -7971930096550195204
+    second: AlifCombatAtlas_30
+  - first:
+      213: 3812616310256636489
+    second: AlifCombatAtlas_31
+  - first:
+      213: -5305283063599083214
+    second: AlifCombatAtlas_32
+  - first:
+      213: 3044727814433803603
+    second: AlifCombatAtlas_33
+  - first:
+      213: -764590816977531316
+    second: AlifCombatAtlas_34
+  - first:
+      213: 5716113136310517810
+    second: AlifCombatAtlas_35
+  - first:
+      213: -402159872786527023
+    second: AlifCombatAtlas_36
+  - first:
+      213: 592491863002615776
+    second: Pose0
+  - first:
+      213: -1838760920508527145
+    second: Pose1
+  - first:
+      213: -7112623826987071965
+    second: Pose2
+  - first:
+      213: -8021783482508467223
+    second: Pose3
+  - first:
+      213: -7956290859484898942
+    second: Pose4
+  - first:
+      213: 3667687730454903871
+    second: Pose5
+  - first:
+      213: 3859006577663055386
+    second: Pose6
+  - first:
+      213: -521743139655878630
+    second: Pose7
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 380
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Pose0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 443.5
+        width: 443.5
+        height: 443.5
+      alignment: 9
+      pivot: {x: 0.5, y: 0.12}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0ef8492d534f83800800000000000000
+      internalID: 592491863002615776
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Pose1
+      rect:
+        serializedVersion: 2
+        x: 443.5
+        y: 443.5
+        width: 443.5
+        height: 443.5
+      alignment: 9
+      pivot: {x: 0.5, y: 0.12}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7dd083a5fa86b76e0800000000000000
+      internalID: -1838760920508527145
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Pose2
+      rect:
+        serializedVersion: 2
+        x: 887
+        y: 443.5
+        width: 443.5
+        height: 443.5
+      alignment: 9
+      pivot: {x: 0.5, y: 0.12}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 326c47b4052ea4d90800000000000000
+      internalID: -7112623826987071965
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Pose3
+      rect:
+        serializedVersion: 2
+        x: 1330.5
+        y: 443.5
+        width: 443.5
+        height: 443.5
+      alignment: 9
+      pivot: {x: 0.5, y: 0.12}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9e3acf38c66eca090800000000000000
+      internalID: -8021783482508467223
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Pose4
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 443.5
+        height: 443.5
+      alignment: 9
+      pivot: {x: 0.5, y: 0.12}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 28917b61e93959190800000000000000
+      internalID: -7956290859484898942
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Pose5
+      rect:
+        serializedVersion: 2
+        x: 443.5
+        y: 0
+        width: 443.5
+        height: 443.5
+      alignment: 9
+      pivot: {x: 0.5, y: 0.12}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f3cb2d00f8e36e230800000000000000
+      internalID: 3667687730454903871
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Pose6
+      rect:
+        serializedVersion: 2
+        x: 887
+        y: 0
+        width: 443.5
+        height: 443.5
+      alignment: 9
+      pivot: {x: 0.5, y: 0.12}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a1690875902fd8530800000000000000
+      internalID: 3859006577663055386
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Pose7
+      rect:
+        serializedVersion: 2
+        x: 1330.5
+        y: 0
+        width: 443.5
+        height: 443.5
+      alignment: 9
+      pivot: {x: 0.5, y: 0.12}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a1870d8f06562c8f0800000000000000
+      internalID: -521743139655878630
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      AlifCombatAtlas_0: 4477739511796182674
+      AlifCombatAtlas_1: 3910652314932145439
+      AlifCombatAtlas_10: -2602815351763166783
+      AlifCombatAtlas_11: 4567016137634065739
+      AlifCombatAtlas_12: 4822125396462981935
+      AlifCombatAtlas_13: -5368382131109625558
+      AlifCombatAtlas_14: -7177410567367056669
+      AlifCombatAtlas_15: -7333307035310722385
+      AlifCombatAtlas_16: -4006468229849790167
+      AlifCombatAtlas_17: -7505609706947113767
+      AlifCombatAtlas_18: -2462124071192039547
+      AlifCombatAtlas_19: 8867106730237839844
+      AlifCombatAtlas_2: -3046228752496007506
+      AlifCombatAtlas_20: 7032952234525241866
+      AlifCombatAtlas_21: 5454690615743985453
+      AlifCombatAtlas_22: -867881557159807453
+      AlifCombatAtlas_23: -8684155253865366436
+      AlifCombatAtlas_24: -3144675301845674712
+      AlifCombatAtlas_25: -1988308914943696128
+      AlifCombatAtlas_26: 2618359692519526374
+      AlifCombatAtlas_27: -5621867607611219241
+      AlifCombatAtlas_28: -1653578618328868352
+      AlifCombatAtlas_29: -5998775304912686846
+      AlifCombatAtlas_3: 685838631786647566
+      AlifCombatAtlas_30: -7971930096550195204
+      AlifCombatAtlas_31: 3812616310256636489
+      AlifCombatAtlas_32: -5305283063599083214
+      AlifCombatAtlas_33: 3044727814433803603
+      AlifCombatAtlas_34: -764590816977531316
+      AlifCombatAtlas_35: 5716113136310517810
+      AlifCombatAtlas_36: -402159872786527023
+      AlifCombatAtlas_4: -2374518537329550582
+      AlifCombatAtlas_5: -220785523177218945
+      AlifCombatAtlas_6: 1285777781501764843
+      AlifCombatAtlas_7: 6095187564193831405
+      AlifCombatAtlas_8: 6034306904224184646
+      AlifCombatAtlas_9: -6633818886853997445
+      Pose0: 592491863002615776
+      Pose1: -1838760920508527145
+      Pose2: -7112623826987071965
+      Pose3: -8021783482508467223
+      Pose4: -7956290859484898942
+      Pose5: 3667687730454903871
+      Pose6: 3859006577663055386
+      Pose7: -521743139655878630
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

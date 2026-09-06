@@ -1,0 +1,73 @@
+{
+  "dialogueId": "Chapter1_Warung_Extension",
+  "onCompleteEventId": "warung.extension.completed",
+  "lines": [
+    {
+      "speakerName": "Bu Siti",
+      "text": "Alif, terima kasih sudah teliti memeriksa nota tadi. Kejujuran itu modal utama dalam berdagang.",
+      "nextLineIndex": 1,
+      "choices": []
+    },
+    {
+      "speakerName": "Alif",
+      "text": "Sama-sama, Bu Siti. Transaksi yang jelas dan transparan membuat kedua pihak tenang dan tidak ada yang dirugikan.",
+      "nextLineIndex": 2,
+      "choices": []
+    },
+    {
+      "speakerName": "Bu Siti",
+      "text": "Betul sekali. Ada sisa kembalian 5.000 rupiah, apa mau disimpan atau disedekahkan ke kotak wakaf warung?",
+      "nextLineIndex": -1,
+      "choices": [
+        {
+          "choiceText": "Simpan untuk dana darurat pribadi (Prioritaskan tabungan)",
+          "nextLineIndex": 3,
+          "affinityChange": 1,
+          "financialLogicChange": 10.0,
+          "shariaComplianceChange": -10.0,
+          "balanceCorrection": 0.0,
+          "eventId": "choice.save_cash",
+          "outcomeText": "Alif memilih memperkuat dana darurat pribadi."
+        },
+        {
+          "choiceText": "Sedekahkan ke kotak wakaf warung (Berkah sosial)",
+          "nextLineIndex": 4,
+          "affinityChange": 2,
+          "financialLogicChange": -10.0,
+          "shariaComplianceChange": 10.0,
+          "balanceCorrection": 0.0,
+          "eventId": "choice.donate_cash",
+          "outcomeText": "Alif menyisihkan sebagian rizki untuk keberkahan sesama."
+        },
+        {
+          "choiceText": "Alokasikan 50% untuk tabungan dan 50% untuk sedekah (Keseimbangan)",
+          "nextLineIndex": 5,
+          "affinityChange": 3,
+          "financialLogicChange": 0.0,
+          "shariaComplianceChange": 0.0,
+          "balanceCorrection": 15.0,
+          "eventId": "choice.balanced_approach",
+          "outcomeText": "Keputusan seimbang antara ketahanan finansial dan kepatuhan syariah tercapai."
+        }
+      ]
+    },
+    {
+      "speakerName": "Bu Siti",
+      "text": "Bagus, Alif. Mengatur pengeluaran dengan disiplin adalah tanda orang bijak mengatur amanah.",
+      "nextLineIndex": -1,
+      "choices": []
+    },
+    {
+      "speakerName": "Bu Siti",
+      "text": "Alhamdulillah, semoga berkah berlipat ganda untuk Alif dan lingkungan kita.",
+      "nextLineIndex": -1,
+      "choices": []
+    },
+    {
+      "speakerName": "Bu Siti",
+      "text": "Masyallah, cara berpikir yang sangat seimbang! Tidak melupakan kebutuhan sendiri sekaligus peduli sekitar.",
+      "nextLineIndex": -1,
+      "choices": []
+    }
+  ]
+}

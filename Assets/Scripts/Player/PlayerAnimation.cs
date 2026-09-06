@@ -19,6 +19,15 @@ namespace Alif.Player
         private static readonly int IsMovingHash = Animator.StringToHash("IsMoving");
 
         [SerializeField] private Animator _animator;
+        [SerializeField] private FootstepDustEffect _footstepDust;
+
+        [Header("Procedural Juice")]
+        [SerializeField] private bool _enableIdleBreathing = true;
+        [SerializeField] private float _breathingSpeed = 2.4f;
+        [SerializeField] private float _breathingAmount = 0.02f;
+
+        private Vector3 _baseScale = Vector3.one;
+        private bool _wasMoving;
 
         private void Awake()
         {
@@ -26,26 +35,72 @@ namespace Alif.Player
             {
                 _animator = GetComponent<Animator>();
             }
+
+            if (_footstepDust == null)
+            {
+                _footstepDust = GetComponent<FootstepDustEffect>();
+                if (_footstepDust == null)
+                {
+                    _footstepDust = gameObject.AddComponent<FootstepDustEffect>();
+                }
+            }
+
+            _baseScale = transform.localScale;
+            if (_baseScale.sqrMagnitude < 0.001f)
+            {
+                _baseScale = Vector3.one;
+            }
+        }
+
+        private void LateUpdate()
+        {
+            if (!_enableIdleBreathing) return;
+
+            if (!_wasMoving)
+            {
+                // Subtle breathing squash and stretch
+                float sin = Mathf.Sin(Time.time * _breathingSpeed);
+                float scaleY = 1f + sin * _breathingAmount;
+                float scaleX = 1f - sin * (_breathingAmount * 0.6f);
+                transform.localScale = new Vector3(_baseScale.x * scaleX, _baseScale.y * scaleY, _baseScale.z);
+            }
+            else
+            {
+                // Smoothly restore normal scale while walking
+                transform.localScale = Vector3.Lerp(transform.localScale, _baseScale, Time.deltaTime * 10f);
+            }
         }
 
         /// <summary>
         /// Dipanggil PlayerController tiap frame untuk mengirim arah hadap dan status bergerak
-        /// ke Animator, supaya Blend Tree bisa memilih animasi idle/walk yang benar.
+        /// ke Animator, serta mengatur laju animasi dan efek debu langkah.
         /// </summary>
-        public void SetMovementState(FacingDirection facing, bool isMoving)
+        public void SetMovementState(FacingDirection facing, bool isMoving, bool isSprinting = false)
         {
+            _wasMoving = isMoving;
             Vector2 directionVector = FacingToVector(facing);
 
-            _animator.SetFloat(MoveXHash, directionVector.x);
-            _animator.SetFloat(MoveYHash, directionVector.y);
-            _animator.SetBool(IsMovingHash, isMoving);
+            if (_animator != null)
+            {
+                _animator.SetFloat(MoveXHash, directionVector.x);
+                _animator.SetFloat(MoveYHash, directionVector.y);
+                _animator.SetBool(IsMovingHash, isMoving);
+
+                // Kecepatan putar animasi meningkat saat sprint agar langkah selaras dengan laju gerak
+                _animator.speed = isMoving ? (isSprinting ? 1.4f : 1.05f) : 1f;
+            }
+
+            if (isMoving && _footstepDust != null)
+            {
+                _footstepDust.SpawnDust(isSprinting, directionVector);
+            }
         }
 
         /// <summary>
         /// Konversi enum arah hadap menjadi vector 2D normalized, dipakai sebagai parameter
         /// Blend Tree di Animator (2D Freeform Directional).
         /// </summary>
-        private Vector2 FacingToVector(FacingDirection facing)
+        public static Vector2 FacingToVector(FacingDirection facing)
         {
             switch (facing)
             {

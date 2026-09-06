@@ -48,6 +48,9 @@ namespace Alif.UI
                 return;
             }
 
+            var state = ChapterProgress.LoadAdventure(out _);
+            if (state.Chapter != chapterNumber || state.Completed) state = state.StartChapter(chapterNumber);
+            if (!ChapterProgress.SaveAdventure(state)) return;
             ChapterProgress.SelectChapter(chapterNumber);
             SceneManager.LoadScene(sceneName);
         }
@@ -63,6 +66,9 @@ namespace Alif.UI
             {
                 case 1: return _chapter1SceneName;
                 case 2: return _chapter2SceneName;
+                case 3: return Alif.Adventure.AdventureGame.SceneFor(3);
+                case 4: return Alif.Adventure.AdventureGame.SceneFor(4);
+                case 5: return Alif.Adventure.AdventureGame.SceneFor(5);
                 default: return string.Empty;
             }
         }

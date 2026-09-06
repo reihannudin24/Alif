@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7e7e8abb4e4b043c08377bbf1eb960b6, type: 3}
+  m_Name: Chapter5_Confront
+  m_EditorClassIdentifier: Assembly-CSharp::Alif.Dialogue.DialogueData
+  Lines:
+  - SpeakerName: Raka
+    SpeakerData: {fileID: 11400000, guid: bbc7ebd26e1234001ad59f735c01e6d7, type: 2}
+    Text: Sekarang aku mengerti. Membawa teman masuk justru dapat meneruskan kerugian.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Kita menolak, menyimpan bukti, dan mencari kanal resmi. Mari patahkan bayangan
+      menara janji ini bersama.
+    Choices: []
+    NextLineIndex: -1
+  OnCompleteEventId: 

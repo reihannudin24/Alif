@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7e7e8abb4e4b043c08377bbf1eb960b6, type: 3}
+  m_Name: Chapter5_Intro
+  m_EditorClassIdentifier: Assembly-CSharp::Alif.Dialogue.DialogueData
+  Lines:
+  - SpeakerName: Dimas
+    SpeakerData: {fileID: 11400000, guid: b029c455191ad4c42b0dcaa19f995a4c, type: 2}
+    Text: Undangan ini menjanjikan imbal hasil tetap yang sangat tinggi. Katanya
+      sudah banyak teman dibayar.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Naya
+    SpeakerData: {fileID: 11400000, guid: 047c6120d2a134db8a75c78182f2e37e, type: 2}
+    Text: Ada bonus untuk membawa peserta baru. Kita perlu memeriksa sumber pembayaran.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: 'Mari bandingkan tiga bukti: janji, arus uang, dan legalitas penawaran.'
+    Choices: []
+    NextLineIndex: -1
+  OnCompleteEventId: 

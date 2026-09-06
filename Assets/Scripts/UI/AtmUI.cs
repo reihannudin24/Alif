@@ -93,7 +93,7 @@ namespace Alif.UI
             _lockedPlayer = player;
             if (player != null)
             {
-                player.SetMovementLocked(true);
+                player.SetMovementLocked(this, true);
             }
 
             SetVisible(true);
@@ -105,7 +105,7 @@ namespace Alif.UI
 
             if (_lockedPlayer != null)
             {
-                _lockedPlayer.SetMovementLocked(false);
+                _lockedPlayer.SetMovementLocked(this, false);
                 _lockedPlayer = null;
             }
         }

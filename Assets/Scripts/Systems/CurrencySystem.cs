@@ -26,6 +26,15 @@ namespace Alif.Systems
         public int CurrentMoney => _currentMoney;
         public int BankBalance => _bankBalance;
 
+        public void RestoreBalances(int money, int bank)
+        {
+            if (money < 0 || bank < 0) throw new ArgumentOutOfRangeException(nameof(money));
+            _currentMoney = money;
+            _bankBalance = bank;
+            OnMoneyChanged?.Invoke(money);
+            OnBankBalanceChanged?.Invoke(bank);
+        }
+
         private void Awake()
         {
             if (Instance != null && Instance != this)

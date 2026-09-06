@@ -1,0 +1,10 @@
+{
+  "name": "Alif.Runtime",
+  "references": [
+    "Alif.Adventure.Model",
+    "Alif.Battle.Model",
+    "Unity.InputSystem",
+    "Unity.TextMeshPro",
+    "Unity.ugui"
+  ]
+}

@@ -38,9 +38,10 @@ namespace Alif.UI
             Instance = this;
         }
 
-        public void TransitionTo(PlayerController player, Rigidbody2D playerRb, Transform destination, CameraFollow cameraFollow)
+        public void TransitionTo(PlayerController player, Rigidbody2D playerRb, Transform destination, CameraFollow cameraFollow, Action onComplete = null)
         {
-            StartCoroutine(TransitionRoutine(player, playerRb, destination, cameraFollow));
+            if (destination == null) throw new ArgumentNullException(nameof(destination));
+            StartCoroutine(TransitionRoutine(player, playerRb, destination, cameraFollow, onComplete));
         }
 
         /// <summary>
@@ -59,7 +60,7 @@ namespace Alif.UI
         {
             if (player != null)
             {
-                player.SetMovementLocked(true);
+                player.SetMovementLocked(this, true);
             }
 
             if (_fadeText != null)
@@ -81,17 +82,17 @@ namespace Alif.UI
 
             if (player != null)
             {
-                player.SetMovementLocked(false);
+                player.SetMovementLocked(this, false);
             }
 
             onComplete?.Invoke();
         }
 
-        private IEnumerator TransitionRoutine(PlayerController player, Rigidbody2D playerRb, Transform destination, CameraFollow cameraFollow)
+        private IEnumerator TransitionRoutine(PlayerController player, Rigidbody2D playerRb, Transform destination, CameraFollow cameraFollow, Action onComplete)
         {
             if (player != null)
             {
-                player.SetMovementLocked(true);
+                player.SetMovementLocked(this, true);
             }
 
             if (_fadeText != null)
@@ -104,6 +105,8 @@ namespace Alif.UI
             if (playerRb != null)
             {
                 playerRb.position = destination.position;
+                playerRb.transform.position = destination.position;
+                playerRb.linearVelocity = Vector2.zero;
             }
 
             if (cameraFollow != null)
@@ -116,8 +119,9 @@ namespace Alif.UI
 
             if (player != null)
             {
-                player.SetMovementLocked(false);
+                player.SetMovementLocked(this, false);
             }
+            onComplete?.Invoke();
         }
 
         private IEnumerator Fade(float from, float to)

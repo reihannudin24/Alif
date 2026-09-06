@@ -21,8 +21,14 @@ namespace Alif.EditorTools
             EnsureFolder();
             GenerateMainMenuBgm();
             GenerateButtonClickSfx();
+            GenerateFootstepSfx();
+            GenerateDialogueBlipSfx();
+            GenerateInteractSfx();
+            GenerateCoinSfx();
+            GenerateBumpSfx();
+            GenerateCatMeowSfx();
             AssetDatabase.Refresh();
-            Debug.Log("[Alif] Audio placeholder (BGM + SFX) selesai digenerate di 'Assets/Audio/'.");
+            Debug.Log("[Alif] Audio placeholder (BGM + SFX lengkap) selesai digenerate di 'Assets/Audio/'.");
         }
 
         private static void EnsureFolder()
@@ -88,6 +94,150 @@ namespace Alif.EditorTools
             }
 
             SaveWav($"{AudioFolder}/SFX_ButtonClick.wav", buffer);
+        }
+
+        // ------------------------------------------------------------
+        // SFX Footstep — ketukan langkah lembut pada ubin/aspal.
+        // ------------------------------------------------------------
+        private static void GenerateFootstepSfx()
+        {
+            const float duration = 0.065f;
+            int totalSamples = Mathf.CeilToInt(duration * SampleRate);
+            var buffer = new float[totalSamples];
+
+            for (int i = 0; i < totalSamples; i++)
+            {
+                float t = i / (float)SampleRate;
+                float progress = t / duration;
+                float freq = 150f - 95f * progress;
+                float env = Mathf.Exp(-progress * 7f);
+                float body = Mathf.Sin(2f * Mathf.PI * freq * t) * env * 0.55f;
+                float tap = Mathf.Sin(2f * Mathf.PI * 950f * t) * Mathf.Exp(-progress * 22f) * 0.25f;
+                buffer[i] = body + tap;
+            }
+
+            SaveWav($"{AudioFolder}/SFX_Footstep.wav", buffer);
+        }
+
+        // ------------------------------------------------------------
+        // SFX Dialogue Blip — suara huruf typewriter dialog yang retro & ramah.
+        // ------------------------------------------------------------
+        private static void GenerateDialogueBlipSfx()
+        {
+            const float duration = 0.038f;
+            int totalSamples = Mathf.CeilToInt(duration * SampleRate);
+            var buffer = new float[totalSamples];
+
+            for (int i = 0; i < totalSamples; i++)
+            {
+                float t = i / (float)SampleRate;
+                float progress = t / duration;
+                float freq = 880f - 80f * progress;
+                float env = Mathf.Exp(-progress * 10f);
+                float s = (Mathf.Sin(2f * Mathf.PI * freq * t) + 0.2f * Mathf.Sin(4f * Mathf.PI * freq * t)) * env * 0.5f;
+                buffer[i] = s;
+            }
+
+            SaveWav($"{AudioFolder}/SFX_DialogueBlip.wav", buffer);
+        }
+
+        // ------------------------------------------------------------
+        // SFX Interact Chime — lonceng dua nada lembut saat menyapa NPC/inspeksi.
+        // ------------------------------------------------------------
+        private static void GenerateInteractSfx()
+        {
+            const float duration = 0.22f;
+            int totalSamples = Mathf.CeilToInt(duration * SampleRate);
+            var buffer = new float[totalSamples];
+
+            RenderTone(buffer, 0f, 0.12f, 659.25f, 0.45f); // E5
+            RenderTone(buffer, 0.07f, 0.15f, 987.77f, 0.55f); // B5
+
+            Normalize(buffer, 0.8f);
+            SaveWav($"{AudioFolder}/SFX_Interact.wav", buffer);
+        }
+
+        // ------------------------------------------------------------
+        // SFX Coin — gemerincing koin saat bayar makanan / ambil uang di ATM.
+        // ------------------------------------------------------------
+        private static void GenerateCoinSfx()
+        {
+            const float duration = 0.26f;
+            int totalSamples = Mathf.CeilToInt(duration * SampleRate);
+            var buffer = new float[totalSamples];
+
+            RenderTone(buffer, 0f, 0.12f, 987.77f, 0.4f); // B5
+            RenderTone(buffer, 0.05f, 0.21f, 1318.51f, 0.55f); // E6
+            RenderTone(buffer, 0.05f, 0.18f, 2637.02f, 0.2f); // shimmer
+
+            Normalize(buffer, 0.85f);
+            SaveWav($"{AudioFolder}/SFX_Coin.wav", buffer);
+        }
+
+        // ------------------------------------------------------------
+        // SFX Bump — benturan tumpul saat menabrak dinding dengan cepat.
+        // ------------------------------------------------------------
+        private static void GenerateBumpSfx()
+        {
+            const float duration = 0.09f;
+            int totalSamples = Mathf.CeilToInt(duration * SampleRate);
+            var buffer = new float[totalSamples];
+
+            for (int i = 0; i < totalSamples; i++)
+            {
+                float t = i / (float)SampleRate;
+                float progress = t / duration;
+                float freq = 160f - 110f * progress;
+                float env = Mathf.Exp(-progress * 6.5f);
+                buffer[i] = Mathf.Sin(2f * Mathf.PI * freq * t) * env * 0.6f;
+            }
+
+            SaveWav($"{AudioFolder}/SFX_Bump.wav", buffer);
+        }
+
+        // ------------------------------------------------------------
+        // SFX Cat Meow — suara mengeong lucu kucing stasiun "Si Belang".
+        // ------------------------------------------------------------
+        private static void GenerateCatMeowSfx()
+        {
+            const float duration = 0.38f;
+            int totalSamples = Mathf.CeilToInt(duration * SampleRate);
+            var buffer = new float[totalSamples];
+
+            for (int i = 0; i < totalSamples; i++)
+            {
+                float t = i / (float)SampleRate;
+                float progress = t / duration;
+                float freq = progress < 0.45f
+                    ? Mathf.Lerp(520f, 780f, progress / 0.45f)
+                    : Mathf.Lerp(780f, 460f, (progress - 0.45f) / 0.55f);
+                freq += Mathf.Sin(2f * Mathf.PI * 5.5f * t) * 15f;
+                float attack = Mathf.Min(1f, t / 0.04f);
+                float decay = Mathf.Exp(-Mathf.Pow(progress, 1.8f) * 3.5f);
+                float env = attack * decay;
+                float s = (Mathf.Sin(2f * Mathf.PI * freq * t)
+                    + 0.35f * Mathf.Sin(4f * Mathf.PI * freq * t)
+                    + 0.15f * Mathf.Sin(6f * Mathf.PI * freq * t)) * env * 0.5f;
+                buffer[i] = s;
+            }
+
+            Normalize(buffer, 0.85f);
+            SaveWav($"{AudioFolder}/SFX_CatMeow.wav", buffer);
+        }
+
+        private static void RenderTone(float[] target, float startTime, float dur, float freq, float amp)
+        {
+            int startIdx = Mathf.RoundToInt(startTime * SampleRate);
+            int count = Mathf.RoundToInt(dur * SampleRate);
+            for (int i = 0; i < count; i++)
+            {
+                int idx = startIdx + i;
+                if (idx >= target.Length) break;
+                float t = i / (float)SampleRate;
+                float env = t > 0.005f ? Mathf.Exp(-t * 11f) : (t / 0.005f);
+                float s = (Mathf.Sin(2f * Mathf.PI * freq * t) + 0.25f * Mathf.Sin(4f * Mathf.PI * freq * t)) * env * amp;
+                target[idx] += s;
+            }
         }
 
         // ------------------------------------------------------------
