@@ -1,6 +1,6 @@
 ﻿<Solution>
-  <Project Path="Alif.Runtime.csproj" />
   <Project Path="Assembly-CSharp-Editor.csproj" />
+  <Project Path="Alif.Runtime.csproj" />
   <Project Path="Alif.Adventure.Tests.csproj" />
   <Project Path="Alif.Battle.Model.csproj" />
   <Project Path="Alif.Battle.Tests.csproj" />
