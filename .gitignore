@@ -51,6 +51,7 @@ ExportedObj/
 *.csproj
 *.unityproj
 *.sln
+*.slnx
 *.suo
 *.tmp
 *.user
@@ -109,3 +110,20 @@ InitTestScene*.unity*
 # macOS
 .DS_Store
 **/.DS_Store
+
+# Local Tooling Caches
+/Tools/cache/
+
+# Test runner output
+test-results.xml
+
+# Local WebGL scratch builds & archives
+/web_alif/
+/web_alif.zip
+
+# Burst generated intermediate plugins
+/Data/Plugins/
+
+# AI tool workspaces & caches
+.codex/
+.zcode/

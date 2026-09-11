@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using Alif.Core;
 using Alif.Dialogue;
 
 namespace Alif.UI
@@ -111,6 +112,9 @@ namespace Alif.UI
             // DontDestroyOnLoad di tengah proses Awake) — kalau langsung subscribe di sini
             // dan Instance-nya masih null, DialogueUI SELAMANYA nggak pernah dengerin event
             // apa pun (nggak ada retry). Makanya di-loop tiap frame sampai beneran siap.
+            // Kotak disembunyikan DULU sebelum subscribe, supaya pemulihan dialog yang sudah
+            // berjalan di SubscribeToDialogueManager tidak langsung ditimpa tersembunyi lagi.
+            SetBoxVisible(false);
             if (DialogueManager.Instance != null)
             {
                 SubscribeToDialogueManager();
@@ -119,8 +123,6 @@ namespace Alif.UI
             {
                 StartCoroutine(SubscribeWhenReady());
             }
-
-            SetBoxVisible(false);
         }
 
         private void OnDisable()
@@ -151,6 +153,16 @@ namespace Alif.UI
             DialogueManager.Instance.OnLineDisplayed += HandleLineDisplayed;
             DialogueManager.Instance.OnChoiceRejected += HandleChoiceRejected;
             _isSubscribed = true;
+
+            // Dialog bisa saja sudah berjalan sebelum UI ini subscribe — event mulanya sudah
+            // lewat (domain reload di tengah Play Mode, atau manager DontDestroyOnLoad yang
+            // membawa dialog aktif dari scene sebelumnya). Tanpa pemulihan ini, pemain
+            // terkunci oleh dialog yang kotaknya tidak pernah muncul.
+            if (DialogueManager.Instance.IsDialogueActive && DialogueManager.Instance.CurrentLine != null)
+            {
+                SetBoxVisible(true);
+                HandleLineDisplayed(DialogueManager.Instance.CurrentLine);
+            }
         }
 
         private void UnsubscribeFromDialogueManager()
@@ -210,7 +222,7 @@ namespace Alif.UI
 
             if (_dialogueText != null)
             {
-                _dialogueText.text = line.Text;
+                StartTypewriter(line.Text);
             }
 
             if (_portraitImage != null)
@@ -231,12 +243,17 @@ namespace Alif.UI
                 {
                     PlayPortraitEnterAnimation();
                 }
+                else if (portrait != null)
+                {
+                    PlayPortraitSpeakingBounce();
+                }
             }
 
             ClearChoiceButtons();
 
             if (line.HasChoices)
             {
+                CompleteTypewriter();
                 SpawnChoiceButtons(line.Choices);
                 SetNextButtonVisible(false);
             }
@@ -302,6 +319,53 @@ namespace Alif.UI
             }
 
             ResizePanelForChoices(totalContentHeight);
+            PlayChoiceEntrance();
+        }
+
+        private Coroutine _choiceEntranceRoutine;
+
+        /// <summary>
+        /// Tombol pilihan masuk satu per satu (slide pendek + fade, jeda 55ms) — memandu mata
+        /// ke daftar pilihan tanpa memblokir klik. Tombol tetap bisa diklik sejak muncul.
+        /// </summary>
+        private void PlayChoiceEntrance()
+        {
+            if (_choiceEntranceRoutine != null) StopCoroutine(_choiceEntranceRoutine);
+            _choiceEntranceRoutine = StartCoroutine(StaggerChoiceEntrance());
+        }
+
+        private IEnumerator StaggerChoiceEntrance()
+        {
+            if (PlayerPrefs.GetInt("Alif_ReducedMotion", 0) == 1) yield break;
+            for (int i = 0; i < _spawnedChoiceButtons.Count; i++)
+            {
+                RectTransform rect = _spawnedChoiceButtons[i].transform as RectTransform;
+                if (rect == null) continue;
+                CanvasGroup group = _spawnedChoiceButtons[i].GetComponent<CanvasGroup>();
+                if (group == null) group = _spawnedChoiceButtons[i].AddComponent<CanvasGroup>();
+                StartCoroutine(ChoiceSlideIn(rect, group, rect.anchoredPosition, i * .055f));
+            }
+            _choiceEntranceRoutine = null;
+        }
+
+        private IEnumerator ChoiceSlideIn(RectTransform rect, CanvasGroup group, Vector2 rest, float delay)
+        {
+            group.alpha = 0f;
+            const float duration = .26f;
+            float elapsed = 0f;
+            while (elapsed < delay + duration)
+            {
+                if (rect == null) yield break; // dialog berganti cepat: tombol sudah dihancurkan
+                elapsed += Time.deltaTime;
+                float p = Mathf.Clamp01((elapsed - delay) / duration);
+                float eased = 1f - Mathf.Pow(1f - p, 3f);
+                rect.anchoredPosition = Vector2.Lerp(rest + new Vector2(-46f, -12f), rest, eased);
+                group.alpha = Mathf.Clamp01(p * 2f);
+                yield return null;
+            }
+            if (rect == null) yield break;
+            rect.anchoredPosition = rest;
+            group.alpha = 1f;
         }
 
         /// <summary>
@@ -347,9 +411,91 @@ namespace Alif.UI
             _choiceStatusText.gameObject.SetActive(false);
         }
 
+        private Coroutine _typewriterRoutine;
+        private Coroutine _portraitBounceRoutine;
+        private bool _isTyping;
+
+        private void StartTypewriter(string text)
+        {
+            if (_typewriterRoutine != null)
+            {
+                StopCoroutine(_typewriterRoutine);
+            }
+            _typewriterRoutine = StartCoroutine(TypewriterRoutine(text));
+        }
+
+        private IEnumerator TypewriterRoutine(string text)
+        {
+            _isTyping = true;
+            _dialogueText.text = text;
+            _dialogueText.maxVisibleCharacters = 0;
+
+            int totalCharacters = text.Length;
+            int charIndex = 0;
+            const float charDelay = 0.024f; // ~40 karakter per detik
+
+            while (charIndex < totalCharacters)
+            {
+                charIndex++;
+                _dialogueText.maxVisibleCharacters = charIndex;
+
+                char c = text[charIndex - 1];
+                if (charIndex % 3 == 0 && !char.IsWhiteSpace(c) && !char.IsPunctuation(c))
+                {
+                    AudioManager.Instance?.PlayDialogueBlip(0.12f, 0.42f);
+                }
+
+                yield return new WaitForSeconds(charDelay);
+            }
+
+            _isTyping = false;
+            _typewriterRoutine = null;
+        }
+
+        private void CompleteTypewriter()
+        {
+            if (_typewriterRoutine != null)
+            {
+                StopCoroutine(_typewriterRoutine);
+                _typewriterRoutine = null;
+            }
+            if (_dialogueText != null)
+            {
+                _dialogueText.maxVisibleCharacters = int.MaxValue;
+            }
+            _isTyping = false;
+        }
+
+        private void PlayPortraitSpeakingBounce()
+        {
+            if (_portraitRect == null) return;
+            if (_portraitBounceRoutine != null) StopCoroutine(_portraitBounceRoutine);
+            _portraitBounceRoutine = StartCoroutine(PortraitBounceRoutine());
+        }
+
+        private IEnumerator PortraitBounceRoutine()
+        {
+            Vector3 baseScale = Vector3.one;
+            Vector3 targetScale = baseScale * 1.04f;
+            float dur = 0.12f;
+            for (float t = 0f; t < dur; t += Time.deltaTime)
+            {
+                float p = t / dur;
+                _portraitRect.localScale = Vector3.Lerp(baseScale, targetScale, Mathf.Sin(p * Mathf.PI));
+                yield return null;
+            }
+            _portraitRect.localScale = baseScale;
+            _portraitBounceRoutine = null;
+        }
+
         private void HandleNextClicked()
         {
             PlayClickSfx();
+            if (_isTyping)
+            {
+                CompleteTypewriter();
+                return;
+            }
             DialogueManager.Instance.AdvanceDialogue();
         }
 
@@ -366,6 +512,11 @@ namespace Alif.UI
             }
 
             PlayClickSfx();
+            if (_isTyping)
+            {
+                CompleteTypewriter();
+                return;
+            }
             DialogueManager.Instance.AdvanceDialogue();
         }
 

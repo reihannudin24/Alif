@@ -1,7 +1,9 @@
 using UnityEngine;
+using System.Collections.Generic;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using Alif.Characters;
+using Alif.Core;
 using Alif.UI;
 using Alif.World;
 
@@ -42,6 +44,11 @@ namespace Alif.Player
 
         [Header("Movement")]
         [SerializeField] private float _moveSpeed = 4f;
+        [SerializeField] private float _sprintMultiplier = 1.4f;
+        [Tooltip("Percepatan menuju kecepatan target saat ada input (unit/detik²). Membuat start berhenti terasa instan.")]
+        [SerializeField] private float _acceleration = 34f;
+        [Tooltip("Perlambatan ke diam saat input dilepas (unit/detik²).")]
+        [SerializeField] private float _deceleration = 46f;
 
         [Header("Interaction")]
         [Tooltip("Jarak maksimum untuk mendeteksi NPC terdekat saat tombol Interact ditekan.")]
@@ -60,19 +67,48 @@ namespace Alif.Player
         private FacingDirection _currentFacing = FacingDirection.South;
         private Vector2 _feetOffset;
         private Vector2 _feetHalfExtents = new Vector2(0.16f, 0.12f);
+        private bool _isSprinting;
+        private float _footstepTimer;
+        private float _lastBumpTime;
+        private Vector2 _smoothVelocity;
+        private CameraFollow _cameraFollow;
+        private bool _sprintZoomActive;
 
         // Bendera sederhana untuk mengunci input pergerakan, misalnya saat dialog sedang berlangsung.
         private bool _movementLocked = false;
+        private readonly HashSet<Object> _movementOwners = new HashSet<Object>();
+        private PhysicsMaterial2D _runtimeMaterial;
+        public Vector2 FacingVector => PlayerAnimation.FacingToVector(_currentFacing);
+        public Vector2 MoveInput => _moveInput;
+        public bool IsSprinting => _isSprinting;
+        private Vector2 _adventureDirection;
+        public void ConfigureAdventure() { _interactableLayer = 1 << 7; _interactRadius = 1.35f; _moveSpeed = 3f; }
+        public void SetAdventureDirection(Vector2 direction) { _adventureDirection = direction; }
+        public bool MovementLocked => _movementLocked || _movementOwners.Count > 0;
+        private bool InputBlocked => MovementLocked || (GameManager.Instance != null &&
+            (GameManager.Instance.CurrentState == GameManager.GameState.Paused || GameManager.Instance.CurrentState == GameManager.GameState.Dialogue || GameManager.Instance.CurrentState == GameManager.GameState.Combat));
+        private bool InteractionBlocked => InputBlocked;
 
         private void Awake()
         {
             _rigidbody = GetComponent<Rigidbody2D>();
 
+            // Pastikan physics material tanpa friksi agar karakter meluncur mulus tanpa tersangkut di dinding
+            PhysicsMaterial2D frictionlessMat = _runtimeMaterial = new PhysicsMaterial2D("PlayerFrictionless") { friction = 0f, bounciness = 0f };
+            _rigidbody.sharedMaterial = frictionlessMat;
+
             CapsuleCollider2D feetCollider = GetComponent<CapsuleCollider2D>();
             if (feetCollider != null)
             {
+                feetCollider.sharedMaterial = frictionlessMat;
                 _feetOffset = feetCollider.offset;
                 _feetHalfExtents = feetCollider.size * 0.5f;
+            }
+
+            // Pastikan kedalaman render Y-sorting otomatis terpasang
+            if (GetComponent<YSortOrder>() == null)
+            {
+                gameObject.AddComponent<YSortOrder>();
             }
 
             // Physics2D biasanya berjalan 50 Hz, sedangkan render umumnya 60 Hz atau lebih.
@@ -125,12 +161,51 @@ namespace Alif.Player
 
         private void Update()
         {
+            _movementOwners.RemoveWhere(owner => owner == null);
+            bool shiftPressed = Keyboard.current != null && (Keyboard.current.leftShiftKey.isPressed || Keyboard.current.rightShiftKey.isPressed);
             _moveInput = ReadMoveInput();
+            _isSprinting = shiftPressed && _moveInput.sqrMagnitude > 0.01f;
+
+            // Sinkronkan zoom kamera sprint hanya saat statusnya berubah (bukan tiap frame).
+            if (_isSprinting != _sprintZoomActive)
+            {
+                _sprintZoomActive = _isSprinting;
+                if (_cameraFollow == null) _cameraFollow = FindAnyObjectByType<CameraFollow>();
+                _cameraFollow?.SetSprintZoom(_isSprinting);
+            }
 
             UpdateFacingDirection();
             UpdateAnimation();
             UpdateInteractionPrompt();
             HandleMouseClick();
+            HandleFootstepSound();
+            if (_inputActions == null && Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
+                TryInteractWithNearestNPC();
+        }
+
+        private void HandleFootstepSound()
+        {
+            if (InputBlocked || _rigidbody.linearVelocity.sqrMagnitude < 0.01f)
+            {
+                _footstepTimer = 0.06f;
+                return;
+            }
+
+            _footstepTimer -= Time.deltaTime;
+            if (_footstepTimer <= 0f)
+            {
+                _footstepTimer = _isSprinting ? 0.22f : 0.34f;
+                AudioManager.Instance?.PlayFootstep(0.08f, _isSprinting ? 0.62f : 0.42f);
+            }
+        }
+
+        private void OnCollisionEnter2D(Collision2D collision)
+        {
+            if (Time.time - _lastBumpTime > 0.35f && collision.relativeVelocity.sqrMagnitude > 3.5f)
+            {
+                _lastBumpTime = Time.time;
+                AudioManager.Instance?.PlayBump(0.65f);
+            }
         }
 
         /// <summary>
@@ -140,12 +215,19 @@ namespace Alif.Player
         /// </summary>
         private Vector2 ReadMoveInput()
         {
-            if (_movementLocked)
+            if (InputBlocked)
             {
                 return Vector2.zero;
             }
 
             Vector2 keyboardInput = _moveAction != null ? _moveAction.ReadValue<Vector2>() : Vector2.zero;
+            if (_moveAction == null && Keyboard.current != null)
+            {
+                var k = Keyboard.current;
+                keyboardInput = new Vector2((k.dKey.isPressed || k.rightArrowKey.isPressed ? 1 : 0) - (k.aKey.isPressed || k.leftArrowKey.isPressed ? 1 : 0),
+                    (k.wKey.isPressed || k.upArrowKey.isPressed ? 1 : 0) - (k.sKey.isPressed || k.downArrowKey.isPressed ? 1 : 0));
+                if (keyboardInput.sqrMagnitude < .01f) keyboardInput = _adventureDirection;
+            }
             Vector2 joystickInput = _virtualJoystick != null ? _virtualJoystick.Direction : Vector2.zero;
 
             return keyboardInput.sqrMagnitude >= joystickInput.sqrMagnitude ? keyboardInput : joystickInput;
@@ -153,16 +235,21 @@ namespace Alif.Player
 
         private void FixedUpdate()
         {
-            if (_movementLocked)
+            if (InputBlocked)
             {
                 _rigidbody.linearVelocity = Vector2.zero;
+                _smoothVelocity = Vector2.zero;
                 return;
             }
 
             // Normalize supaya gerak diagonal tidak lebih cepat dari gerak lurus. WalkableArea
             // menjadi whitelist lantai; collider physics biasa tetap menangani tembok/objek.
-            Vector2 velocity = _moveInput.normalized * _moveSpeed;
-            velocity = ConstrainVelocityToWalkableFloor(velocity);
+            float currentSpeed = _isSprinting ? (_moveSpeed * _sprintMultiplier) : _moveSpeed;
+            Vector2 target = Vector2.ClampMagnitude(_moveInput, 1f) * currentSpeed;
+            float rate = _moveInput.sqrMagnitude > .01f ? _acceleration : _deceleration;
+            _smoothVelocity = Vector2.MoveTowards(_smoothVelocity, target, rate * Time.fixedDeltaTime);
+            Vector2 velocity = ConstrainVelocityToWalkableFloor(_smoothVelocity);
+            _smoothVelocity = velocity; // constraint bisa memangkas kecepatan (dinding/lantai) — jangan menumpuk selisihnya
             _rigidbody.linearVelocity = velocity;
         }
 
@@ -199,6 +286,12 @@ namespace Alif.Player
 
             if (canMoveX && canMoveY)
             {
+                // Evaluasi apakah langkah diagonal parsial bisa lolos sebelum mengorbankan salah satu sumbu
+                Vector2 partialDisplacement = requestedVelocity * 0.65f * Time.fixedDeltaTime;
+                if (WalkableArea.ContainsFootprint(currentFeet + partialDisplacement, _feetHalfExtents))
+                {
+                    return requestedVelocity * 0.65f;
+                }
                 return Mathf.Abs(requestedVelocity.x) >= Mathf.Abs(requestedVelocity.y) ? xVelocity : yVelocity;
             }
 
@@ -246,8 +339,8 @@ namespace Alif.Player
                 return;
             }
 
-            bool isMoving = _moveInput.sqrMagnitude > 0.01f;
-            _playerAnimation.SetMovementState(_currentFacing, isMoving);
+            bool isMoving = _rigidbody.linearVelocity.sqrMagnitude > 0.01f;
+            _playerAnimation.SetMovementState(_currentFacing, isMoving, _isSprinting);
         }
 
         // GameObject panah "InteractionArrow" yang lagi ditampilkan (child dari interactable
@@ -258,38 +351,33 @@ namespace Alif.Player
         /// Cari collider IInteractable terdekat dalam radius interact (NPC atau benda statis
         /// seperti bangku). Dipakai baik oleh tombol Interact maupun klik mouse.
         /// </summary>
+        private static string HierarchyPath(Transform value)
+        {
+            string path = value.name + ":" + value.GetSiblingIndex();
+            while (value.parent != null) { value = value.parent; path = value.name + ":" + value.GetSiblingIndex() + "/" + path; }
+            return path;
+        }
+        public Collider2D InteractionTarget { get; private set; }
         private Collider2D FindNearestInteractableCollider()
         {
-            Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, _interactRadius, _interactableLayer);
-            if (hits.Length == 0)
+            if (InteractionBlocked) return null;
+            var hits = Physics2D.OverlapCircleAll(transform.position, _interactRadius, _interactableLayer);
+            Collider2D best = null;
+            int bestPriority = int.MinValue;
+            float bestFacing = float.MinValue, bestDistance = float.MaxValue;
+            foreach (var hit in hits)
             {
-                return null;
+                if (GetInteractable(hit) == null) continue;
+                Vector2 delta = hit.ClosestPoint(transform.position) - (Vector2)transform.position;
+                float distance = delta.magnitude;
+                int priority = hit.GetComponentInParent<InteractionPriority>()?.Priority ?? 0;
+                float facing = Vector2.Dot(FacingVector, delta.normalized) >= 0 ? 1 : 0;
+                if (best == null || priority > bestPriority || (priority == bestPriority &&
+                    (facing > bestFacing || (facing == bestFacing && (distance < bestDistance ||
+                    (Mathf.Approximately(distance, bestDistance) && string.CompareOrdinal(HierarchyPath(hit.transform), HierarchyPath(best.transform)) < 0))))))
+                { best = hit; bestPriority = priority; bestFacing = facing; bestDistance = distance; }
             }
-
-            Collider2D nearest = null;
-            float nearestDistance = float.MaxValue;
-
-            foreach (Collider2D hit in hits)
-            {
-                // Layer saja tidak cukup: collider dekorasi yang keliru masuk layer Interactable
-                // tidak boleh "mencuri" target terdekat dari Bu Siti/NPC yang valid.
-                if (GetInteractable(hit) == null)
-                {
-                    continue;
-                }
-
-                // Ukur ke tepi collider, bukan pivot. Ini membuat interaksi pada kasir/meja besar
-                // tetap bekerja ketika Player sudah dekat sisi visualnya.
-                Vector2 closestPoint = hit.ClosestPoint(transform.position);
-                float distance = Vector2.Distance(transform.position, closestPoint);
-                if (distance < nearestDistance)
-                {
-                    nearestDistance = distance;
-                    nearest = hit;
-                }
-            }
-
-            return nearest;
+            return best;
         }
 
         /// <summary>
@@ -297,7 +385,7 @@ namespace Alif.Player
         /// </summary>
         private void TryInteractWithNearestNPC()
         {
-            Collider2D nearest = FindNearestInteractableCollider();
+            Collider2D nearest = InteractionTarget = FindNearestInteractableCollider();
             if (nearest == null)
             {
                 return;
@@ -314,7 +402,7 @@ namespace Alif.Player
         /// </summary>
         private void UpdateInteractionPrompt()
         {
-            Collider2D nearest = FindNearestInteractableCollider();
+            Collider2D nearest = InteractionTarget = FindNearestInteractableCollider();
             GameObject newArrow = null;
 
             if (nearest != null)
@@ -341,6 +429,12 @@ namespace Alif.Player
             if (_activePromptArrow != null)
             {
                 _activePromptArrow.SetActive(true);
+                // Panah interaksi mendapat animasi pop + bob ringan saat muncul (sekali pasang,
+                // OnEnable komponen me-restart animasinya setiap kali panah ditampilkan ulang).
+                if (_activePromptArrow.GetComponent<InteractionPromptFX>() == null)
+                {
+                    _activePromptArrow.AddComponent<InteractionPromptFX>();
+                }
             }
         }
 
@@ -351,6 +445,7 @@ namespace Alif.Player
         /// </summary>
         private void HandleMouseClick()
         {
+            if (InteractionBlocked) return;
             if (Mouse.current == null || !Mouse.current.leftButton.wasPressedThisFrame)
             {
                 return;
@@ -370,25 +465,8 @@ namespace Alif.Player
             Vector2 mouseScreenPos = Mouse.current.position.ReadValue();
             Vector2 worldPoint = cam.ScreenToWorldPoint(mouseScreenPos);
 
-            Collider2D hit = Physics2D.OverlapPoint(worldPoint, _interactableLayer);
-            if (hit == null)
-            {
-                return;
-            }
-
-            IInteractable interactable = GetInteractable(hit);
-            if (interactable == null)
-            {
-                return;
-            }
-
-            float distance = Vector2.Distance(transform.position, hit.ClosestPoint(transform.position));
-            if (distance > _interactRadius)
-            {
-                return;
-            }
-
-            interactable?.Interact();
+            Collider2D target = InteractionTarget = FindNearestInteractableCollider();
+            if (target != null && target.OverlapPoint(worldPoint)) GetInteractable(target)?.Interact();
         }
 
         private static IInteractable GetInteractable(Collider2D collider)
@@ -399,7 +477,9 @@ namespace Alif.Player
             }
 
             IInteractable interactable = collider.GetComponent<IInteractable>();
-            return interactable ?? collider.GetComponentInParent<IInteractable>();
+            interactable = interactable ?? collider.GetComponentInParent<IInteractable>();
+            if (interactable is Behaviour behaviour && !behaviour.isActiveAndEnabled) return null;
+            return interactable;
         }
 
         /// <summary>
@@ -414,12 +494,25 @@ namespace Alif.Player
         /// <summary>
         /// Kunci/lepas pergerakan player, dipanggil misalnya oleh DialogueManager saat dialog aktif.
         /// </summary>
+        public void SetMovementLocked(Object owner, bool isLocked)
+        {
+            if (owner == null) return;
+            if (isLocked) _movementOwners.Add(owner); else _movementOwners.Remove(owner);
+            if (MovementLocked) StopMotion();
+        }
+        public void BindJoystick(VirtualJoystick joystick) => _virtualJoystick = joystick;
+        public void StopMotion()
+        {
+            _moveInput = _smoothVelocity = _adventureDirection = Vector2.zero;
+            if (_rigidbody != null) _rigidbody.linearVelocity = Vector2.zero;
+        }
+        private void OnDestroy() { if (_runtimeMaterial != null) Destroy(_runtimeMaterial); }
         public void SetMovementLocked(bool isLocked)
         {
             _movementLocked = isLocked;
             if (isLocked)
             {
-                _moveInput = Vector2.zero;
+                StopMotion();
             }
         }
 

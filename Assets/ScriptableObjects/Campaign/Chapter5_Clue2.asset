@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7e7e8abb4e4b043c08377bbf1eb960b6, type: 3}
+  m_Name: Chapter5_Clue2
+  m_EditorClassIdentifier: Assembly-CSharp::Alif.Dialogue.DialogueData
+  Lines:
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Promotor hanya menunjukkan logo lembaga dan tangkapan layar izin yang tidak
+      bisa dicocokkan.
+    Choices:
+    - ChoiceText: Logo resmi sudah cukup.
+      NextLineIndex: 1
+      AffinityChange: 0
+      FinancialLogicChange: 0
+      ShariaComplianceChange: 0
+      BalanceCorrection: 0
+      EventId: 
+      OutcomeText: 
+    - ChoiceText: Periksa identitas dan izin penawaran melalui kanal resmi.
+      NextLineIndex: 2
+      AffinityChange: 0
+      FinancialLogicChange: 0
+      ShariaComplianceChange: 0
+      BalanceCorrection: 0
+      EventId: 
+      OutcomeText: 
+    NextLineIndex: -1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Logo dan tangkapan layar dapat disalahgunakan. Cocokkan informasi langsung
+      melalui lembaga berwenang; simpan bukti penawaran mencurigakan.
+    Choices: []
+    NextLineIndex: 0
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
+    Text: Logo dan tangkapan layar dapat disalahgunakan. Cocokkan informasi langsung
+      melalui lembaga berwenang; simpan bukti penawaran mencurigakan.
+    Choices: []
+    NextLineIndex: 3
+  OnCompleteEventId: 

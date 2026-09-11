@@ -1,0 +1,76 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7e7e8abb4e4b043c08377bbf1eb960b6, type: 3}
+  m_Name: DialogueData_Chapter1_Warung_Extension
+  m_EditorClassIdentifier: Alif.Runtime::Alif.Dialogue.DialogueData
+  Lines:
+  - SpeakerName: Bu Siti
+    SpeakerData: {fileID: 0}
+    Text: Alif, terima kasih sudah teliti memeriksa nota tadi. Kejujuran itu modal
+      utama dalam berdagang.
+    Choices: []
+    NextLineIndex: 1
+  - SpeakerName: Alif
+    SpeakerData: {fileID: 0}
+    Text: Sama-sama, Bu Siti. Transaksi yang jelas dan transparan membuat kedua pihak
+      tenang dan tidak ada yang dirugikan.
+    Choices: []
+    NextLineIndex: 2
+  - SpeakerName: Bu Siti
+    SpeakerData: {fileID: 0}
+    Text: Betul sekali. Ada sisa kembalian 5.000 rupiah, apa mau disimpan atau disedekahkan
+      ke kotak wakaf warung?
+    Choices:
+    - ChoiceText: Simpan untuk dana darurat pribadi (Prioritaskan tabungan)
+      NextLineIndex: 3
+      AffinityChange: 1
+      FinancialLogicChange: 10
+      ShariaComplianceChange: -10
+      BalanceCorrection: 0
+      EventId: choice.save_cash
+      OutcomeText: Alif memilih memperkuat dana darurat pribadi.
+    - ChoiceText: Sedekahkan ke kotak wakaf warung (Berkah sosial)
+      NextLineIndex: 4
+      AffinityChange: 2
+      FinancialLogicChange: -10
+      ShariaComplianceChange: 10
+      BalanceCorrection: 0
+      EventId: choice.donate_cash
+      OutcomeText: Alif menyisihkan sebagian rizki untuk keberkahan sesama.
+    - ChoiceText: Alokasikan 50% untuk tabungan dan 50% untuk sedekah (Keseimbangan)
+      NextLineIndex: 5
+      AffinityChange: 3
+      FinancialLogicChange: 0
+      ShariaComplianceChange: 0
+      BalanceCorrection: 15
+      EventId: choice.balanced_approach
+      OutcomeText: Keputusan seimbang antara ketahanan finansial dan kepatuhan syariah
+        tercapai.
+    NextLineIndex: -1
+  - SpeakerName: Bu Siti
+    SpeakerData: {fileID: 0}
+    Text: Bagus, Alif. Mengatur pengeluaran dengan disiplin adalah tanda orang bijak
+      mengatur amanah.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Bu Siti
+    SpeakerData: {fileID: 0}
+    Text: Alhamdulillah, semoga berkah berlipat ganda untuk Alif dan lingkungan kita.
+    Choices: []
+    NextLineIndex: -1
+  - SpeakerName: Bu Siti
+    SpeakerData: {fileID: 0}
+    Text: Masyallah, cara berpikir yang sangat seimbang! Tidak melupakan kebutuhan
+      sendiri sekaligus peduli sekitar.
+    Choices: []
+    NextLineIndex: -1
+  OnCompleteEventId: warung.extension.completed

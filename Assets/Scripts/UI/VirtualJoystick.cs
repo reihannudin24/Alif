@@ -20,6 +20,12 @@ namespace Alif.UI
         // Nilai -1..1 di tiap sumbu, dibaca PlayerController sebagai pengganti/tambahan input keyboard.
         public Vector2 Direction { get; private set; }
 
+        public void Configure(RectTransform background, RectTransform knob)
+        {
+            _background = background; _knob = knob;
+        }
+        private void OnDisable() => OnPointerUp(null);
+        private void OnApplicationFocus(bool focused) { if (!focused) OnPointerUp(null); }
         public void OnPointerDown(PointerEventData eventData)
         {
             OnDrag(eventData);

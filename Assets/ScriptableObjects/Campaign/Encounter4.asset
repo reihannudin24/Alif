@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0b857f75598704650a5236a47c2019e6, type: 3}
+  m_Name: Encounter4
+  m_EditorClassIdentifier: Alif.Battle.Model::Alif.Battle.ActionEncounterDefinition
+  Chapter: 4
+  BossName: Saudagar Topeng
+  BossSprite: {fileID: -5279710737682418511, guid: 1ce2f8541073f4d2890c48eeabfb01fa, type: 3}
+  CombatPoses:
+  - {fileID: 592491863002615776, guid: 9c46d2227f75246af99cde5b002ae5bc, type: 3}
+  - {fileID: -1838760920508527145, guid: 9c46d2227f75246af99cde5b002ae5bc, type: 3}
+  - {fileID: -7112623826987071965, guid: 9c46d2227f75246af99cde5b002ae5bc, type: 3}
+  - {fileID: -8021783482508467223, guid: 9c46d2227f75246af99cde5b002ae5bc, type: 3}
+  - {fileID: -7956290859484898942, guid: 9c46d2227f75246af99cde5b002ae5bc, type: 3}
+  - {fileID: 3667687730454903871, guid: 9c46d2227f75246af99cde5b002ae5bc, type: 3}
+  - {fileID: 3859006577663055386, guid: 9c46d2227f75246af99cde5b002ae5bc, type: 3}
+  - {fileID: -521743139655878630, guid: 9c46d2227f75246af99cde5b002ae5bc, type: 3}
+  Accent: {r: 0.37, g: 0.75, b: 0.96, a: 1}
+  BossHP: 216
+  PlayerDamage: 18
+  BossDamage: 16
+  AttackDuration: 0.45
+  DodgeDuration: 0.25
+  DodgeCooldown: 0.8
+  DodgeImmunity: 0.15
+  Anticipation: 0.9
+  ActiveDuration: 0.65
+  Recovery: 1.3
+  SwingSound: {fileID: 8300000, guid: ee207e9c539b94f3dae862af07442758, type: 3}
+  HitSound: {fileID: 8300000, guid: d7539d0ec5f1c4a318f3f043d78be660, type: 3}
+  DodgeSound: {fileID: 8300000, guid: 4f10e3769d9ce4d349156386e3c3023a, type: 3}
+  VictorySound: {fileID: 8300000, guid: 2724bc25ec3524ac28f188fc90201604, type: 3}
+  ReferenceTitle: "MUI \u2022 Prinsip transaksi syariah"
+  ReferenceUrl: https://mirror.mui.or.id/berita/23844/hindari-7-hal-dalam-transaksi-dengan-uang-elektronik/
+  Lesson: Naya menyimpan bukti dan meminta penjelasan yang jujur. Menutupi cacat
+    barang agar pembeli terkecoh merupakan tadlis. Periksa kondisi, informasi produk,
+    dan kesepakatan sebelum membayar.

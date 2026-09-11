@@ -499,6 +499,12 @@ namespace Alif.EditorTools
 
             BoxCollider2D collider = blocker.AddComponent<BoxCollider2D>();
             collider.size = size;
+
+            PhysicsMaterial2D frictionless = AssetDatabase.LoadAssetAtPath<PhysicsMaterial2D>("Assets/Settings/Frictionless2D.physicsMaterial2D");
+            if (frictionless != null)
+            {
+                collider.sharedMaterial = frictionless;
+            }
         }
 
         private static void AddPropBlockers(GameObject parent, (string name, Vector2 center, Vector2 size)[] blockers)
@@ -731,17 +737,30 @@ namespace Alif.EditorTools
             Animator animator = GetOrAddComponent<Animator>(character);
             animator.runtimeAnimatorController = characterData.AnimatorController;
 
+            // Solid collider di kaki agar Alif tidak bisa jalan menembus karakter
+            CapsuleCollider2D solidCollider = GetOrAddComponent<CapsuleCollider2D>(character);
+            solidCollider.direction = CapsuleDirection2D.Horizontal;
+            solidCollider.size = new Vector2(0.32f, 0.2f);
+            solidCollider.offset = new Vector2(0f, -0.32f);
+            solidCollider.isTrigger = false;
+
+            // Trigger interaksi
             CircleCollider2D collider = GetOrAddComponent<CircleCollider2D>(character);
-            collider.radius = 0.34f;
-            collider.isTrigger = isInteractable;
+            collider.radius = 0.6f;
+            collider.isTrigger = true;
+
+            GetOrAddComponent<YSortOrder>(character);
+            GetOrAddComponent<EmoteBubble>(character);
 
             if (!isInteractable)
             {
                 character.layer = 0;
+                collider.enabled = false;
                 return character;
             }
 
             character.layer = LayerIndexInteractable;
+            collider.enabled = true;
             RestaurantStoryPoint point = GetOrAddComponent<RestaurantStoryPoint>(character);
             SetSerializedRef(point, "_story", story);
             SetSerializedValue(point, "_pointType", (int)pointType);
@@ -1204,13 +1223,21 @@ namespace Alif.EditorTools
             rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
             rb.interpolation = RigidbodyInterpolation2D.Interpolate;
 
+            PhysicsMaterial2D frictionless = AssetDatabase.LoadAssetAtPath<PhysicsMaterial2D>("Assets/Settings/Frictionless2D.physicsMaterial2D");
+            if (frictionless != null)
+            {
+                rb.sharedMaterial = frictionless;
+            }
+
             CapsuleCollider2D collider = GetOrAddComponent<CapsuleCollider2D>(player);
-            // Top-down: yang bertabrakan dengan dunia hanya "kaki" Alif, bukan seluruh
-            // gambar badannya. Collider lama 0.7 x 0.9 membuat setiap prop terasa punya
-            // zona tak terlihat yang besar dan menutup celah antar meja.
-            collider.direction = CapsuleDirection2D.Vertical;
-            collider.size = new Vector2(0.32f, 0.24f);
+            // Top-down: collider horizontal pada kaki Alif agar mulus melewati celah meja & pintu
+            collider.direction = CapsuleDirection2D.Horizontal;
+            collider.size = new Vector2(0.32f, 0.22f);
             collider.offset = new Vector2(0f, -0.34f);
+            if (frictionless != null)
+            {
+                collider.sharedMaterial = frictionless;
+            }
 
             SpriteRenderer sr = GetOrAddComponent<SpriteRenderer>(player);
             Sprite southIdle = AssetDatabase.LoadAssetAtPath<Sprite>($"{PlayerSpriteFolder}/Idle/rotations/south.png");
@@ -1221,6 +1248,9 @@ namespace Alif.EditorTools
             animator.runtimeAnimatorController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(PlayerControllerPath);
 
             GetOrAddComponent<PlayerAnimation>(player);
+            GetOrAddComponent<YSortOrder>(player);
+            GetOrAddComponent<FootstepDustEffect>(player);
+            GetOrAddComponent<EmoteBubble>(player);
 
             // PlayerInput (+ "Send Messages") pernah dipakai di sini, tapi ternyata rapuh
             // (bisa lempar MissingMethodException walau method target ada). PlayerController
@@ -1316,9 +1346,17 @@ namespace Alif.EditorTools
             sr.sprite = characterData.Portrait;
             sr.sortingOrder = SortingOrderCharacters;
 
+            // Solid foot collider di kaki NPC agar pemain tidak menembus badan
+            CapsuleCollider2D solidCollider = GetOrAddComponent<CapsuleCollider2D>(npc);
+            solidCollider.direction = CapsuleDirection2D.Horizontal;
+            solidCollider.size = new Vector2(0.32f, 0.2f);
+            solidCollider.offset = new Vector2(0f, -0.32f);
+            solidCollider.isTrigger = false;
+
+            // Trigger interaksi
             CircleCollider2D collider = GetOrAddComponent<CircleCollider2D>(npc);
             collider.isTrigger = true;
-            collider.radius = 0.5f;
+            collider.radius = 0.7f;
 
             Animator animator = GetOrAddComponent<Animator>(npc);
             animator.runtimeAnimatorController = characterData.AnimatorController;
@@ -1328,7 +1366,26 @@ namespace Alif.EditorTools
             SetSerializedRef(npcController, "_defaultDialogue", dialogueData);
             SetSerializedRef(npcController, "_spriteRenderer", sr);
 
+            // Muat 8 rotasi sprite untuk hadap ke pemain
+            Sprite[] rotSprites = LoadNpcRotationSprites(folder);
+            npcController.SetRotationSprites(rotSprites);
+
+            GetOrAddComponent<YSortOrder>(npc);
+            GetOrAddComponent<EmoteBubble>(npc);
+
             AddInteractionArrow(npc.transform, new Vector2(0f, 1.0f));
+        }
+
+        private static Sprite[] LoadNpcRotationSprites(string folder)
+        {
+            string[] dirs = { "south", "south-east", "east", "north-east", "north", "north-west", "west", "south-west" };
+            Sprite[] sprites = new Sprite[8];
+            for (int i = 0; i < dirs.Length; i++)
+            {
+                string path = $"Assets/Sprites/Characters/{folder}/Idle/rotations/{dirs[i]}.png";
+                sprites[i] = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            }
+            return sprites;
         }
 
         private static DialogueData GetOrCreateDialogueData(string folder, string displayName)
@@ -1448,7 +1505,10 @@ namespace Alif.EditorTools
 
             SpriteRenderer sr = GetOrAddComponent<SpriteRenderer>(arrow);
             sr.sprite = GetOrCreateTriangleSprite("InteractionArrow", new Color(1f, 1f, 1f, 0.95f), 64);
-            sr.sortingOrder = SortingOrderCharacters + 1;
+            sr.sortingOrder = SortingOrderCharacters + 10;
+
+            FloatingPrompt prompt = GetOrAddComponent<FloatingPrompt>(arrow);
+            prompt.SetBasePosition(new Vector3(localOffset.x, localOffset.y, 0f));
 
             arrow.SetActive(false);
         }
@@ -1533,6 +1593,173 @@ namespace Alif.EditorTools
             {
                 SpeakerName = "Alif",
                 Text = "Ada voucher promo kereta di loket! Lumayan, aku ambil buat jaga-jaga."
+            });
+
+            EnsureFolder(DialogueDataFolder);
+            AssetDatabase.CreateAsset(data, path);
+            return data;
+        }
+
+        private static void ConfigureAudioManager(AudioManager audioManager)
+        {
+            if (audioManager == null) return;
+            AudioClip footstep = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/SFX_Footstep.wav");
+            AudioClip blip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/SFX_DialogueBlip.wav");
+            AudioClip interact = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/SFX_Interact.wav");
+            AudioClip coin = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/SFX_Coin.wav");
+            AudioClip bump = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/SFX_Bump.wav");
+            AudioClip meow = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/SFX_CatMeow.wav");
+
+            SetSerializedRef(audioManager, "_footstepSfx", footstep);
+            SetSerializedRef(audioManager, "_dialogueBlipSfx", blip);
+            SetSerializedRef(audioManager, "_interactSfx", interact);
+            SetSerializedRef(audioManager, "_coinSfx", coin);
+            SetSerializedRef(audioManager, "_bumpSfx", bump);
+            SetSerializedRef(audioManager, "_catMeowSfx", meow);
+        }
+
+        private static void BuildFunEasterEggs(PlayerController playerController)
+        {
+            GameObject background = FindOrCreateRoot("Background");
+            Transform parent = background.transform;
+
+            // 1. Kucing Stasiun "Si Belang" di dekat bangku ruang tunggu
+            BuildStationCat(parent, new Vector2(2.15f, -2.4f));
+
+            // 2. Koin Rezeki Berkilau di bawah bangku
+            BuildLuckyCoin(parent, new Vector2(4.3f, -3.1f));
+
+            // 3. Papan Informasi Kereta (Notice Board)
+            BuildStationNoticeBoard(parent, new Vector2(-1.25f, 1.85f));
+        }
+
+        private static void BuildStationCat(Transform parent, Vector2 localPos)
+        {
+            GameObject catGO = FindOrCreateWorldChild(parent, "Cat_SiBelang");
+            catGO.transform.localPosition = localPos;
+            catGO.layer = LayerIndexInteractable;
+
+            SpriteRenderer sr = GetOrAddComponent<SpriteRenderer>(catGO);
+            Sprite catSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/Characters/cat_belang.png");
+            sr.sprite = catSprite;
+            sr.sortingOrder = SortingOrderCharacters;
+
+            CircleCollider2D col = GetOrAddComponent<CircleCollider2D>(catGO);
+            col.radius = 0.45f;
+            col.isTrigger = true;
+
+            GetOrAddComponent<YSortOrder>(catGO);
+            GetOrAddComponent<EmoteBubble>(catGO);
+
+            StationCat cat = GetOrAddComponent<StationCat>(catGO);
+            SetSerializedRef(cat, "_catDialogue", GetOrCreateCatDialogue());
+
+            AddInteractionArrow(catGO.transform, new Vector2(0f, 0.5f));
+        }
+
+        private static DialogueData GetOrCreateCatDialogue()
+        {
+            string path = $"{DialogueDataFolder}/DialogueData_CatSiBelang.asset";
+            DialogueData data = AssetDatabase.LoadAssetAtPath<DialogueData>(path);
+            if (data != null) return data;
+
+            data = ScriptableObject.CreateInstance<DialogueData>();
+            data.Lines.Add(new DialogueLine
+            {
+                SpeakerName = "Alif",
+                Text = "Halo Si Belang! Kucing stasiun yang santai banget."
+            });
+            data.Lines.Add(new DialogueLine
+            {
+                SpeakerName = "Si Belang",
+                Text = "*Purrrr...* (Si Belang mendengkur puas dan menyandarkan kepalanya ke tanganmu.)"
+            });
+
+            EnsureFolder(DialogueDataFolder);
+            AssetDatabase.CreateAsset(data, path);
+            return data;
+        }
+
+        private static void BuildLuckyCoin(Transform parent, Vector2 localPos)
+        {
+            GameObject coinGO = FindOrCreateWorldChild(parent, "Secret_LuckyCoin");
+            coinGO.transform.localPosition = localPos;
+            coinGO.layer = LayerIndexInteractable;
+
+            SpriteRenderer sr = GetOrAddComponent<SpriteRenderer>(coinGO);
+            Sprite coinSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/UI/Coin_Shine.png");
+            sr.sprite = coinSprite;
+            sr.sortingOrder = SortingOrderCharacters - 1;
+
+            CircleCollider2D col = GetOrAddComponent<CircleCollider2D>(coinGO);
+            col.radius = 0.35f;
+            col.isTrigger = true;
+
+            LuckyCoinPickup luckyCoin = GetOrAddComponent<LuckyCoinPickup>(coinGO);
+            SetSerializedRef(luckyCoin, "_rewardDialogue", GetOrCreateLuckyCoinDialogue());
+            SetSerializedValue(luckyCoin, "_rewardAmount", 5000);
+
+            AddInteractionArrow(coinGO.transform, new Vector2(0f, 0.35f));
+        }
+
+        private static DialogueData GetOrCreateLuckyCoinDialogue()
+        {
+            string path = $"{DialogueDataFolder}/DialogueData_LuckyCoin.asset";
+            DialogueData data = AssetDatabase.LoadAssetAtPath<DialogueData>(path);
+            if (data != null) return data;
+
+            data = ScriptableObject.CreateInstance<DialogueData>();
+            data.Lines.Add(new DialogueLine
+            {
+                SpeakerName = "Alif",
+                Text = "Eh, ada koin lima ribu rupiah berkilau di lantai! Lumayan banget buat nambah uang makan siang. Rezeki anak sholeh!"
+            });
+
+            EnsureFolder(DialogueDataFolder);
+            AssetDatabase.CreateAsset(data, path);
+            return data;
+        }
+
+        private static void BuildStationNoticeBoard(Transform parent, Vector2 localPos)
+        {
+            GameObject boardGO = FindOrCreateWorldChild(parent, "Station_NoticeBoard");
+            boardGO.transform.localPosition = localPos;
+            boardGO.layer = LayerIndexInteractable;
+
+            SpriteRenderer sr = GetOrAddComponent<SpriteRenderer>(boardGO);
+            Sprite boardSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/UI/Notice_Board.png");
+            sr.sprite = boardSprite;
+            sr.sortingOrder = SortingOrderCharacters;
+
+            BoxCollider2D col = GetOrAddComponent<BoxCollider2D>(boardGO);
+            col.size = new Vector2(0.55f, 0.55f);
+            col.isTrigger = true;
+
+            GetOrAddComponent<YSortOrder>(boardGO);
+
+            InteractableObject interactable = GetOrAddComponent<InteractableObject>(boardGO);
+            SetSerializedRef(interactable, "_dialogue", GetOrCreateNoticeBoardDialogue());
+            SetSerializedRef(interactable, "_speakerData", GetOrCreateAlifCharacterData());
+
+            AddInteractionArrow(boardGO.transform, new Vector2(0f, 0.45f));
+        }
+
+        private static DialogueData GetOrCreateNoticeBoardDialogue()
+        {
+            string path = $"{DialogueDataFolder}/DialogueData_NoticeBoard.asset";
+            DialogueData data = AssetDatabase.LoadAssetAtPath<DialogueData>(path);
+            if (data != null) return data;
+
+            data = ScriptableObject.CreateInstance<DialogueData>();
+            data.Lines.Add(new DialogueLine
+            {
+                SpeakerName = "Alif",
+                Text = "Papan Pengumuman Stasiun: 'Jadwal Kereta Commuter Line aman. Hati-hati melangkah, dahulukan penumpang yang turun.'"
+            });
+            data.Lines.Add(new DialogueLine
+            {
+                SpeakerName = "Alif",
+                Text = "Ada tempelan memo kecil di pojok: 'Si Belang jangan dikasih cokelat ya, kalau mau kasih jajan ikan tongkol di Warung Bu Siti aja.'"
             });
 
             EnsureFolder(DialogueDataFolder);

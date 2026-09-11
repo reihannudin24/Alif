@@ -16,7 +16,8 @@ namespace Alif.Core
             MainMenu,
             Playing,
             Dialogue,
-            Paused
+            Paused,
+            Combat
         }
 
         [Header("Game State")]
@@ -49,6 +50,8 @@ namespace Alif.Core
         {
             _currentState = newState;
         }
+
+        private void OnDestroy() { if (Instance == this) Instance = null; }
 
         public bool IsPlaying() => _currentState == GameState.Playing;
     }

@@ -1,0 +1,83 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 985d7659e3f264baf92f520ac64bb1d9, type: 3}
+  m_Name: DanaKilat
+  m_EditorClassIdentifier: Alif.Battle.Model::Alif.Battle.BattleEncounterDefinition
+  EnemyName: Monster Dana Kilat
+  AlifSprite: {fileID: 21300000, guid: 45a7b4c3ae2a74ecc8e98c4aa6d878b7, type: 3}
+  EnemySprite: {fileID: -3792374647891246411, guid: 73e5cb54a82d64535abedbcb65db3121, type: 3}
+  PlayerMaxHP: 100
+  EnemyMaxHP: 100
+  Damage: 34
+  ReferenceTitle: Fatwa MUI No. 1 Tahun 2004 tentang Bunga
+  ReferenceUrl: https://mui.or.id/baca/fatwa/hukum-bunga-interestfaidah
+  Stages:
+  - Skill: Periksa Akad
+    Offer: "Dana Kilat: \u2018Butuh Rp2.000.000? Cair sekarang! Pinjaman 30 hari,
+      tambahan wajib 10% dari pokok. Jangan buang waktu membaca!\u2019"
+    Responses:
+    - Text: Langsung setuju karena uangnya cepat cair.
+      Correct: 0
+      Explanation: Kecepatan cair tidak menjelaskan kewajibanmu. Tawaran ini menetapkan
+        tambahan 10% untuk pinjaman 30 hari. Baca pokok, tambahan, dan jatuh tempo
+        sebelum memutuskan.
+    - Text: Periksa pokok, tambahan wajib, jangka waktu, dan total pengembalian.
+      Correct: 1
+      Explanation: "Pokok Rp2.000.000 dengan tambahan wajib 10% berarti Rp200.000
+        tambahan, sehingga total Rp2.200.000 untuk 30 hari. Ini tambahan pinjaman
+        terkait waktu, bukan sekadar slogan \u2018cair cepat\u2019."
+    - Text: Percaya saja pada testimoni dan jumlah unduhannya.
+      Correct: 0
+      Explanation: Popularitas bukan bukti kesesuaian akad. Yang perlu diperiksa
+        adalah syarat pinjaman dan kewajiban pembayaran. Fatwa MUI No. 1 Tahun 2004
+        membahas tambahan atas pinjaman berdasarkan waktu.
+  - Skill: Kenali Riba
+    Offer: "Dana Kilat: \u2018Tambahan 10% itu sudah pasti sejak awal dan dihitung
+      untuk 30 hari. Kecil, kok. Berarti aman, kan?\u2019"
+    Responses:
+    - Text: Tambahan wajib karena waktu pada pinjaman ini termasuk bunga yang dibahas
+        fatwa MUI.
+      Correct: 1
+      Explanation: Fatwa MUI No. 1 Tahun 2004 menjelaskan bunga sebagai tambahan
+        atas pinjaman yang ditentukan di muka berdasarkan waktu, umumnya berupa persentase.
+        Praktik pembungaan itu termasuk riba. Penilaian ini mengenai syarat tawaran
+        tersebut, bukan semua layanan daring.
+    - Text: Boleh, selama persentasenya terasa kecil.
+      Correct: 0
+      Explanation: "Besar-kecil persentase tidak mengubah sifat tambahan wajib karena
+        waktu dalam kasus ini. Fatwa MUI No. 1 Tahun 2004 tidak menjadikan \u2018terasa
+        kecil\u2019 sebagai pembenar pembungaan pinjaman."
+    - Text: Semua pinjaman pasti riba, apa pun syaratnya.
+      Correct: 0
+      Explanation: Jangan menyamakan semua pinjaman. Fokus kasus ini adalah tambahan
+        wajib berdasarkan persentase pokok dan waktu. Baca akadnya; fatwa yang dirujuk
+        membahas pembungaan uang.
+  - Skill: Tolak Tawaran
+    Offer: "Dana Kilat: \u2018Abaikan rencana Dimas. Terima pinjaman berbunga ini
+      sekarang; kamu bisa memikirkan akibatnya nanti!\u2019"
+    Responses:
+    - Text: Ambil dulu, baru cari cara melunasinya nanti.
+      Correct: 0
+      Explanation: Menunda memikirkan akibat tidak menghapus tambahan yang sudah
+        disyaratkan. Dimas sudah memiliki rencana bantuan dan pengurangan biaya;
+        kembali ke langkah nyata itu.
+    - Text: Cari tawaran yang sama dengan bunga sedikit lebih rendah.
+      Correct: 0
+      Explanation: Bunga lebih rendah belum mengubah bentuk tambahan karena waktu
+        pada tawaran ini. Pilih langkah yang tidak bergantung pada menerima penawaran
+        tersebut.
+    - Text: Tolak tawaran ini dan lanjutkan rencana bantuan kampus, pengurangan biaya,
+        serta dukungan keluarga.
+      Correct: 1
+      Explanation: 'Tolak pinjaman dengan tambahan berbunga ini. Dimas dapat melanjutkan
+        langkah yang sudah disusun bersama: keringanan biaya, bantuan kampus, tabungan,
+        dan dukungan keluarga. Menolak tawaran disertai rencana yang bisa dijalankan.'

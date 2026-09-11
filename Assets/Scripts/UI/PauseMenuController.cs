@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 using Alif.Dialogue;
+using Alif.Core;
 
 namespace Alif.UI
 {
