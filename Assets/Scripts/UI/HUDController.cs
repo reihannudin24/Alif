@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -30,58 +31,55 @@ namespace Alif.UI
         [Header("Currency Display")]
         [SerializeField] private TMP_Text _moneyText;
 
+        private TimeSystem _timeSystem;
+        private EnergySystem _energySystem;
+        private CurrencySystem _currencySystem;
+        private ScoreSystem _scoreSystem;
+        private Coroutine _systemsSubscribeRoutine;
+
         private void OnEnable()
         {
-            // Subscribe ke event sistem-sistem terkait. Dilakukan di OnEnable/OnDisable
-            // (bukan Awake/OnDestroy) supaya aman jika HUD di-nonaktifkan sementara lalu diaktifkan lagi.
-            if (TimeSystem.Instance != null)
+            // Urutan Awake antarroots Unity tidak dijamin. Canvas kadang aktif lebih dulu dari
+            // _GameManagers, sehingga slider tertinggal di nilai prefab 100% dan tidak pernah
+            // menerima perubahan berikutnya. Retry sampai SEMUA sistem siap, lalu cache instance
+            // yang benar supaya HUD selalu langsung sinkron.
+            if (!TrySubscribeToSystems())
             {
-                TimeSystem.Instance.OnMinuteChanged += HandleTimeChanged;
-                HandleTimeChanged();
-            }
-
-            if (EnergySystem.Instance != null)
-            {
-                EnergySystem.Instance.OnEnergyChanged += HandleEnergyChanged;
-                HandleEnergyChanged(EnergySystem.Instance.EnergyPercent01);
-            }
-
-            if (CurrencySystem.Instance != null)
-            {
-                CurrencySystem.Instance.OnMoneyChanged += HandleMoneyChanged;
-                HandleMoneyChanged(CurrencySystem.Instance.CurrentMoney);
-            }
-
-            if (ScoreSystem.Instance != null)
-            {
-                ScoreSystem.Instance.OnFinancialLogicChanged += HandleFinancialLogicChanged;
-                ScoreSystem.Instance.OnShariaComplianceChanged += HandleShariaComplianceChanged;
-                HandleFinancialLogicChanged(ScoreSystem.Instance.FinancialLogicPercent01);
-                HandleShariaComplianceChanged(ScoreSystem.Instance.ShariaCompliancePercent01);
+                _systemsSubscribeRoutine = StartCoroutine(SubscribeWhenSystemsReady());
             }
         }
 
         private void OnDisable()
         {
-            if (TimeSystem.Instance != null)
+            if (_systemsSubscribeRoutine != null)
             {
-                TimeSystem.Instance.OnMinuteChanged -= HandleTimeChanged;
+                StopCoroutine(_systemsSubscribeRoutine);
+                _systemsSubscribeRoutine = null;
             }
 
-            if (EnergySystem.Instance != null)
+            if (_timeSystem != null)
             {
-                EnergySystem.Instance.OnEnergyChanged -= HandleEnergyChanged;
+                _timeSystem.OnMinuteChanged -= HandleTimeChanged;
+                _timeSystem = null;
             }
 
-            if (CurrencySystem.Instance != null)
+            if (_energySystem != null)
             {
-                CurrencySystem.Instance.OnMoneyChanged -= HandleMoneyChanged;
+                _energySystem.OnEnergyChanged -= HandleEnergyChanged;
+                _energySystem = null;
             }
 
-            if (ScoreSystem.Instance != null)
+            if (_currencySystem != null)
             {
-                ScoreSystem.Instance.OnFinancialLogicChanged -= HandleFinancialLogicChanged;
-                ScoreSystem.Instance.OnShariaComplianceChanged -= HandleShariaComplianceChanged;
+                _currencySystem.OnMoneyChanged -= HandleMoneyChanged;
+                _currencySystem = null;
+            }
+
+            if (_scoreSystem != null)
+            {
+                _scoreSystem.OnFinancialLogicChanged -= HandleFinancialLogicChanged;
+                _scoreSystem.OnShariaComplianceChanged -= HandleShariaComplianceChanged;
+                _scoreSystem = null;
             }
         }
 
@@ -89,7 +87,11 @@ namespace Alif.UI
         {
             if (_dayWeekText != null)
             {
-                _dayWeekText.text = TimeSystem.Instance.GetFormattedDay();
+                TimeSystem activeTime = _timeSystem != null ? _timeSystem : TimeSystem.Instance;
+                if (activeTime != null)
+                {
+                    _dayWeekText.text = activeTime.GetFormattedDay();
+                }
             }
         }
 
@@ -107,8 +109,122 @@ namespace Alif.UI
         {
             if (_moneyText != null)
             {
-                _moneyText.text = $"Rp {amount:N0}";
+                _moneyText.text = CurrencySystem.FormatRupiah(amount);
             }
+        }
+
+        private IEnumerator SubscribeWhenSystemsReady()
+        {
+            while (!TrySubscribeToSystems())
+            {
+                yield return null;
+            }
+
+            _systemsSubscribeRoutine = null;
+        }
+
+        private bool TrySubscribeToSystems()
+        {
+            bool timeReady = TrySubscribeToTime();
+            bool energyReady = TrySubscribeToEnergy();
+            bool currencyReady = TrySubscribeToCurrency();
+            bool scoreReady = TrySubscribeToScore();
+            return timeReady && energyReady && currencyReady && scoreReady;
+        }
+
+        private bool TrySubscribeToTime()
+        {
+            TimeSystem activeTime = TimeSystem.Instance;
+            if (activeTime == null)
+            {
+                return false;
+            }
+
+            if (_timeSystem != activeTime)
+            {
+                if (_timeSystem != null)
+                {
+                    _timeSystem.OnMinuteChanged -= HandleTimeChanged;
+                }
+
+                _timeSystem = activeTime;
+                _timeSystem.OnMinuteChanged += HandleTimeChanged;
+                HandleTimeChanged();
+            }
+
+            return true;
+        }
+
+        private bool TrySubscribeToEnergy()
+        {
+            EnergySystem activeEnergy = EnergySystem.Instance;
+            if (activeEnergy == null)
+            {
+                return false;
+            }
+
+            if (_energySystem != activeEnergy)
+            {
+                if (_energySystem != null)
+                {
+                    _energySystem.OnEnergyChanged -= HandleEnergyChanged;
+                }
+
+                _energySystem = activeEnergy;
+                _energySystem.OnEnergyChanged += HandleEnergyChanged;
+                HandleEnergyChanged(_energySystem.EnergyPercent01);
+            }
+
+            return true;
+        }
+
+        private bool TrySubscribeToCurrency()
+        {
+            CurrencySystem activeCurrency = CurrencySystem.Instance;
+            if (activeCurrency == null)
+            {
+                return false;
+            }
+
+            if (_currencySystem != activeCurrency)
+            {
+                if (_currencySystem != null)
+                {
+                    _currencySystem.OnMoneyChanged -= HandleMoneyChanged;
+                }
+
+                _currencySystem = activeCurrency;
+                _currencySystem.OnMoneyChanged += HandleMoneyChanged;
+                HandleMoneyChanged(_currencySystem.CurrentMoney);
+            }
+
+            return true;
+        }
+
+        private bool TrySubscribeToScore()
+        {
+            ScoreSystem activeScore = ScoreSystem.Instance;
+            if (activeScore == null)
+            {
+                return false;
+            }
+
+            if (_scoreSystem != activeScore)
+            {
+                if (_scoreSystem != null)
+                {
+                    _scoreSystem.OnFinancialLogicChanged -= HandleFinancialLogicChanged;
+                    _scoreSystem.OnShariaComplianceChanged -= HandleShariaComplianceChanged;
+                }
+
+                _scoreSystem = activeScore;
+                _scoreSystem.OnFinancialLogicChanged += HandleFinancialLogicChanged;
+                _scoreSystem.OnShariaComplianceChanged += HandleShariaComplianceChanged;
+                HandleFinancialLogicChanged(_scoreSystem.FinancialLogicPercent01);
+                HandleShariaComplianceChanged(_scoreSystem.ShariaCompliancePercent01);
+            }
+
+            return true;
         }
 
         private void HandleFinancialLogicChanged(float percent01)

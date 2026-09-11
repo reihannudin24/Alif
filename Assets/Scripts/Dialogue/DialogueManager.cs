@@ -43,6 +43,10 @@ namespace Alif.Dialogue
         // mendengarkan event ini tanpa perlu tahu detail dialog yang sedang berjalan.
         public event Action<DialogueChoice> OnChoiceSelected;
 
+        // Pilihan berbiaya yang uangnya tidak cukup tidak memajukan dialog. DialogueUI memakai
+        // event ini untuk memberi alasan sambil tetap membiarkan tombol pilihan tampil.
+        public event Action<string> OnChoiceRejected;
+
         // Event untuk DialogueUI: dipanggil saat dialog dimulai/selesai.
         public event Action OnDialogueStarted;
         public event Action OnDialogueEnded;
@@ -140,6 +144,25 @@ namespace Alif.Dialogue
             if (!IsDialogueActive || choice == null)
             {
                 return;
+            }
+
+            if (choice.MoneyCost > 0)
+            {
+                CurrencySystem currency = CurrencySystem.Instance;
+                if (currency == null)
+                {
+                    OnChoiceRejected?.Invoke("Sistem uang belum siap. Coba pilih kembali sebentar lagi.");
+                    return;
+                }
+
+                if (!currency.SpendMoney(choice.MoneyCost))
+                {
+                    int shortage = Mathf.Max(0, choice.MoneyCost - currency.CurrentMoney);
+                    OnChoiceRejected?.Invoke(
+                        $"Uang tunai kurang {CurrencySystem.FormatRupiah(shortage)}. " +
+                        "Pilih menu lain atau tarik tunai di ATM.");
+                    return;
+                }
             }
 
             if (choice.AffinityChange != 0 && _currentSpeakerData != null)

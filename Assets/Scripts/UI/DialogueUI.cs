@@ -22,6 +22,8 @@ namespace Alif.UI
         [Header("Line Display")]
         [SerializeField] private TMP_Text _speakerNameText;
         [SerializeField] private TMP_Text _dialogueText;
+        [Tooltip("Pesan singkat khusus pilihan yang ditolak, supaya tidak menimpa teks dialog atau tombol pilihan.")]
+        [SerializeField] private TMP_Text _choiceStatusText;
         [SerializeField] private Image _portraitImage;
         [SerializeField] private Button _nextButton;
 
@@ -53,6 +55,8 @@ namespace Alif.UI
         [SerializeField] private GameObject _inventoryPanelRoot;
         [Tooltip("Tombol pause di pojok layar.")]
         [SerializeField] private GameObject _pauseButtonRoot;
+        [Tooltip("Objective disembunyikan selama dialog agar tidak bertumpuk dengan panel pilihan yang membesar ke atas.")]
+        [SerializeField] private GameObject _objectivePanelRoot;
 
         [Header("Audio")]
         [SerializeField] private Alif.Core.AudioManager _audioManager;
@@ -145,6 +149,7 @@ namespace Alif.UI
             DialogueManager.Instance.OnDialogueStarted += HandleDialogueStarted;
             DialogueManager.Instance.OnDialogueEnded += HandleDialogueEnded;
             DialogueManager.Instance.OnLineDisplayed += HandleLineDisplayed;
+            DialogueManager.Instance.OnChoiceRejected += HandleChoiceRejected;
             _isSubscribed = true;
         }
 
@@ -159,11 +164,22 @@ namespace Alif.UI
             DialogueManager.Instance.OnDialogueStarted -= HandleDialogueStarted;
             DialogueManager.Instance.OnDialogueEnded -= HandleDialogueEnded;
             DialogueManager.Instance.OnLineDisplayed -= HandleLineDisplayed;
+            DialogueManager.Instance.OnChoiceRejected -= HandleChoiceRejected;
             _isSubscribed = false;
+        }
+
+        private void HandleChoiceRejected(string reason)
+        {
+            if (_choiceStatusText != null)
+            {
+                _choiceStatusText.text = reason;
+                _choiceStatusText.gameObject.SetActive(true);
+            }
         }
 
         private void HandleDialogueStarted()
         {
+            ClearChoiceStatus();
             SetBoxVisible(true);
         }
 
@@ -171,6 +187,7 @@ namespace Alif.UI
         {
             SetBoxVisible(false);
             ClearChoiceButtons();
+            ClearChoiceStatus();
 
             // Reset supaya dialog berikutnya (walau kebetulan mulai dari NPC yang sama) tetap
             // mainin animasi masuk dari awal, bukan dianggap "pembicara sama, skip animasi".
@@ -184,6 +201,7 @@ namespace Alif.UI
         private void HandleLineDisplayed(DialogueLine line)
         {
             _currentLine = line;
+            ClearChoiceStatus();
 
             if (_speakerNameText != null)
             {
@@ -316,6 +334,17 @@ namespace Alif.UI
 
             _spawnedChoiceButtons.Clear();
             ResizePanelForChoices(0f);
+        }
+
+        private void ClearChoiceStatus()
+        {
+            if (_choiceStatusText == null)
+            {
+                return;
+            }
+
+            _choiceStatusText.text = string.Empty;
+            _choiceStatusText.gameObject.SetActive(false);
         }
 
         private void HandleNextClicked()
@@ -470,6 +499,11 @@ namespace Alif.UI
             if (_pauseButtonRoot != null)
             {
                 _pauseButtonRoot.SetActive(!visible);
+            }
+
+            if (_objectivePanelRoot != null)
+            {
+                _objectivePanelRoot.SetActive(!visible);
             }
         }
     }

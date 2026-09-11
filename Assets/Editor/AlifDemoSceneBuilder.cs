@@ -189,7 +189,9 @@ namespace Alif.EditorTools
             GetOrAddChild<SceneLoader>(managersRoot.transform, "SceneLoader");
             GetOrAddChild<TimeSystem>(managersRoot.transform, "TimeSystem");
             GetOrAddChild<EnergySystem>(managersRoot.transform, "EnergySystem");
-            GetOrAddChild<CurrencySystem>(managersRoot.transform, "CurrencySystem");
+            CurrencySystem currencySystem = GetOrAddChild<CurrencySystem>(managersRoot.transform, "CurrencySystem");
+            SetSerializedValue(currencySystem, "_currentMoney", 15000);
+            SetSerializedValue(currencySystem, "_bankBalance", 100000);
             ScoreSystem scoreSystem = GetOrAddChild<ScoreSystem>(managersRoot.transform, "ScoreSystem");
             ConfigureSharedScoreBalance(scoreSystem);
             GetOrAddChild<InventorySystem>(managersRoot.transform, "InventorySystem");
@@ -226,6 +228,21 @@ namespace Alif.EditorTools
             EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
 
             Debug.Log("[Alif] Demo scene selesai dibangun. Simpan scene (Cmd/Ctrl+S) lalu tekan Play.");
+        }
+
+        [MenuItem("Alif/Rebuild Gameplay Scenes With Objectives %#o", priority = 100)]
+        public static void RebuildGameplayScenesWithObjectives()
+        {
+            EditorSceneManager.SaveOpenScenes();
+            EditorSceneManager.OpenScene(TargetScenePath);
+            BuildDemoScene();
+            EditorSceneManager.SaveOpenScenes();
+
+            AlifChapter2Builder.BuildChapter2Gameplay();
+
+            // Kembali ke Chapter 1 supaya hasil utama langsung siap dites lewat Play.
+            EditorSceneManager.OpenScene(TargetScenePath);
+            Debug.Log("[Alif] Chapter 1 dan Chapter 2 selesai dibangun ulang dengan Objective UI.");
         }
 
         private static void CleanGeneratedObjects()
@@ -630,14 +647,16 @@ namespace Alif.EditorTools
             SetSerializedRef(story, "_alifData", alif);
 
             // Posisi ditentukan terhadap peta WarungBuSiti_Interior (origin 40,-40; scale 1.3).
-            // Bu Siti ada di depan kasir. Raka diposisikan di ubin kosong, bukan di atas counter.
+            // Bu Siti ada di depan kasir. Raka berdiri di sisi kanan-depannya agar komposisi
+            // visual sesuai dialog (mereka sedang bicara dekat kasir), tetapi tetap berjarak
+            // dari kursi tempat Alif menunggu.
             BuildRestaurantCharacter(storyRoot.transform, "BuSiti_Kasir", buSiti, new Vector2(37.25f, -38.35f), story, RestaurantStoryPoint.PointType.Cashier, true);
 
             // Raka belum "kenal" Alif di awal cerita — nonaktif dari awal scene, baru diaktifkan
             // RestaurantStoryTrigger.BeginConflictWithTimeSkip() begitu Alif duduk menunggu
             // pesanan (selagi layar hitam "Beberapa saat kemudian..."), bukan langsung terlihat
             // begitu Alif masuk warung.
-            GameObject rakaGO = BuildRestaurantCharacter(storyRoot.transform, "Raka_Tamu", raka, new Vector2(40.90f, -40.72f), null, RestaurantStoryPoint.PointType.Cashier, false);
+            GameObject rakaGO = BuildRestaurantCharacter(storyRoot.transform, "Raka_Tamu", raka, new Vector2(37.95f, -38.62f), null, RestaurantStoryPoint.PointType.Cashier, false);
             rakaGO.SetActive(false);
 
             // Sebelumnya (39.45,-40.85) kegeser terlalu dekat ke PilarTengah (local -0.72,-0.19
@@ -789,7 +808,8 @@ namespace Alif.EditorTools
         {
             DialogueData data = GetOrCreateStoryDialogue("DialogueData_WarungPesanMakanan");
             AddStoryLine(data, "Bu Siti", buSiti, "Selamat datang, Alif. Mau makan apa? Hari ini lauknya baru matang.");
-            DialogueLine menu = AddStoryLine(data, "Alif", alif, "Aku pilih menu yang mana, ya?");
+            DialogueLine menu = AddStoryLine(data, "Alif", alif,
+                "(Dalam hati) Aku punya Rp15.000. Pilih makanan yang cukup, bukan sekadar keinginan.");
 
             int branchStart = data.Lines.Count;
             const int linesPerBranch = 2;
@@ -798,9 +818,33 @@ namespace Alif.EditorTools
             AddOrderBranch(data, alif, buSiti, "Nasi telur saja, Bu. Yang sederhana.", "Boleh, nasi telur satu. Totalnya Rp12.000.", rejoinIndex);
             AddOrderBranch(data, alif, buSiti, "Es teh dulu, Bu. Nanti makan setelahnya.", "Siap, es teh satu. Totalnya Rp6.000.", rejoinIndex);
 
-            menu.Choices.Add(new DialogueChoice { ChoiceText = "Ayam geprek + nasi — Rp18.000", NextLineIndex = branchStart, EventId = "warung.order.ayam_geprek" });
-            menu.Choices.Add(new DialogueChoice { ChoiceText = "Nasi telur — Rp12.000", NextLineIndex = branchStart + linesPerBranch, EventId = "warung.order.nasi_telur" });
-            menu.Choices.Add(new DialogueChoice { ChoiceText = "Es teh — Rp6.000", NextLineIndex = branchStart + linesPerBranch * 2, EventId = "warung.order.es_teh" });
+            menu.Choices.Add(new DialogueChoice
+            {
+                ChoiceText = "(Dalam hati) Ayam geprek Rp18.000 memang enak, tetapi jangan ambil tabungan hanya karena ingin.",
+                NextLineIndex = branchStart,
+                EventId = "warung.order.ayam_geprek",
+                MoneyCost = 18000,
+                FinancialLogicChange = -12f,
+                OutcomeText = "Mengambil tabungan untuk keinginan membuat keputusan terlalu boros."
+            });
+            menu.Choices.Add(new DialogueChoice
+            {
+                ChoiceText = "(Dalam hati) Nasi telur Rp12.000 cukup mengenyangkan dan masih menyisakan Rp3.000. Ini paling seimbang.",
+                NextLineIndex = branchStart + linesPerBranch,
+                EventId = "warung.order.nasi_telur",
+                MoneyCost = 12000,
+                BalanceCorrection = 10f,
+                OutcomeText = "Makanan cukup dan masih ada sisa uang: neraca tetap dekat titik seimbang."
+            });
+            menu.Choices.Add(new DialogueChoice
+            {
+                ChoiceText = "(Dalam hati) Es teh Rp6.000 memang murah, tetapi tidak mengenyangkan. Nanti aku malah perlu membeli makan lagi.",
+                NextLineIndex = branchStart + linesPerBranch * 2,
+                EventId = "warung.order.es_teh",
+                MoneyCost = 6000,
+                FinancialLogicChange = 10f,
+                OutcomeText = "Harga murah belum tentu hemat bila kebutuhan utama belum terpenuhi."
+            });
 
             AddStoryLine(data, "Bu Siti", buSiti, "Terima kasih. Duduk dulu di meja dekat jendela, ya. Pesananmu segera Ibu antar.");
             AddStoryLine(data, "Alif", alif, "Baik, Bu. Aku tunggu di sana.");
@@ -1538,7 +1582,7 @@ namespace Alif.EditorTools
         // ---------------------------------------------------------------
         // CANVAS: HUD, INVENTORY, DIALOGUE
         // ---------------------------------------------------------------
-        private static void BuildCanvas(PlayerController playerController)
+        internal static void BuildCanvas(PlayerController playerController)
         {
             GameObject canvasGO = FindOrCreateUIRoot("Canvas");
 
@@ -1558,6 +1602,7 @@ namespace Alif.EditorTools
             (AudioManager audioManager, AudioClip clickSfx) = BuildGameplayAudio(canvasGO.transform);
 
             GameObject hudPanel = BuildHUD(canvasGO.transform);
+            GameObject objectivePanel = BuildObjectivePanel(hudPanel.transform);
             GameObject inventoryPanel = BuildInventory(canvasGO.transform);
             (GameObject dialoguePanel, Image dialoguePortraitImage) = BuildDialoguePanel(canvasGO.transform, audioManager, clickSfx);
 
@@ -1589,6 +1634,7 @@ namespace Alif.EditorTools
             SetSerializedRef(dialogueUI, "_panelRect", dialoguePanel.GetComponent<RectTransform>());
             SetSerializedRef(dialogueUI, "_speakerNameText", dialoguePanel.transform.Find("SpeakerNameText")?.GetComponent<TMP_Text>());
             SetSerializedRef(dialogueUI, "_dialogueText", dialoguePanel.transform.Find("DialogueText")?.GetComponent<TMP_Text>());
+            SetSerializedRef(dialogueUI, "_choiceStatusText", dialoguePanel.transform.Find("ChoiceStatusText")?.GetComponent<TMP_Text>());
             SetSerializedRef(dialogueUI, "_portraitImage", dialoguePortraitImage);
             SetSerializedRef(dialogueUI, "_nextButton", dialoguePanel.transform.Find("NextButton")?.GetComponent<Button>());
             SetSerializedRef(dialogueUI, "_choiceButtonContainer", dialoguePanel.transform.Find("ChoiceButtonContainer"));
@@ -1611,6 +1657,7 @@ namespace Alif.EditorTools
             SetSerializedRef(dialogueUI, "_interactButtonRoot", interactButtonGO);
             SetSerializedRef(dialogueUI, "_inventoryPanelRoot", inventoryPanel);
             SetSerializedRef(dialogueUI, "_pauseButtonRoot", pauseButtonGO);
+            SetSerializedRef(dialogueUI, "_objectivePanelRoot", objectivePanel);
 
             BuildScoreBalanceFeedback(canvasGO.transform, canvasGO);
 
@@ -1849,9 +1896,9 @@ namespace Alif.EditorTools
             canvasGroup.blocksRaycasts = false;
         }
 
-        // Popup ATM — saldo bank + tombol tarik tunai beberapa nominal + "Ambil Semua". Tarik
-        // tunai mindahin saldo dari CurrencySystem.BankBalance ke uang kantong (lihat AtmUI).
-        private static void BuildAtmPopup(Transform canvasTransform, AudioManager audioManager, AudioClip clickSfx)
+        // Popup ATM — saldo bank kecil + nominal tarik tunai terbatas. Tidak ada "Ambil Semua"
+        // agar pilihan UI ikut mengajarkan Alif mengambil uang secukupnya.
+        internal static void BuildAtmPopup(Transform canvasTransform, AudioManager audioManager, AudioClip clickSfx)
         {
             GameObject overlay = FindOrCreateChild(canvasTransform, "AtmPopup");
             RectTransform overlayRT = overlay.GetComponent<RectTransform>();
@@ -1861,21 +1908,35 @@ namespace Alif.EditorTools
 
             GameObject card = FindOrCreateChild(overlay.transform, "Card");
             RectTransform cardRT = card.GetComponent<RectTransform>();
-            SetRect(cardRT, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(420, 520));
+            SetRect(cardRT, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(420, 330));
             AddImage(cardRT, new Color(0.16f, 0.12f, 0.08f, 0.97f));
 
-            TMP_Text balanceText = FindOrCreateText(card.transform, "BalanceText", "Saldo ATM: Rp 1.000.000",
-                new Vector2(0, 1), new Vector2(1, 1), new Vector2(0.5f, 1f), new Vector2(0, -30), new Vector2(-32, 40), 18, TextAlignmentOptions.Center);
+            // Bersihkan nominal besar dari versi ATM lama saat builder memperbarui scene
+            // yang sudah ada (Chapter 2 mempertahankan Canvas hasil Chapter 1).
+            foreach (string staleName in new[] { "Withdraw100k", "Withdraw200k", "Withdraw500k", "WithdrawAll" })
+            {
+                Transform stale = card.transform.Find(staleName);
+                if (stale != null)
+                {
+                    Object.DestroyImmediate(stale.gameObject);
+                }
+            }
+
+            TMP_Text balanceText = FindOrCreateText(card.transform, "BalanceText", "Saldo ATM: Rp 100.000",
+                new Vector2(0, 1), new Vector2(1, 1), new Vector2(0.5f, 1f), new Vector2(0, -24), new Vector2(-32, 34), 18, TextAlignmentOptions.Center);
+            balanceText.text = "Saldo ATM: Rp 100.000";
             balanceText.fontStyle = FontStyles.Bold;
 
-            Button withdraw50 = BuildAtmButton(card.transform, "Withdraw50k", "Rp 50.000", new Vector2(-102, -90), new Vector2(180, 40));
-            Button withdraw100 = BuildAtmButton(card.transform, "Withdraw100k", "Rp 100.000", new Vector2(102, -90), new Vector2(180, 40));
-            Button withdraw200 = BuildAtmButton(card.transform, "Withdraw200k", "Rp 200.000", new Vector2(-102, -138), new Vector2(180, 40));
-            Button withdraw500 = BuildAtmButton(card.transform, "Withdraw500k", "Rp 500.000", new Vector2(102, -138), new Vector2(180, 40));
-            Button withdrawAll = BuildAtmButton(card.transform, "WithdrawAll", "AMBIL SEMUA", new Vector2(0, -190), new Vector2(360, 40));
-            Button closeButton = BuildAtmButton(card.transform, "CloseButton", "TUTUP", new Vector2(0, -238), new Vector2(200, 34));
+            TMP_Text savingHint = FindOrCreateText(card.transform, "SavingHint", "Ambil seperlunya, simpan sisanya untuk kebutuhan penting.",
+                new Vector2(0, 1), new Vector2(1, 1), new Vector2(0.5f, 1f), new Vector2(0, -61), new Vector2(-36, 32), 11, TextAlignmentOptions.Center);
+            savingHint.color = new Color(1f, 1f, 1f, 0.7f);
 
-            var withdrawButtons = new System.Collections.Generic.List<Object> { withdraw50, withdraw100, withdraw200, withdraw500 };
+            Button withdraw10 = BuildAtmButton(card.transform, "Withdraw10k", "Rp 10.000", new Vector2(-102, 0), new Vector2(180, 40));
+            Button withdraw20 = BuildAtmButton(card.transform, "Withdraw20k", "Rp 20.000", new Vector2(102, 0), new Vector2(180, 40));
+            Button withdraw50 = BuildAtmButton(card.transform, "Withdraw50k", "Rp 50.000", new Vector2(0, -54), new Vector2(360, 40));
+            Button closeButton = BuildAtmButton(card.transform, "CloseButton", "TUTUP", new Vector2(0, -112), new Vector2(200, 34));
+
+            var withdrawButtons = new System.Collections.Generic.List<Object> { withdraw10, withdraw20, withdraw50 };
 
             // Overlay-nya SENGAJA dibiarkan aktif — sama alasannya kayak QuitConfirmationUI /
             // TravelConfirmationUI (visibility lewat CanvasGroup, bukan SetActive, biar
@@ -1887,11 +1948,12 @@ namespace Alif.EditorTools
             SetSerializedRef(atmUI, "_canvasGroup", canvasGroup);
             SetSerializedRef(atmUI, "_balanceText", balanceText);
             SetSerializedRef(atmUI, "_closeButton", closeButton);
-            SetSerializedRef(atmUI, "_withdrawAllButton", withdrawAll);
             SetSerializedObjectList(atmUI, "_withdrawButtons", withdrawButtons);
+            SetSerializedIntArray(atmUI, "_withdrawAmounts", new[] { 10000, 20000, 50000 });
 
-            foreach (Button button in new[] { withdraw50, withdraw100, withdraw200, withdraw500, withdrawAll, closeButton })
+            foreach (Button button in new[] { withdraw10, withdraw20, withdraw50, closeButton })
             {
+                button.onClick = new Button.ButtonClickedEvent();
                 AddClickSfxListener(button, audioManager, clickSfx);
             }
 
@@ -1930,8 +1992,8 @@ namespace Alif.EditorTools
             // juga dikasih angka persentase di ujung kanan baris yang sama — bar visual doang
             // susah dibedain pas nilainya udah tinggal sedikit (misal energi kritis).
             (Slider energySlider, TextMeshProUGUI energyPercentText) = BuildLabeledSlider(panel.transform, "Energy", "Energi", -34, new Color(0.45f, 0.75f, 0.35f, 1f));
-            (Slider financialLogicSlider, TextMeshProUGUI financialLogicPercentText) = BuildLabeledSlider(panel.transform, "FinancialLogic", "Logika Finansial", -68, new Color(0.35f, 0.6f, 0.85f, 1f));
-            (Slider shariaComplianceSlider, TextMeshProUGUI shariaCompliancePercentText) = BuildLabeledSlider(panel.transform, "ShariaCompliance", "Kepatuhan Syariah", -102, new Color(0.85f, 0.65f, 0.25f, 1f));
+            (Slider financialLogicSlider, TextMeshProUGUI financialLogicPercentText) = BuildLabeledSlider(panel.transform, "FinancialLogic", "Logika Finansial", -68, new Color(0.35f, 0.6f, 0.85f, 1f), 0.5f);
+            (Slider shariaComplianceSlider, TextMeshProUGUI shariaCompliancePercentText) = BuildLabeledSlider(panel.transform, "ShariaCompliance", "Kepatuhan Syariah", -102, new Color(0.85f, 0.65f, 0.25f, 1f), 0.5f);
 
             TextMeshProUGUI balanceHint = FindOrCreateText(panel.transform, "BalanceHint", "NERACA: 100% TOTAL • IDEAL 50% / 50%",
                 new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, 1), new Vector2(12, -136), new Vector2(-12, 14), 9, TextAlignmentOptions.Left);
@@ -1941,8 +2003,9 @@ namespace Alif.EditorTools
                 new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 0), new Vector2(12, 32), new Vector2(-12, 14), 11, TextAlignmentOptions.Left)
                 .color = new Color(1f, 1f, 1f, 0.75f);
 
-            TextMeshProUGUI moneyText = FindOrCreateText(panel.transform, "MoneyText", "Rp 150",
+            TextMeshProUGUI moneyText = FindOrCreateText(panel.transform, "MoneyText", "Rp 15.000",
                 new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 0), new Vector2(12, 8), new Vector2(-12, 22), 16, TextAlignmentOptions.Left);
+            moneyText.text = "Rp 15.000";
 
             HUDController hud = GetOrAddComponent<HUDController>(panel);
             SetSerializedRef(hud, "_dayWeekText", dayWeekText);
@@ -1954,6 +2017,51 @@ namespace Alif.EditorTools
             SetSerializedRef(hud, "_shariaCompliancePercentText", shariaCompliancePercentText);
             SetSerializedRef(hud, "_moneyText", moneyText);
 
+            return panel;
+        }
+
+        internal static GameObject BuildObjectivePanel(Transform hudTransform)
+        {
+            GameObject panel = FindOrCreateChild(hudTransform, "ObjectivePanel");
+            RectTransform panelRT = panel.GetComponent<RectTransform>();
+            SetRect(panelRT, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, -230), new Vector2(280, 142));
+            Image panelImage = AddImage(panelRT, new Color(0.12f, 0.09f, 0.06f, 0.92f));
+            panelImage.raycastTarget = false;
+
+            GameObject accent = FindOrCreateChild(panel.transform, "Accent");
+            RectTransform accentRT = accent.GetComponent<RectTransform>();
+            SetRect(accentRT, new Vector2(0, 0), new Vector2(0, 1), new Vector2(0, 0.5f), Vector2.zero, new Vector2(4, 0));
+            Image accentImage = AddImage(accentRT, new Color(0.95f, 0.69f, 0.2f, 1f));
+            accentImage.raycastTarget = false;
+
+            TextMeshProUGUI headerText = FindOrCreateText(panel.transform, "HeaderText", "OBJECTIVE",
+                new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, 1), new Vector2(14, -9), new Vector2(-74, 18), 11, TextAlignmentOptions.Left);
+            headerText.fontStyle = FontStyles.Bold;
+            headerText.color = new Color(0.95f, 0.69f, 0.2f, 1f);
+            headerText.raycastTarget = false;
+
+            TextMeshProUGUI progressText = FindOrCreateText(panel.transform, "ProgressText", "0/3",
+                new Vector2(1, 1), new Vector2(1, 1), new Vector2(1, 1), new Vector2(-12, -9), new Vector2(58, 18), 10, TextAlignmentOptions.Right);
+            progressText.fontStyle = FontStyles.Bold;
+            progressText.raycastTarget = false;
+
+            TextMeshProUGUI titleText = FindOrCreateText(panel.transform, "TitleText", "Tujuan saat ini",
+                new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, 1), new Vector2(14, -29), new Vector2(-26, 26), 13, TextAlignmentOptions.Left);
+            titleText.fontStyle = FontStyles.Bold;
+            titleText.raycastTarget = false;
+
+            TextMeshProUGUI stepsText = FindOrCreateText(panel.transform, "StepsText", "> Tunggu tujuan cerita...",
+                new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, 1), new Vector2(14, -58), new Vector2(-26, 74), 10, TextAlignmentOptions.TopLeft);
+            stepsText.textWrappingMode = TextWrappingModes.Normal;
+            stepsText.richText = true;
+            stepsText.lineSpacing = 4f;
+            stepsText.raycastTarget = false;
+
+            ObjectiveUI objectiveUI = GetOrAddComponent<ObjectiveUI>(panel);
+            SetSerializedRef(objectiveUI, "_titleText", titleText);
+            SetSerializedRef(objectiveUI, "_progressText", progressText);
+            SetSerializedRef(objectiveUI, "_stepsText", stepsText);
+            SetSerializedRef(objectiveUI, "_accentImage", accentImage);
             return panel;
         }
 
@@ -1978,7 +2086,8 @@ namespace Alif.EditorTools
         // Label kecil + progress bar di bawahnya, dipakai buat Energy, Financial Logic (skor
         // logika bisnis argumen pemain di minigame AI Detektif), dan Sharia Compliance (skor
         // bebas Riba/Gharar/Maysir) — beda warna fill per bar biar gampang dibedain sekilas.
-        private static (Slider slider, TextMeshProUGUI percentText) BuildLabeledSlider(Transform parent, string name, string label, float topY, Color fillColor)
+        private static (Slider slider, TextMeshProUGUI percentText) BuildLabeledSlider(
+            Transform parent, string name, string label, float topY, Color fillColor, float initialValue = 1f)
         {
             FindOrCreateText(parent, $"{name}Label", label,
                 new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, 1), new Vector2(12, topY), new Vector2(-68, 14), 11, TextAlignmentOptions.Left)
@@ -1986,8 +2095,10 @@ namespace Alif.EditorTools
 
             // Angka persentase di ujung kanan baris label yang sama — HUDController mengisi ini
             // tiap kali sistem terkait berubah (lihat Handle*Changed).
-            TextMeshProUGUI percentText = FindOrCreateText(parent, $"{name}PercentText", "100%",
+            int initialPercent = Mathf.RoundToInt(Mathf.Clamp01(initialValue) * 100f);
+            TextMeshProUGUI percentText = FindOrCreateText(parent, $"{name}PercentText", $"{initialPercent}%",
                 new Vector2(1, 1), new Vector2(1, 1), new Vector2(1, 1), new Vector2(-12, topY), new Vector2(50, 14), 11, TextAlignmentOptions.Right);
+            percentText.text = $"{initialPercent}%";
             percentText.color = new Color(1f, 1f, 1f, 0.92f);
             percentText.fontStyle = FontStyles.Bold;
 
@@ -2000,7 +2111,7 @@ namespace Alif.EditorTools
             slider.interactable = false;
             slider.minValue = 0f;
             slider.maxValue = 1f;
-            slider.value = 1f;
+            slider.value = Mathf.Clamp01(initialValue);
             slider.direction = Slider.Direction.LeftToRight;
 
             GameObject background = FindOrCreateChild(sliderGO.transform, "Background");
@@ -2081,13 +2192,13 @@ namespace Alif.EditorTools
         // SetSerializedValue di BuildCanvas) supaya panel dialog & tombol pilihan selalu sinkron
         // dengan layout yang dibangun di sini — satu sumber angka, bukan dua yang harus diubah
         // manual berbarengan tiap kali di-tweak.
-        private const float ChoiceTopReservedSpace = 78f; // ruang di atas container: nama pembicara + baris "Pilih respons Alif:".
+        private const float ChoiceTopReservedSpace = 138f; // nama, isi hati/prompt, dan satu baris peringatan transaksi.
         private const float ChoiceButtonSpacing = 8f;
         private const float ChoiceBottomPadding = 16f;
         private const float NormalPanelHeight = 180f;
-        private const float MaxChoicePanelHeight = 460f;
-        private const float MinChoiceButtonHeight = 44f;
-        private const float ChoiceButtonVerticalPadding = 16f;
+        private const float MaxChoicePanelHeight = 500f;
+        private const float MinChoiceButtonHeight = 52f;
+        private const float ChoiceButtonVerticalPadding = 18f;
 
         private static (GameObject, Image) BuildDialoguePanel(Transform canvasTransform, AudioManager audioManager, AudioClip clickSfx)
         {
@@ -2114,13 +2225,22 @@ namespace Alif.EditorTools
             }
 
             const float textLeft = 24f; // dulu 172 (nyisain ruang portrait kecil di kiri box) — portrait udah pindah keluar.
+            const float portraitSafeRight = 150f; // jangan biarkan teks panjang masuk ke area portrait besar di kanan.
 
             FindOrCreateText(panel.transform, "SpeakerNameText", "Nama NPC",
                 new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, 1), new Vector2(textLeft, -12), new Vector2(-16, 26), 18, TextAlignmentOptions.Left)
                 .fontStyle = FontStyles.Bold;
 
             FindOrCreateText(panel.transform, "DialogueText", "...",
-                new Vector2(0, 0), new Vector2(1, 1), new Vector2(0, 1), new Vector2(textLeft, -44), new Vector2(-16, -50), 16, TextAlignmentOptions.TopLeft);
+                new Vector2(0, 0), new Vector2(1, 1), new Vector2(0, 1), new Vector2(textLeft, -44), new Vector2(-portraitSafeRight, -50), 16, TextAlignmentOptions.TopLeft);
+
+            TextMeshProUGUI choiceStatusText = FindOrCreateText(panel.transform, "ChoiceStatusText", "",
+                new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, 1), new Vector2(textLeft, -91), new Vector2(-portraitSafeRight, 38), 13, TextAlignmentOptions.TopLeft);
+            choiceStatusText.color = new Color(1f, 0.72f, 0.32f, 1f);
+            choiceStatusText.fontStyle = FontStyles.Bold;
+            choiceStatusText.textWrappingMode = TextWrappingModes.Normal;
+            choiceStatusText.raycastTarget = false;
+            choiceStatusText.gameObject.SetActive(false);
 
             GameObject nextButtonGO = BuildSimpleButton(panel.transform, "NextButton", "Lanjut >");
             RectTransform nextRT = nextButtonGO.GetComponent<RectTransform>();
@@ -2136,7 +2256,7 @@ namespace Alif.EditorTools
             // lalu panel dialog-nya ikut membesar ke atas supaya semuanya tetap di dalam box.
             GameObject choiceContainer = FindOrCreateChild(panel.transform, "ChoiceButtonContainer");
             RectTransform choiceRT = choiceContainer.GetComponent<RectTransform>() ?? choiceContainer.AddComponent<RectTransform>();
-            SetRect(choiceRT, new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, 1), new Vector2(textLeft, -ChoiceTopReservedSpace), new Vector2(-(textLeft + 16), 0));
+            SetRect(choiceRT, new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, 1), new Vector2(textLeft, -ChoiceTopReservedSpace), new Vector2(-(textLeft + portraitSafeRight), 0));
             VerticalLayoutGroup vlg = GetOrAddComponent<VerticalLayoutGroup>(choiceContainer);
             vlg.spacing = ChoiceButtonSpacing;
             vlg.childControlWidth = true;
@@ -2187,7 +2307,7 @@ namespace Alif.EditorTools
         // ---------------------------------------------------------------
         private const string ClickSfxClipPath = "Assets/Audio/SFX_ButtonClick.wav";
 
-        private static (AudioManager, AudioClip) BuildGameplayAudio(Transform canvasTransform)
+        internal static (AudioManager, AudioClip) BuildGameplayAudio(Transform canvasTransform)
         {
             GameObject audioGO = FindOrCreateChild(canvasTransform, "Audio");
 
@@ -2272,7 +2392,7 @@ namespace Alif.EditorTools
 
             TextMeshProUGUI label = FindOrCreateText(temp.transform, "Label", "Pilihan",
                 new Vector2(0, 0), new Vector2(1, 1), new Vector2(0, 0.5f), Vector2.zero, Vector2.zero, 14, TextAlignmentOptions.MidlineLeft);
-            label.enableWordWrapping = true;
+            label.textWrappingMode = TextWrappingModes.Normal;
             label.margin = new Vector4(16, 8, 16, 8);
             label.raycastTarget = false;
 
@@ -2492,12 +2612,30 @@ namespace Alif.EditorTools
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        private static void SetSerializedValue(Object target, string fieldName, int value)
+        internal static void SetSerializedValue(Object target, string fieldName, int value)
         {
             var so = new SerializedObject(target);
             SerializedProperty prop = so.FindProperty(fieldName);
             if (prop == null) return;
             prop.intValue = value;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void SetSerializedIntArray(Object target, string fieldName, int[] values)
+        {
+            var so = new SerializedObject(target);
+            SerializedProperty prop = so.FindProperty(fieldName);
+            if (prop == null)
+            {
+                Debug.LogWarning($"[Alif] Field '{fieldName}' tidak ditemukan di {target.GetType().Name}.");
+                return;
+            }
+
+            prop.arraySize = values.Length;
+            for (int i = 0; i < values.Length; i++)
+            {
+                prop.GetArrayElementAtIndex(i).intValue = values[i];
+            }
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 

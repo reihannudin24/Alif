@@ -40,9 +40,6 @@ namespace Alif.World
         [SerializeField] private CharacterData _alifData;
 
         [Header("Order")]
-        [SerializeField] private int _ayamGeprekPrice = 18000;
-        [SerializeField] private int _nasiTelurPrice = 12000;
-        [SerializeField] private int _esTehPrice = 6000;
         [SerializeField] private float _energyRestoredAfterConflict = 12f;
 
         [Header("Raka")]
@@ -55,9 +52,22 @@ namespace Alif.World
         private bool _subscribed;
         private bool _endingTransitionStarted;
 
+        private static readonly string[] MealObjectiveSteps =
+        {
+            "Masuk ke Warung Bu Siti",
+            "Pesan makanan di kasir",
+            "Duduk di meja dekat jendela"
+        };
+
+        private static readonly string[] ConflictObjectiveSteps =
+        {
+            "Bantu Bu Siti mengambil keputusan yang seimbang"
+        };
+
         private void Start()
         {
             SubscribeToDialogue();
+            ObjectiveUI.Instance?.SetObjective("Cari makan di Warung Bu Siti", MealObjectiveSteps);
         }
 
         private void OnDestroy()
@@ -76,6 +86,7 @@ namespace Alif.World
             switch (_state)
             {
                 case StoryState.NeedOrder:
+                    ObjectiveUI.Instance?.SetCurrentStep(1);
                     DialogueManager.Instance.StartDialogue(_orderDialogue, _alifData);
                     break;
                 case StoryState.Ordered:
@@ -104,6 +115,7 @@ namespace Alif.World
             if (_state == StoryState.Ordered)
             {
                 _state = StoryState.ConflictPlaying;
+                ObjectiveUI.Instance?.SetObjective("Hadapi situasi di warung", ConflictObjectiveSteps);
                 BeginConflictWithTimeSkip();
             }
         }
@@ -191,22 +203,10 @@ namespace Alif.World
                 return;
             }
 
-            int price = GetPrice(choice.EventId);
-            if (price <= 0)
-            {
-                return;
-            }
-
-            // CurrencySystem selalu tersedia di Demo Scene. Jika project memakai scene custom
-            // tanpa CurrencySystem, pesanan tetap boleh lanjut agar cerita tidak buntu.
-            if (CurrencySystem.Instance == null || CurrencySystem.Instance.SpendMoney(price))
-            {
-                _state = StoryState.Ordered;
-            }
-            else
-            {
-                Debug.Log("[Alif] Uang Alif tidak cukup untuk memesan makanan.");
-            }
+            // DialogueManager sudah memvalidasi dan membayar MoneyCost sebelum event ini
+            // dipanggil. Jika uang tidak cukup, pilihan ditolak dan event tidak diteruskan.
+            _state = StoryState.Ordered;
+            ObjectiveUI.Instance?.SetCurrentStep(2);
         }
 
         private void HandleDialogueCompleted(DialogueData completedDialogue)
@@ -217,6 +217,7 @@ namespace Alif.World
             }
 
             _state = StoryState.Finished;
+            ObjectiveUI.Instance?.CompleteObjective();
             if (EnergySystem.Instance != null)
             {
                 EnergySystem.Instance.RestoreEnergy(_energyRestoredAfterConflict);
@@ -243,16 +244,6 @@ namespace Alif.World
             SceneManager.LoadScene(ChapterEndingSceneName);
         }
 
-        private int GetPrice(string eventId)
-        {
-            switch (eventId)
-            {
-                case "warung.order.ayam_geprek": return _ayamGeprekPrice;
-                case "warung.order.nasi_telur": return _nasiTelurPrice;
-                case "warung.order.es_teh": return _esTehPrice;
-                default: return 0;
-            }
-        }
     }
 
 }

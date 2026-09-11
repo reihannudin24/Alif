@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using UnityEngine;
 
 namespace Alif.Systems
@@ -13,11 +14,11 @@ namespace Alif.Systems
 
         [Header("Currency")]
         [Tooltip("Uang tunai yang dipegang Alif (di kantong) — ini yang ditampilkan HUD.")]
-        [SerializeField] private int _currentMoney = 100000;
+        [SerializeField] private int _currentMoney = 15000;
 
         [Header("Bank Account (ATM)")]
         [Tooltip("Saldo di rekening/ATM — terpisah dari uang tunai, cuma bisa dipindah ke uang tunai lewat AtmUI.Withdraw().")]
-        [SerializeField] private int _bankBalance = 1000000;
+        [SerializeField] private int _bankBalance = 100000;
 
         // Event membawa jumlah uang terbaru setelah berubah.
         public event Action<int> OnMoneyChanged;
@@ -25,6 +26,13 @@ namespace Alif.Systems
 
         public int CurrentMoney => _currentMoney;
         public int BankBalance => _bankBalance;
+
+        /// <summary>Format konsisten Indonesia untuk semua tampilan uang: Rp 15.000.</summary>
+        public static string FormatRupiah(int amount)
+        {
+            string digits = amount.ToString("N0", CultureInfo.InvariantCulture).Replace(',', '.');
+            return $"Rp {digits}";
+        }
 
         private void Awake()
         {

@@ -52,6 +52,7 @@ MonoBehaviour:
         satu.
       NextLineIndex: 6
       AffinityChange: 0
+      MoneyCost: 0
       FinancialLogicChange: 4
       ShariaComplianceChange: 4
       BalanceCorrection: 6
@@ -60,6 +61,7 @@ MonoBehaviour:
     - ChoiceText: Langsung bilang semua pinjaman pasti buruk tanpa melihat situasinya.
       NextLineIndex: 7
       AffinityChange: 0
+      MoneyCost: 0
       FinancialLogicChange: 0
       ShariaComplianceChange: 2
       BalanceCorrection: -4
@@ -68,6 +70,7 @@ MonoBehaviour:
     - ChoiceText: Suruh Dimas ambil saja karena kebutuhan besok mendesak.
       NextLineIndex: 8
       AffinityChange: 0
+      MoneyCost: 0
       FinancialLogicChange: -6
       ShariaComplianceChange: -6
       BalanceCorrection: 0
@@ -120,6 +123,7 @@ MonoBehaviour:
         identitas penyedia.
       NextLineIndex: 13
       AffinityChange: 0
+      MoneyCost: 0
       FinancialLogicChange: 6
       ShariaComplianceChange: 5
       BalanceCorrection: 5
@@ -128,6 +132,7 @@ MonoBehaviour:
     - ChoiceText: Cukup lihat tulisan 'cair cepat' dan testimoni pengguna.
       NextLineIndex: 14
       AffinityChange: 0
+      MoneyCost: 0
       FinancialLogicChange: -5
       ShariaComplianceChange: -3
       BalanceCorrection: 0
@@ -136,6 +141,7 @@ MonoBehaviour:
     - ChoiceText: Hanya cek apakah cicilan pertama terlihat murah.
       NextLineIndex: 15
       AffinityChange: 0
+      MoneyCost: 0
       FinancialLogicChange: 1
       ShariaComplianceChange: -2
       BalanceCorrection: -2
@@ -192,6 +198,7 @@ MonoBehaviour:
         komponen yang bisa ditunda.
       NextLineIndex: 21
       AffinityChange: 0
+      MoneyCost: 0
       FinancialLogicChange: 6
       ShariaComplianceChange: 4
       BalanceCorrection: 5
@@ -200,6 +207,7 @@ MonoBehaviour:
     - ChoiceText: Batalkan perjalanan tanpa menghubungi siapa pun.
       NextLineIndex: 22
       AffinityChange: 0
+      MoneyCost: 0
       FinancialLogicChange: -2
       ShariaComplianceChange: 1
       BalanceCorrection: -3
@@ -209,6 +217,7 @@ MonoBehaviour:
     - ChoiceText: Ajukan pinjol dulu, baru pikirkan cara membayar setelah pulang.
       NextLineIndex: 23
       AffinityChange: 0
+      MoneyCost: 0
       FinancialLogicChange: -7
       ShariaComplianceChange: -7
       BalanceCorrection: 0
@@ -253,6 +262,7 @@ MonoBehaviour:
         hasan tertulis dari keluarga/teman.
       NextLineIndex: 27
       AffinityChange: 0
+      MoneyCost: 0
       FinancialLogicChange: 5
       ShariaComplianceChange: 6
       BalanceCorrection: 6
@@ -261,6 +271,7 @@ MonoBehaviour:
     - ChoiceText: Cari aplikasi lain yang bunganya sedikit lebih rendah.
       NextLineIndex: 28
       AffinityChange: 0
+      MoneyCost: 0
       FinancialLogicChange: -2
       ShariaComplianceChange: -5
       BalanceCorrection: -2
@@ -269,6 +280,7 @@ MonoBehaviour:
     - ChoiceText: Pinjam diam-diam dari banyak teman tanpa mencatat jatuh temponya.
       NextLineIndex: 29
       AffinityChange: 0
+      MoneyCost: 0
       FinancialLogicChange: -4
       ShariaComplianceChange: 0
       BalanceCorrection: -4
@@ -316,6 +328,7 @@ MonoBehaviour:
         sudah dilakukan, dan jadwal pengembalian.'
       NextLineIndex: 33
       AffinityChange: 0
+      MoneyCost: 0
       FinancialLogicChange: 4
       ShariaComplianceChange: 5
       BalanceCorrection: 5
@@ -324,6 +337,7 @@ MonoBehaviour:
     - ChoiceText: Sembunyikan alasan sebenarnya supaya lebih cepat diberi uang.
       NextLineIndex: 34
       AffinityChange: 0
+      MoneyCost: 0
       FinancialLogicChange: -5
       ShariaComplianceChange: -5
       BalanceCorrection: 0
@@ -332,6 +346,7 @@ MonoBehaviour:
     - ChoiceText: Minta Alif berbohong dan mengaku uang itu untuk dirinya.
       NextLineIndex: 35
       AffinityChange: 0
+      MoneyCost: 0
       FinancialLogicChange: -6
       ShariaComplianceChange: -6
       BalanceCorrection: 0
@@ -376,6 +391,7 @@ MonoBehaviour:
         bukti, lalu jalankan daftar solusi bersama.
       NextLineIndex: 39
       AffinityChange: 0
+      MoneyCost: 0
       FinancialLogicChange: 6
       ShariaComplianceChange: 6
       BalanceCorrection: 7
@@ -384,6 +400,7 @@ MonoBehaviour:
     - ChoiceText: Rebut ponsel Dimas dan hapus semuanya tanpa penjelasan.
       NextLineIndex: 40
       AffinityChange: 0
+      MoneyCost: 0
       FinancialLogicChange: 0
       ShariaComplianceChange: 2
       BalanceCorrection: -3
@@ -393,6 +410,7 @@ MonoBehaviour:
     - ChoiceText: Biarkan Dimas mencoba sekali agar kapok.
       NextLineIndex: 41
       AffinityChange: 0
+      MoneyCost: 0
       FinancialLogicChange: -8
       ShariaComplianceChange: -8
       BalanceCorrection: 0

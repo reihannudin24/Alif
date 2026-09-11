@@ -44,6 +44,10 @@ namespace Alif.Dialogue
         [Tooltip("Opsional: poin affinity yang ditambahkan ke NPC saat pilihan ini dipilih, untuk dating sim.")]
         public int AffinityChange = 0;
 
+        [Header("Transaction")]
+        [Tooltip("Biaya tunai yang langsung dibayar saat pilihan dipilih. Pilihan ditolak jika uang tidak cukup.")]
+        public int MoneyCost = 0;
+
         [Header("Dampak Neraca 100%")]
         [Tooltip("Menggeser neraca ke Logika Finansial. Dalam Shared Balance Mode, Kepatuhan Syariah bergerak berlawanan agar total tetap 100%.")]
         public float FinancialLogicChange = 0f;

@@ -20,32 +20,40 @@ MonoBehaviour:
     NextLineIndex: -1
   - SpeakerName: Alif
     SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
-    Text: Aku pilih menu yang mana, ya?
+    Text: (Dalam hati) Aku punya Rp15.000. Pilih makanan yang cukup, bukan sekadar
+      keinginan.
     Choices:
-    - ChoiceText: "Ayam geprek + nasi \u2014 Rp18.000"
+    - ChoiceText: (Dalam hati) Ayam geprek Rp18.000 memang enak, tetapi jangan ambil
+        tabungan hanya karena ingin.
       NextLineIndex: 2
       AffinityChange: 0
-      FinancialLogicChange: 0
+      MoneyCost: 18000
+      FinancialLogicChange: -12
       ShariaComplianceChange: 0
       BalanceCorrection: 0
       EventId: warung.order.ayam_geprek
-      OutcomeText: 
-    - ChoiceText: "Nasi telur \u2014 Rp12.000"
+      OutcomeText: Mengambil tabungan untuk keinginan membuat keputusan terlalu boros.
+    - ChoiceText: (Dalam hati) Nasi telur Rp12.000 cukup mengenyangkan dan masih
+        menyisakan Rp3.000. Ini paling seimbang.
       NextLineIndex: 4
       AffinityChange: 0
+      MoneyCost: 12000
       FinancialLogicChange: 0
       ShariaComplianceChange: 0
-      BalanceCorrection: 0
+      BalanceCorrection: 10
       EventId: warung.order.nasi_telur
-      OutcomeText: 
-    - ChoiceText: "Es teh \u2014 Rp6.000"
+      OutcomeText: 'Makanan cukup dan masih ada sisa uang: neraca tetap dekat titik
+        seimbang.'
+    - ChoiceText: (Dalam hati) Es teh Rp6.000 memang murah, tetapi tidak mengenyangkan.
+        Nanti aku malah perlu membeli makan lagi.
       NextLineIndex: 6
       AffinityChange: 0
-      FinancialLogicChange: 0
+      MoneyCost: 6000
+      FinancialLogicChange: 10
       ShariaComplianceChange: 0
       BalanceCorrection: 0
       EventId: warung.order.es_teh
-      OutcomeText: 
+      OutcomeText: Harga murah belum tentu hemat bila kebutuhan utama belum terpenuhi.
     NextLineIndex: -1
   - SpeakerName: Alif
     SpeakerData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}

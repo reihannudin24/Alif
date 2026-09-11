@@ -3,6 +3,7 @@ using UnityEngine;
 using Alif.Characters;
 using Alif.Core;
 using Alif.Dialogue;
+using Alif.UI;
 
 namespace Alif.World
 {
@@ -19,9 +20,18 @@ namespace Alif.World
 
         private bool _storyFinished;
         private bool _subscribed;
+        private int _choiceCount;
+
+        private static readonly string[] ChapterObjectiveSteps =
+        {
+            "Periksa biaya dan risiko pinjaman cepat",
+            "Susun alternatif dana yang aman",
+            "Bantu Dimas membatalkan pengajuan"
+        };
 
         private IEnumerator Start()
         {
+            ObjectiveUI.Instance?.SetObjective("Bantu Dimas menghindari pinjol", ChapterObjectiveSteps);
             Subscribe();
             yield return new WaitForSeconds(_openingDelay);
             RequestConversation();
@@ -55,6 +65,7 @@ namespace Alif.World
             }
 
             DialogueManager.Instance.OnDialogueCompleted += HandleDialogueCompleted;
+            DialogueManager.Instance.OnChoiceSelected += HandleChoiceSelected;
             _subscribed = true;
         }
 
@@ -67,7 +78,26 @@ namespace Alif.World
             }
 
             DialogueManager.Instance.OnDialogueCompleted -= HandleDialogueCompleted;
+            DialogueManager.Instance.OnChoiceSelected -= HandleChoiceSelected;
             _subscribed = false;
+        }
+
+        private void HandleChoiceSelected(DialogueChoice choice)
+        {
+            if (_storyFinished || choice == null)
+            {
+                return;
+            }
+
+            _choiceCount++;
+            if (_choiceCount >= 4)
+            {
+                ObjectiveUI.Instance?.SetCurrentStep(2);
+            }
+            else if (_choiceCount >= 2)
+            {
+                ObjectiveUI.Instance?.SetCurrentStep(1);
+            }
         }
 
         private void HandleDialogueCompleted(DialogueData completedDialogue)
@@ -78,6 +108,7 @@ namespace Alif.World
             }
 
             _storyFinished = true;
+            ObjectiveUI.Instance?.CompleteObjective();
             ChapterProgress.CompleteChapter(2, true);
             Debug.Log("[Alif] Chapter 2 selesai: Dimas membatalkan rencana pinjol dan menyusun solusi yang transparan.");
         }

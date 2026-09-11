@@ -8,6 +8,7 @@ using Alif.Characters;
 using Alif.Core;
 using Alif.Dialogue;
 using Alif.Player;
+using Alif.Systems;
 using Alif.World;
 
 namespace Alif.EditorTools
@@ -52,6 +53,15 @@ namespace Alif.EditorTools
             Chapter2StoryController story = BuildStory(mainDialogue, finishedDialogue, dimas);
             BuildDimas(story, dimas);
             ConfigureCamera(player.transform);
+            CurrencySystem currencySystem = Object.FindAnyObjectByType<CurrencySystem>();
+            if (currencySystem != null)
+            {
+                AlifDemoSceneBuilder.SetSerializedValue(currencySystem, "_currentMoney", 15000);
+                AlifDemoSceneBuilder.SetSerializedValue(currencySystem, "_bankBalance", 100000);
+            }
+            // Bangun ulang Canvas dari sumber layout yang sama dengan Chapter 1. Ini mencegah
+            // Chapter 2 menyimpan prefab/tombol dialog versi lama setiap kali UI diperbaiki.
+            AlifDemoSceneBuilder.BuildCanvas(player);
 
             AssetDatabase.SaveAssets();
             EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
@@ -67,7 +77,7 @@ namespace Alif.EditorTools
 
         private static void StripChapter1World()
         {
-            var keep = new HashSet<string> { "Main Camera", "Global Light 2D", "_GameManagers", "Player", "Canvas", "EventSystem" };
+            var keep = new HashSet<string> { "Main Camera", "Global Light 2D", "_GameManagers", "Player", "EventSystem" };
             foreach (GameObject root in SceneManager.GetActiveScene().GetRootGameObjects())
             {
                 if (!keep.Contains(root.name))

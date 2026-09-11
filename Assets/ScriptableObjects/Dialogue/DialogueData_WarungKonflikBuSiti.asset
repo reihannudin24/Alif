@@ -97,6 +97,7 @@ MonoBehaviour:
     - ChoiceText: Ambil dana cepat; yang penting freezer dan stok segera aman.
       NextLineIndex: 14
       AffinityChange: 0
+      MoneyCost: 0
       FinancialLogicChange: 14
       ShariaComplianceChange: 0
       BalanceCorrection: 0
@@ -105,6 +106,7 @@ MonoBehaviour:
     - ChoiceText: Tolak semua bentuk pembiayaan supaya tidak ada risiko syariah.
       NextLineIndex: 16
       AffinityChange: 0
+      MoneyCost: 0
       FinancialLogicChange: 0
       ShariaComplianceChange: 14
       BalanceCorrection: 0
@@ -113,6 +115,7 @@ MonoBehaviour:
     - ChoiceText: Jeda tanda tangan; cek arus kas dan cari akad pembiayaan yang transparan.
       NextLineIndex: 18
       AffinityChange: 0
+      MoneyCost: 0
       FinancialLogicChange: 0
       ShariaComplianceChange: 0
       BalanceCorrection: 12
@@ -228,6 +231,7 @@ MonoBehaviour:
     - ChoiceText: Fokus pada hasil bulanan; minta Raka menunda denda saja.
       NextLineIndex: 32
       AffinityChange: 0
+      MoneyCost: 0
       FinancialLogicChange: 12
       ShariaComplianceChange: 0
       BalanceCorrection: 0
@@ -236,6 +240,7 @@ MonoBehaviour:
     - ChoiceText: Hindari keuntungan usaha dan biarkan warung berhenti sementara.
       NextLineIndex: 34
       AffinityChange: 0
+      MoneyCost: 0
       FinancialLogicChange: 0
       ShariaComplianceChange: 12
       BalanceCorrection: 0
@@ -245,6 +250,7 @@ MonoBehaviour:
         dan mekanisme bagi hasil.'
       NextLineIndex: 36
       AffinityChange: 0
+      MoneyCost: 0
       FinancialLogicChange: 0
       ShariaComplianceChange: 0
       BalanceCorrection: 12
@@ -336,6 +342,7 @@ MonoBehaviour:
     - ChoiceText: Tanda tangani dulu agar dana masuk; perbaiki kontraknya nanti.
       NextLineIndex: 46
       AffinityChange: 0
+      MoneyCost: 0
       FinancialLogicChange: 10
       ShariaComplianceChange: 0
       BalanceCorrection: 0
@@ -344,6 +351,7 @@ MonoBehaviour:
     - ChoiceText: Tolak setiap kerja sama dan jual peralatan untuk menutup kebutuhan.
       NextLineIndex: 48
       AffinityChange: 0
+      MoneyCost: 0
       FinancialLogicChange: 0
       ShariaComplianceChange: 10
       BalanceCorrection: 0
@@ -353,6 +361,7 @@ MonoBehaviour:
         syariah/koperasi dengan catatan kas.
       NextLineIndex: 50
       AffinityChange: 0
+      MoneyCost: 0
       FinancialLogicChange: 0
       ShariaComplianceChange: 0
       BalanceCorrection: 12

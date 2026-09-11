@@ -1,3 +1,4 @@
+using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -7,7 +8,8 @@ using Alif.Systems;
 namespace Alif.UI
 {
     /// <summary>
-    /// Popup ATM — nampilin saldo bank & tombol tarik tunai beberapa nominal + "Ambil Semua".
+    /// Popup ATM — nampilin saldo bank & pilihan tarik tunai kecil agar Alif mengambil uang
+    /// secukupnya, bukan langsung mengosongkan tabungan.
     /// Tarik tunai mindahin saldo dari CurrencySystem.BankBalance ke CurrencySystem.CurrentMoney
     /// (uang kantong, yang ditampilkan HUD). Movement Player dikunci selama popup ini kebuka.
     ///
@@ -25,10 +27,11 @@ namespace Alif.UI
         [SerializeField] private TMP_Text _balanceText;
         [SerializeField] private Button _closeButton;
         [SerializeField] private Button[] _withdrawButtons;
-        [SerializeField] private int[] _withdrawAmounts = { 50000, 100000, 200000, 500000 };
-        [SerializeField] private Button _withdrawAllButton;
+        [SerializeField] private int[] _withdrawAmounts = { 10000, 20000, 50000 };
 
         private PlayerController _lockedPlayer;
+        private CurrencySystem _currencySystem;
+        private Coroutine _subscribeRoutine;
 
         private void Awake()
         {
@@ -51,13 +54,8 @@ namespace Alif.UI
                 }
                 else
                 {
-                    Debug.LogWarning($"[Alif] AtmUI: _withdrawButtons[{i}] kosong, tombol Rp {amount:N0} nggak akan bisa diklik.");
+                    Debug.LogWarning($"[Alif] AtmUI: _withdrawButtons[{i}] kosong, tombol {CurrencySystem.FormatRupiah(amount)} nggak akan bisa diklik.");
                 }
-            }
-
-            if (_withdrawAllButton != null)
-            {
-                _withdrawAllButton.onClick.AddListener(HandleWithdrawAllClicked);
             }
 
             Hide();
@@ -73,23 +71,63 @@ namespace Alif.UI
 
         private void OnEnable()
         {
-            if (CurrencySystem.Instance != null)
+            if (!TrySubscribeToCurrency())
             {
-                CurrencySystem.Instance.OnBankBalanceChanged += HandleBalanceChanged;
-                HandleBalanceChanged(CurrencySystem.Instance.BankBalance);
+                _subscribeRoutine = StartCoroutine(SubscribeWhenCurrencyReady());
             }
         }
 
         private void OnDisable()
         {
-            if (CurrencySystem.Instance != null)
+            if (_subscribeRoutine != null)
             {
-                CurrencySystem.Instance.OnBankBalanceChanged -= HandleBalanceChanged;
+                StopCoroutine(_subscribeRoutine);
+                _subscribeRoutine = null;
             }
+
+            if (_currencySystem != null)
+            {
+                _currencySystem.OnBankBalanceChanged -= HandleBalanceChanged;
+                _currencySystem = null;
+            }
+        }
+
+        private IEnumerator SubscribeWhenCurrencyReady()
+        {
+            while (!TrySubscribeToCurrency())
+            {
+                yield return null;
+            }
+
+            _subscribeRoutine = null;
+        }
+
+        private bool TrySubscribeToCurrency()
+        {
+            CurrencySystem activeCurrency = CurrencySystem.Instance;
+            if (activeCurrency == null)
+            {
+                return false;
+            }
+
+            if (_currencySystem != activeCurrency)
+            {
+                if (_currencySystem != null)
+                {
+                    _currencySystem.OnBankBalanceChanged -= HandleBalanceChanged;
+                }
+
+                _currencySystem = activeCurrency;
+                _currencySystem.OnBankBalanceChanged += HandleBalanceChanged;
+            }
+
+            HandleBalanceChanged(_currencySystem.BankBalance);
+            return true;
         }
 
         public void Show(PlayerController player)
         {
+            TrySubscribeToCurrency();
             _lockedPlayer = player;
             if (player != null)
             {
@@ -126,30 +164,31 @@ namespace Alif.UI
         {
             if (_balanceText != null)
             {
-                _balanceText.text = $"Saldo ATM: Rp {balance:N0}";
+                _balanceText.text = $"Saldo ATM: {CurrencySystem.FormatRupiah(balance)}";
+            }
+
+            for (int i = 0; i < _withdrawButtons.Length && i < _withdrawAmounts.Length; i++)
+            {
+                if (_withdrawButtons[i] != null)
+                {
+                    _withdrawButtons[i].interactable = balance >= _withdrawAmounts[i];
+                }
             }
         }
 
         private void HandleWithdrawClicked(int amount)
         {
-            if (CurrencySystem.Instance == null)
+            if (!TrySubscribeToCurrency())
             {
                 Debug.LogWarning("[Alif] Tarik tunai gagal: CurrencySystem.Instance tidak ditemukan di scene.");
                 return;
             }
 
-            bool success = CurrencySystem.Instance.Withdraw(amount);
+            bool success = _currencySystem.Withdraw(amount);
             Debug.Log(success
-                ? $"[Alif] Tarik tunai Rp {amount:N0} berhasil. Sisa saldo ATM: Rp {CurrencySystem.Instance.BankBalance:N0}."
-                : $"[Alif] Tarik tunai Rp {amount:N0} gagal (saldo ATM cuma Rp {CurrencySystem.Instance.BankBalance:N0}).");
+                ? $"[Alif] Tarik tunai {CurrencySystem.FormatRupiah(amount)} berhasil. Sisa saldo ATM: {CurrencySystem.FormatRupiah(_currencySystem.BankBalance)}."
+                : $"[Alif] Tarik tunai {CurrencySystem.FormatRupiah(amount)} gagal (saldo ATM cuma {CurrencySystem.FormatRupiah(_currencySystem.BankBalance)}).");
         }
 
-        private void HandleWithdrawAllClicked()
-        {
-            if (CurrencySystem.Instance != null)
-            {
-                CurrencySystem.Instance.Withdraw(CurrencySystem.Instance.BankBalance);
-            }
-        }
     }
 }
