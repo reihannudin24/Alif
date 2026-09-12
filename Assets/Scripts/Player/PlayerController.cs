@@ -476,10 +476,21 @@ namespace Alif.Player
                 return null;
             }
 
-            IInteractable interactable = collider.GetComponent<IInteractable>();
-            interactable = interactable ?? collider.GetComponentInParent<IInteractable>();
-            if (interactable is Behaviour behaviour && !behaviour.isActiveAndEnabled) return null;
-            return interactable;
+            Transform current = collider.transform;
+            while (current != null)
+            {
+                MonoBehaviour[] behaviours = current.GetComponents<MonoBehaviour>();
+                for (int i = 0; i < behaviours.Length; i++)
+                {
+                    MonoBehaviour behaviour = behaviours[i];
+                    if (behaviour != null && behaviour.isActiveAndEnabled && behaviour is IInteractable interactable)
+                    {
+                        return interactable;
+                    }
+                }
+                current = current.parent;
+            }
+            return null;
         }
 
         /// <summary>

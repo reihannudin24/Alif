@@ -22,6 +22,7 @@ namespace Alif.EditorTools
 {
     public static class AlifAdventureBuilder
     {
+        const string VariantC = "Assets/Sprites/Generated/VariantC/";
         public static readonly string[] ScenePaths = new[] { "MainMenu", "ChapterSelect", "Chapter1Cutscene", "Chapter1Ending", "Chapter2Cutscene" }
             .Select(n=>"Assets/Scenes/"+n+".unity")
             .Concat(Enumerable.Range(1,5).Select(c=>"Assets/Scenes/Adventure/"+AdventureGame.SceneFor(c)+".unity"))
@@ -34,8 +35,26 @@ namespace Alif.EditorTools
             if(EditorApplication.isPlaying)throw new InvalidOperationException("Stop Play Mode before configuring the build.");
             ValidateContent();ValidateScenes();
             EditorBuildSettings.scenes=ScenePaths.Select(p=>new EditorBuildSettingsScene(p,true)).ToArray();
-            EditorSceneManager.playModeStartScene=AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePaths[0]);
             AssetDatabase.SaveAssets();Debug.Log("[Alif] Campaign validated; no scenes regenerated.");
+        }
+        [MenuItem("Alif/Adventure/Apply Approved Variant C")]
+        public static void ApplyVariantC()
+        {
+            if(EditorApplication.isPlaying)throw new InvalidOperationException("Stop Play Mode first.");
+            if(!Application.isBatchMode&&!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())return;
+            AssetDatabase.Refresh();ConfigureVariantCSprites();
+            var setup=EditorSceneManager.GetSceneManagerSetup();
+            try
+            {
+                for(int chapter=2;chapter<=5;chapter++)
+                {
+                    var scene=EditorSceneManager.OpenScene($"Assets/Scenes/Adventure/{AdventureGame.SceneFor(chapter)}.unity");
+                    ApplyVariantCReferences(Find<AdventureGame>().Single());EditorSceneManager.SaveScene(scene);
+                }
+                RepairChapterOneScene();
+            }
+            finally{RestoreSetup(setup);}
+            Build();Debug.Log("[Alif] Approved Variant C applied to Adventure chapters 1-5.");
         }
         [MenuItem("Alif/Adventure/Repair Missing Adventure Worlds From Original Maps")]
         public static void RepairMissingWorlds()
@@ -100,6 +119,7 @@ namespace Alif.EditorTools
                     EditorSceneManager.SaveScene(scene,path);
                     Debug.Log("[Alif] Repaired missing world: "+path);
                 }
+                RepairChapterOneScene();
                 // Existing cutscenes keep their art/timing; only their gameplay destinations change.
                 foreach(string name in new[]{"Chapter1Cutscene","Chapter2Cutscene"})
                 {
@@ -109,10 +129,136 @@ namespace Alif.EditorTools
                     EditorSceneManager.SaveScene(scene);
                 }
             }
-            finally{EditorSceneManager.RestoreSceneManagerSetup(setup);}
+            finally{RestoreSetup(setup);}
             Build();
         }
+        [MenuItem("Alif/Adventure/Repair Chapter 1 Direction and Interactions")]
+        public static void RepairChapterOnePolish()
+        {
+            if(EditorApplication.isPlaying)throw new InvalidOperationException("Stop Play Mode first.");
+            if(!Application.isBatchMode&&!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())return;
+            var setup=EditorSceneManager.GetSceneManagerSetup();
+            try{RepairChapterOneScene();}
+            finally{RestoreSetup(setup);}
+            Build();
+        }
+        static void RepairChapterOneScene()
+        {
+            string path="Assets/Scenes/Adventure/AdventureChapter1.unity";
+            var scene=EditorSceneManager.OpenScene(path);
+            var game=Find<AdventureGame>().Single();
+            ApplyVariantCReferences(game);
+            game.Centers=new[]{Vector2.zero,new Vector2(0,-20),new Vector2(40,-20),new Vector2(40,-40)};
+            game.Spawns=new[]{new Vector2(0,-2.5f),new Vector2(0,-21),new Vector2(40,-21),new Vector2(39.35f,-43.38f)};
+
+            foreach(var point in Find<AdventurePoint>())
+                if(point.name.Contains("activity")||point.name=="Adventure interaction")Object.DestroyImmediate(point.gameObject);
+                else Object.DestroyImmediate(point);
+            foreach(string generated in new[]{"BuSiti_Gang","Raka_Gang","Gang_DirectionSign","PetugasStasiun","VariantC_StationLuggage","VariantC_StationTimetable","VariantC_GangPlanterCrates","VariantC_ReceiptTray","VariantC_Condiments","VariantC_ServingCounter"})
+            {
+                var old=Named(generated);if(old)Object.DestroyImmediate(old);
+            }
+
+            var station=Required("Station_NoticeBoard");
+            var menu=Required("PapanMenu_Interact");
+            var receipt=Required("MejaTungguPesanan");
+            var cashier=Required("BuSiti_Kasir");
+            station.transform.position=new Vector2(2.6f,-1.55f);
+            SetSprite(station,game.SignFamilySprites.ElementAtOrDefault(0),1.35f);
+            BindPoint(game,station,"Papan arah",0,(Vector2)station.transform.position+new Vector2(0,-.7f));
+
+            var buGang=CloneNpc(Required("BuSiti_Kasir"),"BuSiti_Gang",new Vector2(38.35f,-21.35f));
+            ConfigureReaction(buGang,game.ReactionPoseSprites.ElementAtOrDefault(1),game.EmoteSprites.ElementAtOrDefault(2));
+            BindPoint(game,buGang,"Bu Siti",2,buGang.transform.position);
+            var rakaGang=CloneNpc(Required("Raka_Tamu"),"Raka_Gang",new Vector2(41.55f,-21.35f));
+            ConfigureReaction(rakaGang,game.ReactionPoseSprites.ElementAtOrDefault(2),game.EmoteSprites.ElementAtOrDefault(3));
+            BindPoint(game,rakaGang,"Raka",2,rakaGang.transform.position);
+
+            var gangSign=new GameObject("Gang_DirectionSign");gangSign.transform.position=new Vector2(42.15f,-18.95f);
+            var signRenderer=gangSign.AddComponent<SpriteRenderer>();signRenderer.sprite=game.SignFamilySprites.ElementAtOrDefault(1)??game.DocumentIcon;signRenderer.sortingOrder=20;
+            if(signRenderer.sprite)gangSign.transform.localScale=Vector3.one*(1.35f/signRenderer.sprite.bounds.size.y);
+            BindPoint(game,gangSign,"Papan arah",2,new Vector2(42.15f,-20.1f));
+
+            BindPoint(game,menu,"Papan menu",3,(Vector2)menu.transform.position+new Vector2(0,-.45f));
+            BindPoint(game,receipt,"Meja jendela",3,(Vector2)receipt.transform.position+new Vector2(0,-.75f));
+            ConfigureReaction(cashier,game.ReactionPoseSprites.ElementAtOrDefault(1),game.EmoteSprites.ElementAtOrDefault(0));
+            BindPoint(game,cashier,"Bu Siti",3,(Vector2)cashier.transform.position+new Vector2(0,-.85f));
+
+            var petugas=AddAmbience("PetugasStasiun",game.ReactionPoseSprites.ElementAtOrDefault(0),new Vector2(-4.35f,-1.65f),1.25f,18);
+            ConfigureReaction(petugas,game.ReactionPoseSprites.ElementAtOrDefault(0),game.EmoteSprites.ElementAtOrDefault(1));
+            AddAmbience("VariantC_StationLuggage",game.LocationPropSprites.ElementAtOrDefault(0),new Vector2(4.45f,-1.62f),1.15f,16);
+            AddAmbience("VariantC_StationTimetable",game.LocationPropSprites.ElementAtOrDefault(1),new Vector2(-3.15f,-1.65f),.9f,15);
+            AddAmbience("VariantC_GangPlanterCrates",game.LocationPropSprites.ElementAtOrDefault(2),new Vector2(35.25f,-19.05f),1.15f,14);
+            AddAmbience("VariantC_ReceiptTray",game.LocationPropSprites.ElementAtOrDefault(3),new Vector2(38.35f,-39.05f),.55f,30);
+            AddAmbience("VariantC_Condiments",game.LocationPropSprites.ElementAtOrDefault(4),new Vector2(42.55f,-39.05f),.65f,30);
+            AddAmbience("VariantC_ServingCounter",game.LocationPropSprites.ElementAtOrDefault(5),new Vector2(43.45f,-38.15f),1.25f,18);
+            EditorUtility.SetDirty(game);EditorSceneManager.MarkSceneDirty(scene);EditorSceneManager.SaveScene(scene,path);
+            Debug.Log("[Alif] Chapter 1 uses six explicit interaction props across the authored four-area route.");
+        }
+        static GameObject Named(string name)=>Find<Transform>().FirstOrDefault(t=>t.name==name)?.gameObject;
+        static GameObject Required(string name)=>Named(name)??throw new InvalidOperationException("Missing Chapter 1 object: "+name);
+        static GameObject CloneNpc(GameObject source,string name,Vector2 position)
+        {
+            var clone=Object.Instantiate(source);clone.name=name;clone.transform.SetParent(null);clone.transform.position=position;clone.SetActive(true);
+            foreach(var behaviour in clone.GetComponents<MonoBehaviour>())behaviour.enabled=false;
+            clone.AddComponent<AdventureNpcReaction>();return clone;
+        }
+        static void ConfigureReaction(GameObject npc,Sprite pose,Sprite emote)
+        {
+            if(!npc)return;
+            var reaction=npc.GetComponent<AdventureNpcReaction>()??npc.AddComponent<AdventureNpcReaction>();
+            reaction.Body=npc.GetComponentInChildren<SpriteRenderer>();reaction.ReactionPose=pose;reaction.EmoteSprite=emote;EditorUtility.SetDirty(reaction);
+        }
+        static GameObject AddAmbience(string name,Sprite sprite,Vector2 position,float height,int order)
+        {
+            var go=new GameObject(name);go.transform.position=position;var renderer=go.AddComponent<SpriteRenderer>();renderer.sprite=sprite;renderer.sortingOrder=order;
+            if(sprite)go.transform.localScale=Vector3.one*(height/sprite.bounds.size.y);return go;
+        }
+        static void SetSprite(GameObject go,Sprite sprite,float height)
+        {
+            var renderer=go.GetComponentInChildren<SpriteRenderer>();if(!renderer||!sprite)return;
+            renderer.sprite=sprite;renderer.transform.localScale=Vector3.one*(height/sprite.bounds.size.y);EditorUtility.SetDirty(renderer);
+        }
+        static void ApplyVariantCReferences(AdventureGame game)
+        {
+            game.HudPanelSprite=Sprite(VariantC+"HudObjective.png");game.HudLocationSprite=Sprite(VariantC+"LocationTag.png");
+            game.JournalButtonSprite=Sprite(VariantC+"JournalButton.png");game.PauseButtonSprite=Sprite(VariantC+"PauseButton.png");game.BatikDividerSprite=Sprite(VariantC+"BatikDivider.png");
+            game.JoystickBaseSprite=Sprite(VariantC+"JoystickBase.png");game.JoystickKnobSprite=Sprite(VariantC+"JoystickKnob.png");game.InteractButtonSprite=Sprite(VariantC+"InteractButton.png");
+            game.SignFamilySprites=new[]{Sprite(VariantC+"StationSign.png"),Sprite(VariantC+"GangSign.png")};
+            game.LocationPropSprites=new[]{Sprite(VariantC+"StationLuggage.png"),Sprite(VariantC+"StationTimetable.png"),Sprite(VariantC+"GangPlanterCrates.png"),Sprite(VariantC+"ReceiptTray.png"),Sprite(VariantC+"Condiments.png"),Sprite(VariantC+"ServingCounter.png")};
+            game.ReactionPoseSprites=new[]{Sprite(VariantC+"PetugasReaction.png"),Sprite(VariantC+"BuSitiReaction.png"),Sprite(VariantC+"RakaReaction.png")};
+            game.EmoteSprites=new[]{Sprite(VariantC+"EmoteAlert.png"),Sprite(VariantC+"EmoteQuestion.png"),Sprite(VariantC+"EmoteHeart.png"),Sprite(VariantC+"EmoteSparkle.png"),Sprite(VariantC+"EmoteSweat.png")};
+            EditorUtility.SetDirty(game);
+        }
+        static void ConfigureVariantCSprites()
+        {
+            foreach(string path in Directory.GetFiles(VariantC,"*.png"))
+            {
+                string assetPath=path.Replace('\\','/');var importer=AssetImporter.GetAtPath(assetPath) as TextureImporter;if(!importer)continue;
+                bool world=assetPath.Contains("Sign.png")||assetPath.Contains("Luggage.png")||assetPath.Contains("Timetable.png")||assetPath.Contains("Crates.png")||assetPath.Contains("Tray.png")||assetPath.Contains("Condiments.png")||assetPath.Contains("Counter.png")||assetPath.Contains("Reaction.png");
+                importer.textureType=TextureImporterType.Sprite;importer.spriteImportMode=SpriteImportMode.Single;importer.alphaIsTransparency=true;importer.mipmapEnabled=false;importer.filterMode=FilterMode.Point;importer.textureCompression=TextureImporterCompression.Uncompressed;importer.spritePixelsPerUnit=100;
+                var settings=new TextureImporterSettings();importer.ReadTextureSettings(settings);settings.spriteAlignment=(int)SpriteAlignment.Custom;settings.spritePivot=world?new Vector2(.5f,0):new Vector2(.5f,.5f);importer.SetTextureSettings(settings);
+                importer.spriteBorder=assetPath.EndsWith("HudObjective.png")?new Vector4(55,55,55,55):assetPath.EndsWith("LocationTag.png")?new Vector4(28,28,28,28):Vector4.zero;
+                importer.SaveAndReimport();
+            }
+        }
+        static AdventurePoint BindPoint(AdventureGame game,GameObject prop,string target,int area,Vector2 triggerPosition)
+        {
+            foreach(var old in prop.transform.Cast<Transform>().Where(t=>t.name=="Objective label"||t.name=="InteractionArrow"||t.name=="Adventure interaction").ToArray())Object.DestroyImmediate(old.gameObject);
+            var trigger=new GameObject("Adventure interaction");trigger.layer=7;trigger.transform.SetParent(prop.transform,true);trigger.transform.position=triggerPosition;
+            var collider=trigger.AddComponent<CircleCollider2D>();collider.isTrigger=true;collider.radius=.42f;
+            var point=trigger.AddComponent<AdventurePoint>();point.Game=game;point.Area=area;point.Target=target;point.Reaction=prop.GetComponent<AdventureNpcReaction>();
+            var bounds=prop.GetComponentInChildren<SpriteRenderer>()?.bounds??new Bounds(prop.transform.position,Vector3.one);
+            var label=new GameObject("Objective label").AddComponent<TextMeshPro>();label.transform.SetParent(prop.transform,true);label.transform.position=new Vector3(bounds.center.x,bounds.max.y+.22f,0);label.fontSize=2.1f;label.alignment=TextAlignmentOptions.Center;label.rectTransform.sizeDelta=new Vector2(3,1);label.text=target;point.Label=label;
+            var arrow=new GameObject("InteractionArrow").AddComponent<SpriteRenderer>();arrow.transform.SetParent(prop.transform,true);arrow.transform.position=new Vector3(bounds.center.x,bounds.max.y+.65f,0);arrow.sprite=game.InteractionArrow;arrow.sortingOrder=110;arrow.gameObject.SetActive(false);
+            return point;
+        }
         static T[] Find<T>() where T:Object => Object.FindObjectsByType<T>(FindObjectsInactive.Include,FindObjectsSortMode.None);
+        static void RestoreSetup(SceneSetup[] setup)
+        {
+            if(setup.Length>0)EditorSceneManager.RestoreSceneManagerSetup(setup);
+            else EditorSceneManager.NewScene(NewSceneSetup.EmptyScene);
+        }
         static Sprite Sprite(string path)=>AssetDatabase.LoadAssetAtPath<Sprite>(path);
         static Vector2 FindFreePosition(Vector2 desired,Vector2 center,PlayerController player)
         {
@@ -142,7 +288,7 @@ namespace Alif.EditorTools
             var spawn=new GameObject(label+" spawn");spawn.transform.position=destination;
             var go=new GameObject(label);go.transform.position=position;var trigger=go.AddComponent<BoxCollider2D>();trigger.size=new Vector2(.7f,.7f);trigger.isTrigger=true;
             var door=go.AddComponent<SceneDoor>();var so=new SerializedObject(door);so.FindProperty("_destination").objectReferenceValue=spawn.transform;so.ApplyModifiedPropertiesWithoutUndo();
-            var text=new GameObject("Door label").AddComponent<TextMeshPro>();text.transform.SetParent(go.transform,false);text.fontSize=2;text.text=label+" ↓";text.alignment=TextAlignmentOptions.Center;text.rectTransform.sizeDelta=new Vector2(3,1);
+            var text=new GameObject("Door label").AddComponent<TextMeshPro>();text.transform.SetParent(go.transform,false);text.fontSize=2;text.text=label;text.alignment=TextAlignmentOptions.Center;text.rectTransform.sizeDelta=new Vector2(3,1);
         }
         public static void ValidateContent()
         {
@@ -183,15 +329,22 @@ namespace Alif.EditorTools
                         if(GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(transform.gameObject)>0)throw new Exception("Missing script: "+path+" / "+transform.name);
                     if(!path.Contains("AdventureChapter"))continue;
                     var game=Find<AdventureGame>().Single();var content=AdventureContent.Get(game.Chapter);
-                    if(Find<PlayerController>().Length!=1||Find<DialogueUI>().Length!=1||Find<SceneFadeController>().Length!=1||game.Centers.Length!=content.Areas.Length||game.Spawns.Length!=game.Centers.Length)
-                        throw new Exception("Incomplete Adventure world: "+path+". Run Repair Missing Adventure Worlds explicitly.");
+                    int players=Find<PlayerController>().Length,dialogues=Find<DialogueUI>().Length,fades=Find<SceneFadeController>().Length;
+                    if(players!=1||dialogues!=1||fades!=1||game.Centers.Length!=content.Areas.Length||game.Spawns.Length!=game.Centers.Length)
+                        throw new Exception($"Incomplete Adventure world: {path} (players={players}, dialogueUI={dialogues}, fades={fades}, centers={game.Centers.Length}, areas={content.Areas.Length}, spawns={game.Spawns.Length}). Run Repair Missing Adventure Worlds explicitly.");
                     if(game.Chapter==2&&(game.DanaKilat==null||game.DanaKilat.ValidationError()!=null))throw new Exception("Invalid Dana Kilat");
                     if(game.Chapter>=3&&(game.ActionEncounter==null||game.ActionEncounter.ValidationError()!=null))throw new Exception("Invalid action encounter");
                     foreach(var task in content.Tasks)if(!Find<AdventurePoint>().Any(p=>p.Area==task.Area&&p.Target==task.Target))throw new Exception("Missing point: "+task.Id);
+                    if(game.Chapter==1)
+                    {
+                        foreach(var task in content.Tasks.GroupBy(t=>(t.Area,t.Target)).Select(g=>g.First()))
+                            if(Find<AdventurePoint>().Count(p=>p.Area==task.Area&&p.Target==task.Target)!=1)throw new Exception("Chapter 1 objective must bind exactly once: "+task.Id);
+                        if(Find<AdventurePoint>().Any(p=>p.name.Contains("activity")))throw new Exception("Chapter 1 still has a generic activity marker: "+path);
+                    }
                     foreach(var door in Find<SceneDoor>())if(!door.Destination)throw new Exception("Missing door destination: "+path);
                 }
             }
-            finally{EditorSceneManager.RestoreSceneManagerSetup(setup);}
+            finally{RestoreSetup(setup);}
         }
         public static void BuildMac(){Build();AlifStandaloneBuilder.BuildMacApp();}
         public static void BuildWeb(){Build();AlifStandaloneBuilder.BuildWebGL();}

@@ -588,7 +588,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -1200,6 +1200,7 @@ MonoBehaviour:
   Area: 1
   Optional: 0
   Label: {fileID: 1794825750}
+  Reaction: {fileID: 0}
 --- !u!58 &87102542
 CircleCollider2D:
   m_ObjectHideFlags: 0
@@ -1623,7 +1624,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -2185,7 +2186,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -2650,6 +2651,7 @@ MonoBehaviour:
   Area: 1
   Optional: 0
   Label: {fileID: 925547759}
+  Reaction: {fileID: 0}
 --- !u!58 &194822656
 CircleCollider2D:
   m_ObjectHideFlags: 0
@@ -2811,7 +2813,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -4548,6 +4550,8 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
+  m_MaxWidth: -1
+  m_MaxHeight: -1
 --- !u!114 &305971114
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4646,8 +4650,7 @@ MonoBehaviour:
   - {fileID: 1572581293}
   - {fileID: 181149700}
   - {fileID: 1207269478}
-  _withdrawAmounts: 50c30000a0860100400d030020a10700
-  _withdrawAllButton: {fileID: 1947346683}
+  _withdrawAmounts: 50c30000a0860100400d030020a10700i
 --- !u!225 &308065954
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -5030,7 +5033,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -5610,6 +5613,7 @@ MonoBehaviour:
   Area: 1
   Optional: 0
   Label: {fileID: 1993827271}
+  Reaction: {fileID: 0}
 --- !u!58 &351826045
 CircleCollider2D:
   m_ObjectHideFlags: 0
@@ -5739,6 +5743,8 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
+  m_MaxWidth: -1
+  m_MaxHeight: -1
 --- !u!114 &366081034
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6270,7 +6276,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -6819,7 +6825,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -7381,7 +7387,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -7800,6 +7806,35 @@ MonoBehaviour:
   InteractionArrow: {fileID: 21300000, guid: cf11422040c7a4b8588a9363368e11b8, type: 3}
   DocumentIcon: {fileID: 21300000, guid: 3cb1d9be06b64f91952b713c80ecdc99, type: 3}
   PromotionIcon: {fileID: 21300000, guid: 8c545fd60603542389ec2a0efe88122c, type: 3}
+  HudPanelSprite: {fileID: 21300000, guid: 8567f829060ee4aa9a5931e8979bb949, type: 3}
+  HudLocationSprite: {fileID: 21300000, guid: a25ceefd57edf41139d179dc0c9aee88, type: 3}
+  HudButtonSprite: {fileID: 0}
+  JournalButtonSprite: {fileID: 21300000, guid: bca1502b59c804e878c5ba1054afff25, type: 3}
+  PauseButtonSprite: {fileID: 21300000, guid: 06f92bfda22ad4b8bbb7f5383edc273b, type: 3}
+  BatikDividerSprite: {fileID: 21300000, guid: 93797ccfbe16b4b4f9a794e15b3b8161, type: 3}
+  JoystickBaseSprite: {fileID: 21300000, guid: 97f0e0ecdb1be4fbc90514cd33842f8c, type: 3}
+  JoystickKnobSprite: {fileID: 21300000, guid: f5d457198bf534bc198691d9743af80f, type: 3}
+  InteractButtonSprite: {fileID: 21300000, guid: 02623b42224864b19a54e03ed87f7628, type: 3}
+  SignFamilySprites:
+  - {fileID: 21300000, guid: 0102c28916981416f9c8dbb750d65e26, type: 3}
+  - {fileID: 21300000, guid: efdd577eaddf144dc93a76653bb4807c, type: 3}
+  LocationPropSprites:
+  - {fileID: 21300000, guid: f90d1b9cca8034463959067fa6db8001, type: 3}
+  - {fileID: 21300000, guid: d0e1bb91ff6f74433a3a318e024621b1, type: 3}
+  - {fileID: 21300000, guid: be567ff3d1bac469b9988d7758d24fc8, type: 3}
+  - {fileID: 21300000, guid: 17f5455ed32994f6b9ecd799c9c6d1ea, type: 3}
+  - {fileID: 21300000, guid: 1d78245d290fc404c802cb51c610cdfc, type: 3}
+  - {fileID: 21300000, guid: 27754552eb8ce4f5d88f7ff023279441, type: 3}
+  ReactionPoseSprites:
+  - {fileID: 21300000, guid: fb523e529efbe435bbd4dfc48169afd3, type: 3}
+  - {fileID: 21300000, guid: 786642f5022ac4a55b330f9e49809a63, type: 3}
+  - {fileID: 21300000, guid: fe504a08b867e4825ae14fcd389bf349, type: 3}
+  EmoteSprites:
+  - {fileID: 21300000, guid: 625877a12dea1480983cbdd7e8d365bd, type: 3}
+  - {fileID: 21300000, guid: 195a55255d1fd4dd0b60f916ef95ff42, type: 3}
+  - {fileID: 21300000, guid: 501a8b494862342d993b8908d8adacd2, type: 3}
+  - {fileID: 21300000, guid: b1ce6b539380144cfbedf506f60e1ad7, type: 3}
+  - {fileID: 21300000, guid: 5f8ebddd71c7a4f4fa73934b7a44cc84, type: 3}
   DanaKilat: {fileID: 11400000, guid: 581491f17c6564a04a99cf9a70496df6, type: 2}
   ActionEncounter: {fileID: 11400000, guid: 7c1a27f95475a4e94b712a3e87ce946e, type: 2}
 --- !u!4 &531551720
@@ -8061,7 +8096,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -8276,7 +8311,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -8432,7 +8467,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -8667,6 +8702,7 @@ MonoBehaviour:
   Area: 0
   Optional: 0
   Label: {fileID: 1217721858}
+  Reaction: {fileID: 0}
 --- !u!58 &603743135
 CircleCollider2D:
   m_ObjectHideFlags: 0
@@ -8872,7 +8908,7 @@ MonoBehaviour:
   m_Intensity: 1
   m_LightVolumeIntensity: 1
   m_LightVolumeEnabled: 0
-  m_ApplyToSortingLayers: 00000000
+  m_ApplyToSortingLayers: 00000000i
   m_LightCookieSprite: {fileID: 0}
   m_DeprecatedPointLightCookieSprite: {fileID: 0}
   m_LightOrder: 0
@@ -8887,6 +8923,9 @@ MonoBehaviour:
   m_ShadowSoftnessFalloffIntensity: 0.5
   m_ShadowVolumeIntensityEnabled: 0
   m_ShadowVolumeIntensity: 0.75
+  m_RenderingLayersMask:
+    serializedVersion: 0
+    m_Bits: 1
   m_LocalBounds:
     m_Center: {x: 0, y: -0.00000011920929, z: 0}
     m_Extent: {x: 0.9985302, y: 0.99853027, z: 0}
@@ -9148,7 +9187,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -9266,7 +9305,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -10138,9 +10177,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 794ec4d217c26493b8578d99d5230d5d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Alif.UI.VirtualJoystick
+  _touchArea: {fileID: 0}
   _background: {fileID: 702086355}
   _knob: {fileID: 945475120}
   _handleRange: 60
+  _mode: 0
 --- !u!224 &702086355
 RectTransform:
   m_ObjectHideFlags: 0
@@ -10352,6 +10393,8 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
+  m_MaxWidth: -1
+  m_MaxHeight: -1
 --- !u!114 &729427935
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10728,7 +10771,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -11194,7 +11237,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -11764,7 +11807,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -12248,7 +12291,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -12410,6 +12453,7 @@ MonoBehaviour:
   _panelRect: {fileID: 417675755}
   _speakerNameText: {fileID: 1362089788}
   _dialogueText: {fileID: 1960092069}
+  _choiceStatusText: {fileID: 0}
   _portraitImage: {fileID: 1711614636}
   _nextButton: {fileID: 1479519796}
   _choiceButtonPrefab: {fileID: 2600639096667076813, guid: 17789610d337044778f1bc9145c86583, type: 3}
@@ -12426,6 +12470,7 @@ MonoBehaviour:
   _interactButtonRoot: {fileID: 84777943}
   _inventoryPanelRoot: {fileID: 1192289525}
   _pauseButtonRoot: {fileID: 234211925}
+  _objectivePanelRoot: {fileID: 0}
   _audioManager: {fileID: 1973491359}
   _buttonClickSfx: {fileID: 8300000, guid: bae94a03a7e2d4d9d987cd3255bfea83, type: 3}
   _portraitEnterDuration: 0.35
@@ -12651,7 +12696,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -12882,7 +12927,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -13000,7 +13045,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -13762,7 +13807,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -13948,7 +13993,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -15255,7 +15300,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -15672,7 +15717,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -17126,7 +17171,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -17326,7 +17371,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -17463,7 +17508,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -18479,7 +18524,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -18859,7 +18904,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -19100,6 +19145,7 @@ MonoBehaviour:
   Area: 0
   Optional: 0
   Label: {fileID: 1905233896}
+  Reaction: {fileID: 0}
 --- !u!58 &1368549047
 CircleCollider2D:
   m_ObjectHideFlags: 0
@@ -19504,7 +19550,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -19738,7 +19784,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -19953,7 +19999,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -20090,7 +20136,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -20562,6 +20608,8 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
+  m_MaxWidth: -1
+  m_MaxHeight: -1
 --- !u!114 &1465470065
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -21373,7 +21421,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -22166,7 +22214,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -22779,7 +22827,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -23524,7 +23572,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -24031,7 +24079,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -24828,7 +24876,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -25123,7 +25171,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -25252,6 +25300,7 @@ MonoBehaviour:
   Area: 0
   Optional: 0
   Label: {fileID: 1722566955}
+  Reaction: {fileID: 0}
 --- !u!58 &1808864002
 CircleCollider2D:
   m_ObjectHideFlags: 0
@@ -25817,7 +25866,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -25883,6 +25932,7 @@ MonoBehaviour:
   Area: 0
   Optional: 0
   Label: {fileID: 1808800370}
+  Reaction: {fileID: 0}
 --- !u!58 &1865546662
 CircleCollider2D:
   m_ObjectHideFlags: 0
@@ -26395,7 +26445,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -26595,7 +26645,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -27165,7 +27215,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -27740,7 +27790,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -29278,9 +29328,6 @@ MonoBehaviour:
   _finishedDialogue: {fileID: 11400000, guid: db3fbae2803d441bca85181a8bafdd2a, type: 2}
   _menuDialogue: {fileID: 11400000, guid: 7d657cc3cb5a84ce5aa24c910e4d0e36, type: 2}
   _alifData: {fileID: 11400000, guid: 888c6b6b867d8485ab88489f284792c2, type: 2}
-  _ayamGeprekPrice: 18000
-  _nasiTelurPrice: 12000
-  _esTehPrice: 6000
   _energyRestoredAfterConflict: 12
   _rakaObject: {fileID: 1194114447}
   _playerController: {fileID: 1048792598}
@@ -29380,6 +29427,8 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
+  m_MaxWidth: -1
+  m_MaxHeight: -1
 --- !u!114 &2146658057
 MonoBehaviour:
   m_ObjectHideFlags: 0

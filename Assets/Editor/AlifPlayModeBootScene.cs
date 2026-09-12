@@ -1,5 +1,6 @@
 using UnityEditor;
 using UnityEditor.SceneManagement;
+using UnityEngine;
 
 namespace Alif.EditorTools
 {
@@ -20,6 +21,9 @@ namespace Alif.EditorTools
 
         static AlifPlayModeBootScene()
         {
+            if (Application.isBatchMode)
+                return;
+
             EditorSceneManager.playModeStartScene = AssetDatabase.LoadAssetAtPath<SceneAsset>(BootScenePath);
         }
     }

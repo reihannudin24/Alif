@@ -1,0 +1,12 @@
+{
+  "family": "Variant C - Handcrafted Solo",
+  "generator": "OpenAI built-in image generation",
+  "approved": true,
+  "sourceAtlases": ["VariantC_UI_Atlas.png", "VariantC_Props_Atlas.png", "VariantC_Emotes_Atlas.png", "VariantC_Reactions_Atlas.png"],
+  "prompts": {
+    "ui": "Transparent 4x2 pixel-art UI atlas: cream paper, teak and bamboo, indigo ink, muted gold, restrained batik; objective panel, location tag, journal, pause, joystick base and knob, interact hand, divider; no text.",
+    "props": "Transparent 4x2 pixel-art ambience atlas matching Variant C: station and gang signs, luggage, timetable, plants and crates, receipt tray, condiments, serving counter; no text.",
+    "emotes": "Five transparent pixel-art reaction bubbles: alert, question, heart, sparkle, sweat.",
+    "reactions": "Three transparent Indonesian NPC reaction poses preserving Bu Siti and Raka identity: station officer wave, Bu Siti welcome, Raka thumbs-up."
+  }
+}

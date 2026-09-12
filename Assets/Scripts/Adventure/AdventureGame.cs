@@ -27,6 +27,11 @@ namespace Alif.Adventure
         public Vector2[] Centers, Spawns;
         public CharacterData[] Cast;
         public Sprite InteractionArrow, DocumentIcon, PromotionIcon;
+        [Header("Handcrafted Solo UI (optional approved assets)")]
+        public Sprite HudPanelSprite, HudLocationSprite, HudButtonSprite, JournalButtonSprite, PauseButtonSprite, BatikDividerSprite;
+        public Sprite JoystickBaseSprite, JoystickKnobSprite, InteractButtonSprite;
+        [Header("Chapter 1 ambience (approved assets only)")]
+        public Sprite[] SignFamilySprites, LocationPropSprites, ReactionPoseSprites, EmoteSprites;
         List<SceneDoor> _doors=new List<SceneDoor>();
         int _selectedCard=-1;
         public Action<string> ObjectiveCompleted;
@@ -44,8 +49,13 @@ namespace Alif.Adventure
         public string CurrentTaskId => CurrentTask?.Id ?? "";
         public int PuzzleStepIndex => _task == null ? -1 : State.Progress(_task.Id)?.Step ?? 0;
         AdventureTask CurrentTask => Content?.Tasks.FirstOrDefault(t => State.Progress(t.Id)?.Complete != true);
-        RectTransform _canvas, _modal, _hud;
+        RectTransform _canvas, _modal, _hud, _safeRoot;
         TMP_Text _objective, _location, _toast, _prompt, _guide;
+        Image _guideArrow;
+        GameObject _touchControls;
+        VirtualJoystick _joystick;
+        Rect _lastSafeArea;
+        int _lastScreenWidth, _lastScreenHeight;
         PlayerController _player;
         List<AdventurePoint> _points = new List<AdventurePoint>();
         List<Button> _buttons = new List<Button>();
@@ -118,23 +128,102 @@ namespace Alif.Adventure
         public bool CanExplore => Activity==CampaignActivity.World&&!_transition&&!_paused && !(DialogueManager.Instance?.IsDialogueActive??false);
         void BuildHud()
         {
-            if(_hud)Destroy(_hud.gameObject);
-            _hud=CampaignUI.Rect(_canvas,"Directions",Vector2.zero,Vector2.one);
-            var top=Panel(_hud,new Vector2(.25f,.88f),new Vector2(.75f,.98f));top.raycastTarget=false;
-            _location=Text(_hud,"",new Vector2(.26f,.94f),new Vector2(.74f,.975f),14,Gold);
-            _objective=Text(_hud,"",new Vector2(.26f,.886f),new Vector2(.74f,.94f),19);
-            Button(_hud,"J  Jurnal",new Vector2(.78f,.9f),new Vector2(.89f,.965f),()=>Journal(0));
-            Button(_hud,"Jeda",new Vector2(.9f,.9f),new Vector2(.99f,.965f),Pause);
-            _prompt=Text(_hud,"",new Vector2(.25f,.17f),new Vector2(.75f,.22f),18);_prompt.alignment=TextAlignmentOptions.Center;
-            _guide=Text(_hud,"",new Vector2(.25f,.835f),new Vector2(.75f,.877f),16,Gold);_guide.alignment=TextAlignmentOptions.Center;
-            _toast=Text(_hud,"",new Vector2(.22f,.23f),new Vector2(.78f,.28f),17);_toast.alignment=TextAlignmentOptions.Center;
-            RefreshHud();
+            if(_safeRoot)Destroy(_safeRoot.gameObject);
+            _safeRoot=CampaignUI.Rect(_canvas,"Safe Area",Vector2.zero,Vector2.one);
+            ApplySafeArea(true);
+            _hud=CampaignUI.Rect(_safeRoot,"Adventure HUD",Vector2.zero,Vector2.one);
+
+            var location=Panel(_hud,new Vector2(.02f,.895f),new Vector2(.175f,.965f));
+            location.raycastTarget=false;ApplySprite(location,HudLocationSprite);
+            if(HudLocationSprite)location.color=Color.white;
+            _location=Text(location.transform,"",new Vector2(.03f,.08f),new Vector2(.97f,.92f),12,HudLocationSprite?Ink:Gold);
+            _location.alignment=TextAlignmentOptions.Center;
+
+            var top=Panel(_hud,new Vector2(.18f,.875f),new Vector2(.77f,.98f));
+            top.raycastTarget=false;ApplySprite(top,HudPanelSprite);
+            if(HudPanelSprite)top.color=Color.white;
+            var pin=Panel(top.transform,new Vector2(0,0),new Vector2(.012f,1),Gold);pin.raycastTarget=false;
+            _objective=Text(top.transform,"",new Vector2(.025f,.16f),new Vector2(.975f,.92f),19,HudPanelSprite?Ink:Paper);
+            if(BatikDividerSprite)Icon(top.transform,BatikDividerSprite,new Vector2(.08f,.02f),new Vector2(.92f,.16f));
+            Button(_hud,"Jurnal",new Vector2(.79f,.895f),new Vector2(.885f,.965f),()=>Journal(0),JournalButtonSprite);
+            Button(_hud,"Jeda",new Vector2(.895f,.895f),new Vector2(.99f,.965f),Pause,PauseButtonSprite);
+
+            _guideArrow=CampaignUI.Rect(_hud,"Route arrow",new Vector2(.31f,.82f),new Vector2(.345f,.87f)).gameObject.AddComponent<Image>();
+            _guideArrow.sprite=InteractionArrow;_guideArrow.preserveAspect=true;_guideArrow.raycastTarget=false;_guideArrow.gameObject.SetActive(false);
+            _guide=Text(_hud,"",new Vector2(.345f,.82f),new Vector2(.69f,.87f),16,Gold);_guide.alignment=TextAlignmentOptions.Center;
+            _prompt=Text(_hud,"",new Vector2(.27f,.19f),new Vector2(.73f,.245f),18);_prompt.alignment=TextAlignmentOptions.Center;
+            _toast=Text(_hud,"",new Vector2(.22f,.255f),new Vector2(.78f,.31f),17);_toast.alignment=TextAlignmentOptions.Center;
+            BuildTouchControls();
+            RefreshHud();SetTouchControlsVisible();
+        }
+
+        void ApplySafeArea(bool force=false)
+        {
+            if(!_safeRoot || Screen.width<=0 || Screen.height<=0)return;
+            Rect safe=Screen.safeArea;
+            if(!force && safe==_lastSafeArea && Screen.width==_lastScreenWidth && Screen.height==_lastScreenHeight)return;
+            _lastSafeArea=safe;_lastScreenWidth=Screen.width;_lastScreenHeight=Screen.height;
+            _safeRoot.anchorMin=new Vector2(safe.xMin/Screen.width,safe.yMin/Screen.height);
+            _safeRoot.anchorMax=new Vector2(safe.xMax/Screen.width,safe.yMax/Screen.height);
+            _safeRoot.offsetMin=_safeRoot.offsetMax=Vector2.zero;
+        }
+
+        void BuildTouchControls()
+        {
+            foreach(var legacy in FindObjectsByType<VirtualJoystick>(FindObjectsInactive.Include))
+            {
+                var legacyCanvas=legacy.GetComponentInParent<Canvas>();
+                if(legacyCanvas)
+                {
+                    if(!JoystickBaseSprite)JoystickBaseSprite=legacy.GetComponent<Image>()?.sprite;
+                    if(!JoystickKnobSprite)JoystickKnobSprite=legacy.GetComponentsInChildren<Image>(true).Select(i=>i.sprite).FirstOrDefault(s=>s&&s!=JoystickBaseSprite);
+                    foreach(var name in new[]{"HUD_Panel","Inventory_Panel","VirtualJoystick","InteractButton","PauseButton","PauseMenuPanel","QuitConfirmPopup"})
+                    {
+                        var old=legacyCanvas.transform.Find(name);if(!old)continue;
+                        if(name=="InteractButton"&&!InteractButtonSprite)InteractButtonSprite=old.GetComponent<Image>()?.sprite;
+                        Destroy(old.gameObject);
+                    }
+                }
+                else legacy.gameObject.SetActive(false);
+            }
+            _touchControls=CampaignUI.Rect(_hud,"Touch Controls",Vector2.zero,Vector2.one).gameObject;
+            var touchArea=CampaignUI.Rect(_touchControls.transform,"Joystick touch area",new Vector2(0,.02f),new Vector2(.46f,.58f));
+            var catcher=touchArea.gameObject.AddComponent<Image>();catcher.color=new Color(1,1,1,.001f);catcher.raycastTarget=true;
+            var background=CampaignUI.Rect(touchArea,"Joystick base",Vector2.zero,Vector2.zero);
+            background.anchorMin=background.anchorMax=Vector2.zero;background.pivot=new Vector2(.5f,.5f);
+            background.anchoredPosition=new Vector2(92,92);background.sizeDelta=new Vector2(144,144);
+            var baseImage=background.gameObject.AddComponent<Image>();baseImage.sprite=JoystickBaseSprite;baseImage.color=JoystickBaseSprite?new Color(1,1,1,.72f):new Color(.20f,.16f,.13f,.72f);baseImage.preserveAspect=true;baseImage.raycastTarget=false;
+            var knob=CampaignUI.Rect(background,"Knob",new Vector2(.5f,.5f),new Vector2(.5f,.5f));
+            knob.pivot=new Vector2(.5f,.5f);knob.sizeDelta=new Vector2(64,64);
+            var knobImage=knob.gameObject.AddComponent<Image>();knobImage.sprite=JoystickKnobSprite;knobImage.color=JoystickKnobSprite?Color.white:Paper;knobImage.preserveAspect=true;knobImage.raycastTarget=false;
+            _joystick=touchArea.gameObject.AddComponent<VirtualJoystick>();
+            _joystick.Configure(touchArea,background,knob,VirtualJoystick.SavedMode);_player.BindJoystick(_joystick);
+
+            var interact=CampaignUI.Rect(_touchControls.transform,"Interact",Vector2.one,Vector2.one);
+            interact.anchorMin=interact.anchorMax=interact.pivot=new Vector2(1,0);
+            interact.anchoredPosition=new Vector2(-26,28);interact.sizeDelta=new Vector2(104,104);
+            var image=interact.gameObject.AddComponent<Image>();image.sprite=InteractButtonSprite;image.color=InteractButtonSprite?Color.white:new Color(.42f,.25f,.13f,.92f);image.preserveAspect=true;
+            var button=interact.gameObject.AddComponent<Button>();button.targetGraphic=image;button.onClick.AddListener(_player.Interact);button.navigation=new Navigation{mode=Navigation.Mode.None};
+            var label=CampaignUI.Text(interact,"E",Vector2.zero,Vector2.one,25);label.alignment=TextAlignmentOptions.Center;label.fontStyle=FontStyles.Bold;
+        }
+
+        void SetTouchControlsVisible()
+        {
+            if(!_touchControls)return;
+            bool visible=CanExplore && VirtualJoystick.SavedMode!=JoystickMode.Hidden;
+            _touchControls.SetActive(visible);
+            if(visible)_joystick?.SetMode(VirtualJoystick.SavedMode);
+        }
+
+        static void ApplySprite(Image image,Sprite sprite)
+        {
+            if(!image||!sprite)return;image.sprite=sprite;image.type=sprite.border.sqrMagnitude>0?Image.Type.Sliced:Image.Type.Simple;
         }
         void RefreshHud()
         {
             if(!_objective)return;
             var t=CurrentTask;int done=Content.Tasks.Count(x=>State.Progress(x.Id)?.Complete==true);
-            _location.text=$"BAB {Chapter}  /  {Content.Title}  •  {Content.Areas[State.Area]}";
+            _location.text=$"BAB {Chapter}  •  {Content.Areas[State.Area]}";
             _objective.text=t==null?"Perjalanan bab selesai":$"{done+1}/{Content.Tasks.Length}   {t.Title}";
             foreach(var p in _points)
             {
@@ -144,6 +233,7 @@ namespace Alif.Adventure
         }
         void Update()
         {
+            ApplySafeArea();
             var k=Keyboard.current;
             if(k!=null && k.tabKey.wasPressedThisFrame) CycleFocus((k.leftShiftKey.isPressed || k.rightShiftKey.isPressed)?-1:1);
             if(Chapter==0 || State==null)return;
@@ -162,9 +252,19 @@ namespace Alif.Adventure
             Transform guide=null;
             if(target!=null)
             {
-                guide=target.Area==State.Area?_points.Find(p=>p.Target==target.Target&&p.Area==target.Area)?.transform:NextDoor(target.Area)?.transform;
-                if(guide){Vector2 delta=(Vector2)guide.position-pos;_guide.text=(Mathf.Abs(delta.x)>Mathf.Abs(delta.y)?delta.x>0?"Kanan → ":"← Kiri ":delta.y>0?"Atas ↑ ":"Bawah ↓ ")+(target.Area==State.Area?target.Target:"Pintu ke "+Content.Areas[NextDoor(target.Area).DestinationArea]);}
+                var door=target.Area==State.Area?null:NextDoor(target.Area);
+                guide=target.Area==State.Area?_points.Find(p=>p.Target==target.Target&&p.Area==target.Area)?.transform:door?.transform;
+                if(guide)
+                {
+                    Vector2 delta=(Vector2)guide.position-pos;
+                    bool horizontal=Mathf.Abs(delta.x)>Mathf.Abs(delta.y);
+                    float angle=horizontal?(delta.x>0?90:-90):(delta.y>0?180:0);
+                    _guideArrow.rectTransform.localEulerAngles=new Vector3(0,0,angle);_guideArrow.gameObject.SetActive(true);
+                    string direction=horizontal?(delta.x>0?"Kanan":"Kiri"):(delta.y>0?"Atas":"Bawah");
+                    _guide.text=direction+"  •  "+(target.Area==State.Area?target.Target:"Pintu ke "+Content.Areas[door.DestinationArea]);
+                }
             }
+            if(!guide){_guide.text="";_guideArrow.gameObject.SetActive(false);}
             if(Time.unscaledTime-_savedAt>20)Save(false);
         }
         SceneDoor NextDoor(int targetArea)
@@ -226,12 +326,13 @@ namespace Alif.Adventure
         void OnApplicationPause(bool paused){if(paused&&Chapter>0&&State!=null)Save(false);}
         void OnApplicationFocus(bool focused){if(!focused&&Chapter>0&&State!=null)Save(false);}
         void OnApplicationQuit(){if(Chapter>0&&State!=null)Save(false);}
-        void SetPlaying(){Activity=CampaignActivity.World;_player?.SetMovementLocked(this, false);GameManager.Instance?.SetState(GameManager.GameState.Playing);RefreshHud();}
+        void SetPlaying(){Activity=CampaignActivity.World;_player?.SetMovementLocked(this, false);GameManager.Instance?.SetState(GameManager.GameState.Playing);RefreshHud();SetTouchControlsVisible();}
         void Toast(string message,float seconds=3){if(_toast){_toast.text=message;_toastUntil=Time.unscaledTime+seconds;}}
         void ClearModal(CampaignActivity screen)
         {
             if(_modal){_modal.gameObject.SetActive(false);Destroy(_modal.gameObject);}
             _buttons.Clear();_modal=CampaignUI.Rect(_canvas,screen.ToString(),Vector2.zero,Vector2.one);Activity=screen;_openedAt=Time.unscaledTime;
+            SetTouchControlsVisible();
             _player?.SetMovementLocked(this, true);_player?.SetAdventureDirection(Vector2.zero);_walkTarget=null;
             GameManager.Instance?.SetState(GameManager.GameState.Dialogue);
             var shade=Panel(_modal,Vector2.zero,Vector2.one);shade.color=new Color(.08f,.13f,.16f,.73f);
@@ -251,10 +352,12 @@ namespace Alif.Adventure
         {
             var label=CampaignUI.Text(parent,content,min,max,Mathf.RoundToInt(size*_textScale));label.color=color??Paper;return label;
         }
-        Button Button(Transform parent,string label,Vector2 min,Vector2 max,Action click)
+        Button Button(Transform parent,string label,Vector2 min,Vector2 max,Action click,Sprite sprite=null)
         {
             var b=CampaignUI.Button(parent,label,min,max,()=>{if(Time.unscaledTime-_openedAt<.13f)return;click();});
-            b.image.color=Teal;var colors=b.colors;colors.selectedColor=Gold;colors.highlightedColor=Gold;colors.pressedColor=Gold;b.colors=colors;
+            sprite=sprite?sprite:HudButtonSprite;
+            b.image.color=sprite?Color.white:new Color(.30f,.18f,.11f);ApplySprite(b.image,sprite);
+            var colors=b.colors;colors.selectedColor=Gold;colors.highlightedColor=Gold;colors.pressedColor=new Color(.67f,.48f,.25f);b.colors=colors;
             var text=b.GetComponentInChildren<TMP_Text>();text.fontSize=Mathf.RoundToInt(19*_textScale);text.color=Paper;
             _buttons.Add(b);return b;
         }
@@ -273,9 +376,9 @@ namespace Alif.Adventure
         void ShowDialogueLine(DialogueLine line)
         {
             if(_modal){Destroy(_modal.gameObject);_modal=null;}
-            Activity=CampaignActivity.Dialogue;_hud.gameObject.SetActive(false);
+            Activity=CampaignActivity.Dialogue;_hud.gameObject.SetActive(false);SetTouchControlsVisible();
         }
-        void ExternalDialogueEnded(){_hud.gameObject.SetActive(true);if(_afterDialogue==null)SetPlaying();}
+        void ExternalDialogueEnded(){_hud.gameObject.SetActive(true);if(_afterDialogue==null)SetPlaying();else SetTouchControlsVisible();}
         void DialogueCompleted(DialogueData data)
         {
             if(data!=_dialogue)return;
@@ -310,7 +413,7 @@ namespace Alif.Adventure
                     bool done=progress.Placements[i]==board.Answers[i];
                     var b=Button(p,(done?"✓ ":_selectedCard==i?"> ":"")+board.Cards[i],new Vector2(.04f,y),new Vector2(.51f,y+h-.008f),()=>{_selectedCard=card;ShowPuzzle();});b.interactable=!done;}
                 for(int i=0;i<board.Slots.Length;i++){int slot=i;float h=.4f/board.Slots.Length,y=.63f-(i+1)*h;
-                    Button(p,(board.Kind=="flow"?"→ ":"")+board.Slots[i],new Vector2(.57f,y),new Vector2(.96f,y+h-.008f),()=>{if(_selectedCard>=0)Place(_selectedCard,slot);else ShowPuzzle("Pilih kartu di kiri terlebih dahulu.");});}
+                    Button(p,(board.Kind=="flow"?"Urutan: ":"")+board.Slots[i],new Vector2(.57f,y),new Vector2(.96f,y+h-.008f),()=>{if(_selectedCard>=0)Place(_selectedCard,slot);else ShowPuzzle("Pilih kartu di kiri terlebih dahulu.");});}
             }
             Text(p,feedback??"Kemajuan disimpan setiap kali satu bukti ditempatkan dengan benar.",new Vector2(.035f,.13f),new Vector2(.96f,.23f),18,Gold);
             Button(p,_hint>=2?"Terapkan satu panduan":"Petunjuk",new Vector2(.04f,.035f),new Vector2(.28f,.11f),Hint);
@@ -370,6 +473,7 @@ namespace Alif.Adventure
             Button(p,"Simpan checkpoint",new Vector2(.52f,.46f),new Vector2(.95f,.57f),()=>Save());
             Button(p,"Ukuran teks: "+(_textScale>1?"besar":"normal"),new Vector2(.05f,.29f),new Vector2(.45f,.4f),()=>ToggleSetting("Alif_LargeText"));
             Button(p,"Gerakan: "+(CampaignUI.ReducedMotion?"dikurangi":"normal"),new Vector2(.52f,.29f),new Vector2(.95f,.4f),()=>ToggleSetting("Alif_ReducedMotion"));
+            Button(p,"Joystick: "+JoystickModeLabel(VirtualJoystick.SavedMode),new Vector2(.05f,.12f),new Vector2(.45f,.23f),CycleJoystickMode);
             Button(p,"Simpan & menu utama",new Vector2(.52f,.07f),new Vector2(.95f,.18f),()=>{if(Save())SceneManager.LoadScene(MenuScene);});
             GameManager.Instance.SetState(GameManager.GameState.Paused);FocusFirst();
         }
@@ -387,6 +491,13 @@ namespace Alif.Adventure
             if(Activity==CampaignActivity.Dialogue)ShowDialogueLine(DialogueManager.Instance.CurrentLine);
             else if(Activity==CampaignActivity.Puzzle)ShowPuzzle();else if(Activity==CampaignActivity.Journal)Journal(_journalPage);
             Pause();
+        }
+        static string JoystickModeLabel(JoystickMode mode) => mode==JoystickMode.Fixed?"tetap":mode==JoystickMode.Floating?"mengambang":"tersembunyi";
+        void CycleJoystickMode()
+        {
+            var next=(JoystickMode)(((int)VirtualJoystick.SavedMode+1)%3);
+            VirtualJoystick.SaveMode(next);
+            Resume();BuildHud();Pause();
         }
         void ShowEnding()
         {

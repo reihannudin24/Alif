@@ -12,9 +12,11 @@ namespace Alif.Adventure
         public int Area;
         public bool Optional;
         public TMP_Text Label;
+        public AdventureNpcReaction Reaction;
         public void Interact()
         {
             if (Game == null || !Game.CanExplore) return;
+            Reaction?.React();
             if (Destination >= 0) Game.Travel(Destination);
             else if (Optional) Game.Discover();
             else Game.Interact(Target);

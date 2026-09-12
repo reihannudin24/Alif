@@ -1,1 +1,1 @@
-{"name":"Alif.Adventure.Tests","references":["Alif.Adventure.Model"],"includePlatforms":["Editor"],"optionalUnityReferences":["TestAssemblies"]}
+{"name":"Alif.Adventure.Tests","references":["Alif.Adventure.Model","Alif.Runtime"],"includePlatforms":["Editor"],"optionalUnityReferences":["TestAssemblies"]}

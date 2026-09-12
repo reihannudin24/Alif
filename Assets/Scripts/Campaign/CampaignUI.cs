@@ -44,9 +44,14 @@ namespace Alif.Campaign
         }
         public static Button Button(Transform parent, string text, Vector2 min, Vector2 max, Action action)
         {
-            var image = Panel(parent, text, min, max, new Color(.15f, .29f, .33f), true);
+            var image = Panel(parent, text, min, max, new Color(.30f, .18f, .11f), true);
             var button = image.gameObject.AddComponent<Button>(); button.targetGraphic = image;
-            var colors = button.colors; colors.highlightedColor = new Color(.7f, 1, .9f); colors.pressedColor = new Color(.5f, .8f, .7f); button.colors = colors;
+            var colors = button.colors;
+            colors.highlightedColor = new Color(.86f, .72f, .43f);
+            colors.selectedColor = new Color(.86f, .72f, .43f);
+            colors.pressedColor = new Color(.67f, .48f, .25f);
+            colors.disabledColor = new Color(.20f, .16f, .13f, .65f);
+            button.colors = colors;
             var label = Text(image.transform, text, Vector2.zero, Vector2.one, 21); label.alignment = TextAlignmentOptions.Center;
             button.onClick.AddListener(() => action()); return button;
         }

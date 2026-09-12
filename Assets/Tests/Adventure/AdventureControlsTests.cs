@@ -1,0 +1,77 @@
+using System.Reflection;
+using Alif.Characters;
+using Alif.Player;
+using Alif.UI;
+using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.UI;
+
+namespace Alif.Adventure.Tests
+{
+    public sealed class AdventureControlsTests
+    {
+        [TestCase(-1, JoystickMode.Fixed)]
+        [TestCase(0, JoystickMode.Fixed)]
+        [TestCase(1, JoystickMode.Floating)]
+        [TestCase(2, JoystickMode.Hidden)]
+        [TestCase(3, JoystickMode.Fixed)]
+        public void JoystickModeParsingUsesSafeFallback(int saved, JoystickMode expected)
+        {
+            Assert.That(VirtualJoystick.ParseMode(saved), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void SavedJoystickModeRoundTrips()
+        {
+            try
+            {
+                VirtualJoystick.SaveMode(JoystickMode.Floating);
+                Assert.That(VirtualJoystick.SavedMode, Is.EqualTo(JoystickMode.Floating));
+            }
+            finally { PlayerPrefs.DeleteKey(VirtualJoystick.ModePreferenceKey); }
+        }
+
+        [Test]
+        public void FloatingCenterClampsInsideControlZone()
+        {
+            var area = new Rect(0, 0, 200, 160);
+            Assert.That(VirtualJoystick.ClampFloatingCenter(area, new Vector2(-50, 300), 40), Is.EqualTo(new Vector2(40, 120)));
+            Assert.That(VirtualJoystick.ClampFloatingCenter(new Rect(0, 0, 40, 40), Vector2.zero, 40), Is.EqualTo(new Vector2(20, 20)));
+        }
+
+        [Test]
+        public void HiddenModeDisablesTouchRaycasts()
+        {
+            var go = new GameObject("joystick", typeof(RectTransform), typeof(Image), typeof(VirtualJoystick));
+            try
+            {
+                var rect = go.GetComponent<RectTransform>();
+                var joystick = go.GetComponent<VirtualJoystick>();
+                joystick.Configure(rect, rect, rect, JoystickMode.Hidden);
+                Assert.That(go.GetComponent<Image>().raycastTarget, Is.False);
+                Assert.That(joystick.Mode, Is.EqualTo(JoystickMode.Hidden));
+            }
+            finally { Object.DestroyImmediate(go); }
+        }
+
+        [Test]
+        public void DisabledInteractableDoesNotMaskEnabledSibling()
+        {
+            var go = new GameObject("interaction", typeof(BoxCollider2D));
+            try
+            {
+                go.AddComponent<TestInteractable>().enabled = false;
+                var enabled = go.AddComponent<TestInteractable>();
+                var method = typeof(PlayerController).GetMethod("GetInteractable", BindingFlags.NonPublic | BindingFlags.Static);
+                Assert.That(method, Is.Not.Null);
+                Assert.That(method.Invoke(null, new object[] { go.GetComponent<Collider2D>() }), Is.SameAs(enabled));
+            }
+            finally { Object.DestroyImmediate(go); }
+        }
+    }
+
+    public sealed class TestInteractable : MonoBehaviour, IInteractable
+    {
+        public void Interact() { }
+    }
+}
