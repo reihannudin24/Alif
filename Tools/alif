@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+VERSION="$(sed -n 's/^m_EditorVersion: //p' "$ROOT/ProjectSettings/ProjectVersion.txt")"
+COMMAND="${1:-help}"
+shift || true
+
+case "$COMMAND" in
+    status)
+        unity doctor --format json
+        unity pipeline list --format json
+        ;;
+    validate)
+        unity run "$ROOT" --editor-version "$VERSION" --timeout 600 -- \
+            -executeMethod Alif.EditorTools.AlifAdventureBuilder.Build -logFile -
+        ;;
+    generate-tile-rpg)
+        SPEC="${1:-Assets/AI/TileRpg/Specs/sample-world.json}"
+        unity run "$ROOT" --editor-version "$VERSION" --timeout 600 -- \
+            -executeMethod Alif.EditorTools.AiTileRpgBuilder.Generate \
+            -aiTileRpgSpec "$SPEC" -logFile -
+        ;;
+    test-edit|test-play)
+        mkdir -p "$ROOT/Logs/TestResults"
+        MODE="EditMode"
+        [ "$COMMAND" = "test-play" ] && MODE="PlayMode"
+        unity test "$ROOT" --editor-version "$VERSION" --mode "$MODE" \
+            --report-format nunit,junit --output "$ROOT/Logs/TestResults/${MODE}.xml" --timeout 900
+        ;;
+    build-web)
+        unity build "$ROOT" --editor-version "$VERSION" --target WebGL \
+            --execute-method Alif.EditorTools.AlifAdventureBuilder.BuildWeb \
+            --output-path "$ROOT/Build/WebGL" --allow-dirty-build --timeout 1800
+        ;;
+    build-mac)
+        unity build "$ROOT" --editor-version "$VERSION" --target StandaloneOSX \
+            --execute-method Alif.EditorTools.AlifAdventureBuilder.BuildMac \
+            --output-path "$ROOT/Build/macOS/Alif.app" --allow-dirty-build --timeout 1800
+        ;;
+    *)
+        echo "Usage: ./Tools/alif {status|validate|generate-tile-rpg [spec]|test-edit|test-play|build-web|build-mac}"
+        [ "$COMMAND" = "help" ] || exit 2
+        ;;
+esac

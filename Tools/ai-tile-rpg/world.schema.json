@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Alif AI Tile RPG World",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["name", "width", "height", "cellSize", "palette", "rows", "spawn", "exit"],
+  "properties": {
+    "name": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,47}$" },
+    "width": { "type": "integer", "minimum": 3, "maximum": 256 },
+    "height": { "type": "integer", "minimum": 3, "maximum": 256 },
+    "cellSize": { "type": "number", "exclusiveMinimum": 0, "maximum": 16 },
+    "palette": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["symbol", "sprite", "layer", "solid"],
+        "properties": {
+          "symbol": { "type": "string", "minLength": 1, "maxLength": 1 },
+          "sprite": { "type": "string", "pattern": "^Assets/.+\\.(png|aseprite)$" },
+          "layer": { "enum": ["ground", "detail", "collision"] },
+          "solid": { "type": "boolean" }
+        }
+      }
+    },
+    "rows": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 256,
+      "items": { "type": "string", "minLength": 3, "maxLength": 256 }
+    },
+    "spawn": { "$ref": "#/$defs/point" },
+    "exit": { "$ref": "#/$defs/point" }
+  },
+  "$defs": {
+    "point": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y"],
+      "properties": {
+        "x": { "type": "integer", "minimum": 0, "maximum": 255 },
+        "y": { "type": "integer", "minimum": 0, "maximum": 255 }
+      }
+    }
+  }
+}

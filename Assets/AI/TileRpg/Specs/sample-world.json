@@ -1,0 +1,32 @@
+{
+  "name": "GardenMarket",
+  "width": 12,
+  "height": 8,
+  "cellSize": 1.0,
+  "palette": [
+    {
+      "symbol": ".",
+      "sprite": "Assets/Sprites/External/RPG_Pack/rpgTile000.png",
+      "layer": "ground",
+      "solid": false
+    },
+    {
+      "symbol": "#",
+      "sprite": "Assets/Sprites/External/RPG_Pack/rpgTile025.png",
+      "layer": "collision",
+      "solid": true
+    }
+  ],
+  "rows": [
+    "############",
+    "#..........#",
+    "#..##......#",
+    "#...#..##..#",
+    "#..........#",
+    "#..###.....#",
+    "#..........#",
+    "############"
+  ],
+  "spawn": { "x": 1, "y": 1 },
+  "exit": { "x": 10, "y": 6 }
+}

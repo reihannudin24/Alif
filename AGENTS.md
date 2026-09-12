@@ -13,11 +13,12 @@ Alif is a Unity 6000.6.0f1 2D educational adventure game using URP, the Input Sy
 
 ## Build, Test, and Development
 
-Open the project in Unity 6000.6.0f1. Use the `Alif` menu for supported workflows:
+Use the official `unity` CLI with Unity 6000.6.0f1. Run `./Tools/alif` for the supported workflows:
 
-- `Alif > Adventure > Validate Campaign and Configure Build` validates content and updates Build Settings.
-- `Alif > Build > Build WebGL` writes `Build/WebGL`; the macOS and Windows commands write to `Build/macOS` and `Build/Windows`.
-- Run tests from `Window > General > Test Runner` (EditMode). For CLI runs, use Unity batchmode with `-runTests -testPlatform editmode -testResults test-results.xml`.
+- `./Tools/alif validate` validates content and updates Build Settings.
+- `./Tools/alif build-web` writes `Build/WebGL`; `build-mac` writes `Build/macOS/Alif.app`.
+- `./Tools/alif test-edit` and `./Tools/alif test-play` write reports under `Logs/TestResults/`.
+- `./Tools/alif generate-tile-rpg [spec]` validates an AI-authored world spec and creates an isolated preview scene.
 - Preview WebGL with the repository’s Brotli-aware server when available; plain `python3 -m http.server` does not provide the required encoding headers.
 - Deploy existing builds with `./deploy_to_itch.sh <username>/<game-slug>` after authenticating Butler.
 

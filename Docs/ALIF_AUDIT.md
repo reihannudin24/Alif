@@ -172,7 +172,7 @@ All TextureImporter metadata scanned; family scale is intentional until verified
 
 Retain Unity modules and existing tooling for compatibility. No Yarn Spinner, UniTask, DOTween, DI, ECS, networking or Addressables additions. Existing AI, inference, collaboration, IDE, multiplayer-center, Timeline, Visual Scripting and optional 2D authoring packages require reference/editor-use evidence before removal; retained this pass.
 
-- `com.coplaydev.unity-mcp`: `https://github.com/CoplayDev/unity-mcp.git?path=/MCPForUnity#v10.2.0`
+- `com.unity.pipeline`: official Unity CLI bridge used for local Editor automation.
 - `com.unity.2d.animation`: `15.1.0`
 - `com.unity.2d.aseprite`: `5.0.3`
 - `com.unity.2d.psdimporter`: `14.0.3`
