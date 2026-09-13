@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using TMPro;
@@ -73,6 +74,25 @@ namespace Alif.UI
             PlayCurrentScene();
         }
 
+        /// <summary>
+        /// Keyboard: Space/Enter = LANJUT (menyelesaikan animasi panel yang sedang jalan,
+        /// sama seperti klik), Escape = LEWATI. Cutscene jadi bisa dinikmati tanpa mouse.
+        /// </summary>
+        private void Update()
+        {
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard == null) return;
+            if (keyboard.spaceKey.wasPressedThisFrame || keyboard.enterKey.wasPressedThisFrame
+                || keyboard.numpadEnterKey.wasPressedThisFrame)
+            {
+                OnNextClicked();
+            }
+            else if (keyboard.escapeKey.wasPressedThisFrame)
+            {
+                OnSkipClicked();
+            }
+        }
+
         public void OnNextClicked()
         {
             bool isTextOnlyScene = IsTextOnlyScene(_scenes[_sceneIndex]);
@@ -117,7 +137,7 @@ namespace Alif.UI
                 return;
             }
 
-            SceneManager.LoadScene(_nextSceneName);
+            SceneTransition.Load(_nextSceneName);
         }
 
         private static bool IsTextOnlyScene(CutsceneScene scene)

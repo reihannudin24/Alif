@@ -192,7 +192,7 @@ namespace Alif.Player
             UpdateInteractionPrompt();
             HandleMouseClick();
             HandleFootstepSound();
-            if (_inputActions == null && Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
+            if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
                 TryInteractWithNearestNPC();
         }
 
@@ -234,12 +234,15 @@ namespace Alif.Player
             }
 
             Vector2 keyboardInput = _moveAction != null ? _moveAction.ReadValue<Vector2>() : Vector2.zero;
-            if (_moveAction == null && Keyboard.current != null)
+            if (keyboardInput.sqrMagnitude < 0.01f && Keyboard.current != null)
             {
                 var k = Keyboard.current;
                 keyboardInput = new Vector2((k.dKey.isPressed || k.rightArrowKey.isPressed ? 1 : 0) - (k.aKey.isPressed || k.leftArrowKey.isPressed ? 1 : 0),
                     (k.wKey.isPressed || k.upArrowKey.isPressed ? 1 : 0) - (k.sKey.isPressed || k.downArrowKey.isPressed ? 1 : 0));
-                if (keyboardInput.sqrMagnitude < .01f) keyboardInput = _adventureDirection;
+            }
+            if (keyboardInput.sqrMagnitude < 0.01f)
+            {
+                keyboardInput = _adventureDirection;
             }
             Vector2 joystickInput = _virtualJoystick != null ? _virtualJoystick.Direction : Vector2.zero;
 

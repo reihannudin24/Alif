@@ -80,7 +80,7 @@ namespace Alif.Adventure
         public bool TutorialActive => Chapter==1 && State?.TutorialStep>0;
         void Start()
         {
-            if (Chapter == 0) { SceneManager.LoadScene(MenuScene); return; }
+            if (Chapter == 0) { SceneTransition.Load(MenuScene); return; }
             Instance=this;
             Application.targetFrameRate=60;
             Time.timeScale=1;
@@ -90,7 +90,7 @@ namespace Alif.Adventure
             _canvas=CampaignUI.Canvas("Alif • Adventure",50);
             State=ChapterProgress.LoadAdventure(out string notice);
 
-            if(Chapter > State.HighestUnlocked) {SceneManager.LoadScene(MenuScene);return;}
+            if(Chapter > State.HighestUnlocked) {SceneTransition.Load(MenuScene);return;}
             if(State.Chapter!=Chapter) State=State.StartChapter(Chapter);
             Content=AdventureContent.Get(Chapter);
             BindOriginalScene(); BuildHud();
@@ -226,9 +226,12 @@ namespace Alif.Adventure
         void SetTouchControlsVisible()
         {
             if(!_touchControls)return;
-            bool visible=CanExplore && VirtualJoystick.SavedMode!=JoystickMode.Hidden;
+            // Mode efektif bisa berbeda dari preferensi tersimpan: desktop tanpa layar sentuh
+            // memulai dengan Hidden otomatis (lihat VirtualJoystick.Configure).
+            var mode=_joystick!=null?_joystick.Mode:VirtualJoystick.SavedMode;
+            bool visible=CanExplore && mode!=JoystickMode.Hidden;
             _touchControls.SetActive(visible);
-            if(visible)_joystick?.SetMode(VirtualJoystick.SavedMode);
+            if(visible)_joystick?.SetMode(mode);
         }
 
         static void ApplySprite(Image image,Sprite sprite)
@@ -365,6 +368,24 @@ namespace Alif.Adventure
         {
             var door = NextDoor(area);
             if (door != null) Travel(door);
+        }
+        public void WarpToArea(int areaIndex, Vector2 position)
+        {
+            if (!_player) return;
+            _player.transform.position = position;
+            _player.StopMotion();
+            if (State != null)
+            {
+                State.Area = areaIndex;
+                State.X = position.x;
+                State.Y = position.y;
+                State.HasPosition = true;
+            }
+            Camera.main?.GetComponent<CameraFollow>()?.SnapToTarget();
+            SetPlaying();
+            RefreshHud();
+            string areaName = (Content?.Areas != null && areaIndex >= 0 && areaIndex < Content.Areas.Length) ? Content.Areas[areaIndex] : $"Area {areaIndex}";
+            Toast($"Warp -> {areaName}", 2);
         }
         public bool Save(bool show=true)
         {
@@ -538,8 +559,8 @@ namespace Alif.Adventure
             Button(p,"Simpan checkpoint",new Vector2(.52f,.46f),new Vector2(.95f,.57f),()=>Save());
             Button(p,"Ukuran teks: "+(_textScale>1?"besar":"normal"),new Vector2(.05f,.29f),new Vector2(.45f,.4f),()=>ToggleSetting("Alif_LargeText"));
             Button(p,"Gerakan: "+(CampaignUI.ReducedMotion?"dikurangi":"normal"),new Vector2(.52f,.29f),new Vector2(.95f,.4f),()=>ToggleSetting("Alif_ReducedMotion"));
-            Button(p,"Joystick: "+JoystickModeLabel(VirtualJoystick.SavedMode),new Vector2(.05f,.12f),new Vector2(.45f,.23f),CycleJoystickMode);
-            Button(p,"Simpan & menu utama",new Vector2(.52f,.07f),new Vector2(.95f,.18f),()=>{if(Save())SceneManager.LoadScene(MenuScene);});
+            Button(p,"Joystick: "+JoystickModeLabel(_joystick!=null?_joystick.Mode:VirtualJoystick.SavedMode),new Vector2(.05f,.12f),new Vector2(.45f,.23f),CycleJoystickMode);
+            Button(p,"Simpan & menu utama",new Vector2(.52f,.07f),new Vector2(.95f,.18f),()=>{if(Save())SceneTransition.Load(MenuScene);});
             GameManager.Instance.SetState(GameManager.GameState.Paused);FocusFirst();
         }
         RectTransform _pausePrevious;List<Button> _pauseButtons;
@@ -560,7 +581,8 @@ namespace Alif.Adventure
         static string JoystickModeLabel(JoystickMode mode) => mode==JoystickMode.Fixed?"tetap":mode==JoystickMode.Floating?"mengambang":"tersembunyi";
         void CycleJoystickMode()
         {
-            var next=(JoystickMode)(((int)VirtualJoystick.SavedMode+1)%3);
+            var current=_joystick!=null?_joystick.Mode:VirtualJoystick.SavedMode;
+            var next=(JoystickMode)(((int)current+1)%3);
             VirtualJoystick.SaveMode(next);
             Resume();BuildHud();Pause();
         }
@@ -570,9 +592,9 @@ namespace Alif.Adventure
             Text(p,Content.Ending,new Vector2(.05f,.3f),new Vector2(.95f,.74f),25);
             Button(p,Chapter==5?"Kembali ke menu":"Lanjut ke bab "+(Chapter+1),new Vector2(.52f,.04f),new Vector2(.95f,.15f),()=>
             {
-                if(Chapter==5){SceneManager.LoadScene(MenuScene);return;}
-                if(Chapter==1){SceneManager.LoadScene("Chapter1Ending");return;}
-                State=State.StartChapter(Chapter+1);if(ChapterProgress.SaveAdventure(State))SceneManager.LoadScene(SceneFor(Chapter+1));
+                if(Chapter==5){SceneTransition.Load(MenuScene);return;}
+                if(Chapter==1){SceneTransition.Load("Chapter1Ending");return;}
+                State=State.StartChapter(Chapter+1);if(ChapterProgress.SaveAdventure(State))SceneTransition.Load(SceneFor(Chapter+1));
             });
             Button(p,"Baca rujukan "+(Chapter==5?"OJK":"MUI"),new Vector2(.05f,.18f),new Vector2(.45f,.27f),()=>Application.OpenURL(Chapter==5?AdventureContent.OjkUrl:Chapter==2?AdventureContent.CreditUrl:AdventureContent.MuiUrl));
             Button(p,"Buka jurnal",new Vector2(.05f,.04f),new Vector2(.45f,.15f),()=>Journal(0));FocusFirst();

@@ -43,12 +43,12 @@ namespace Alif.UI
         public void OnNewGameClicked()
         {
             ChapterProgress.StartNewGame();
-            SceneManager.LoadScene(_chapter1CutsceneSceneName);
+            SceneTransition.Load(_chapter1CutsceneSceneName);
         }
 
         public void OnContinueClicked()
         {
-            SceneManager.LoadScene(_chapterSelectSceneName);
+            SceneTransition.Load(_chapterSelectSceneName);
         }
 
         public void OnQuitClicked()

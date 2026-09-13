@@ -1,8 +1,10 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 using TMPro;
+using Alif.Campaign;
 using Alif.Core;
 using Alif.Dialogue;
 
@@ -71,6 +73,7 @@ namespace Alif.UI
 
         private readonly List<GameObject> _spawnedChoiceButtons = new List<GameObject>();
         private DialogueLine _currentLine;
+        private int _keyboardBlockedUntilFrame = -1;
 
         private RectTransform _portraitRect;
         private CanvasGroup _portraitCanvasGroup;
@@ -161,6 +164,7 @@ namespace Alif.UI
             if (DialogueManager.Instance.IsDialogueActive && DialogueManager.Instance.CurrentLine != null)
             {
                 SetBoxVisible(true);
+                _keyboardBlockedUntilFrame = Time.frameCount + 2;
                 HandleLineDisplayed(DialogueManager.Instance.CurrentLine);
             }
         }
@@ -180,6 +184,40 @@ namespace Alif.UI
             _isSubscribed = false;
         }
 
+        /// <summary>
+        /// Keyboard: Space/Enter/E melanjutkan (menyelesaikan typewriter dulu bila masih
+        /// mengetik — sama seperti klik Next), angka 1-3 memilih tombol pilihan. Saat baris
+        /// pilihan sedang tampil, tombol lanjut tidak berlaku supaya pilihan tidak ter-skip.
+        /// </summary>
+        private void Update()
+        {
+            if (_dialogueBoxRoot == null || !_dialogueBoxRoot.activeSelf) return;
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard == null || Time.frameCount <= _keyboardBlockedUntilFrame) return;
+
+            bool advance = keyboard.spaceKey.wasPressedThisFrame || keyboard.enterKey.wasPressedThisFrame
+                || keyboard.numpadEnterKey.wasPressedThisFrame || keyboard.eKey.wasPressedThisFrame;
+            if (advance)
+            {
+                if (_nextButton != null && _nextButton.gameObject.activeSelf) HandleNextClicked();
+                else if (_isTyping) CompleteTypewriter();
+                return;
+            }
+
+            if (_spawnedChoiceButtons.Count == 0) return;
+            int choice = -1;
+            if (keyboard.digit1Key.wasPressedThisFrame) choice = 0;
+            else if (keyboard.digit2Key.wasPressedThisFrame) choice = 1;
+            else if (keyboard.digit3Key.wasPressedThisFrame) choice = 2;
+            if (choice < 0 || choice >= _spawnedChoiceButtons.Count) return;
+            Button button = _spawnedChoiceButtons[choice].GetComponent<Button>();
+            if (button != null && button.IsActive() && button.interactable)
+            {
+                PlayClickSfx();
+                button.onClick.Invoke();
+            }
+        }
+
         private void HandleChoiceRejected(string reason)
         {
             if (_choiceStatusText != null)
@@ -193,6 +231,9 @@ namespace Alif.UI
         {
             ClearChoiceStatus();
             SetBoxVisible(true);
+            // Tekanan yang membuka dialog (mis. E untuk interak) tidak boleh sekalian
+            // meng-skip baris pertama bila Update UI ini jalan setelahnya di frame sama.
+            _keyboardBlockedUntilFrame = Time.frameCount + 2;
         }
 
         private void HandleDialogueEnded()
@@ -200,6 +241,7 @@ namespace Alif.UI
             SetBoxVisible(false);
             ClearChoiceButtons();
             ClearChoiceStatus();
+            StopNextPulse();
 
             // Reset supaya dialog berikutnya (walau kebetulan mulai dari NPC yang sama) tetap
             // mainin animasi masuk dari awal, bukan dianggap "pembicara sama, skip animasi".
@@ -450,6 +492,7 @@ namespace Alif.UI
 
             _isTyping = false;
             _typewriterRoutine = null;
+            MaybeStartNextPulse();
         }
 
         private void CompleteTypewriter()
@@ -464,6 +507,43 @@ namespace Alif.UI
                 _dialogueText.maxVisibleCharacters = int.MaxValue;
             }
             _isTyping = false;
+            MaybeStartNextPulse();
+        }
+
+        // Denyut halus tombol "Lanjut" setelah teks selesai diketik — sinyal visual bahwa
+        // dialog siap dilanjutkan. Dihormati ReducedMotion dan ReducedFlash (denyut = flash
+        // berulang) — inilah konsumen pertama toggle Alif_ReducedFlash.
+        private Coroutine _nextPulseRoutine;
+
+        private void MaybeStartNextPulse()
+        {
+            if (_nextButton == null || !_nextButton.gameObject.activeSelf) return;
+            if (CampaignUI.ReducedMotion || CampaignUI.ReducedFlash) return;
+            if (_nextPulseRoutine != null) return;
+
+            CanvasGroup group = _nextButton.GetComponent<CanvasGroup>();
+            if (group == null) group = _nextButton.gameObject.AddComponent<CanvasGroup>();
+            _nextPulseRoutine = StartCoroutine(NextPulseRoutine(group));
+        }
+
+        private void StopNextPulse()
+        {
+            if (_nextPulseRoutine == null) return;
+            StopCoroutine(_nextPulseRoutine);
+            _nextPulseRoutine = null;
+            CanvasGroup group = _nextButton != null ? _nextButton.GetComponent<CanvasGroup>() : null;
+            if (group != null) group.alpha = 1f;
+        }
+
+        private IEnumerator NextPulseRoutine(CanvasGroup group)
+        {
+            float t = 0f;
+            while (group != null)
+            {
+                t += Time.unscaledDeltaTime;
+                group.alpha = 0.72f + 0.28f * (0.5f + 0.5f * Mathf.Sin(t * 3.4f));
+                yield return null;
+            }
         }
 
         private void PlayPortraitSpeakingBounce()
@@ -533,6 +613,7 @@ namespace Alif.UI
             if (_nextButton != null)
             {
                 _nextButton.gameObject.SetActive(visible);
+                StopNextPulse(); // baris baru sedang mengetik — denyut "siap lanjut" menunggu
             }
         }
 

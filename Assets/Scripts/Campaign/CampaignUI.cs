@@ -90,9 +90,9 @@ namespace Alif.Campaign
                 UnityEngine.Object.Destroy(canvas.gameObject);
                 string scene = chapter == 5 ? "MainMenu" : chapter == 1 ? "Chapter2Cutscene" : $"Chapter{chapter + 1}Gameplay";
                 GameManager.Instance?.SetState(GameManager.GameState.Playing);
-                UnityEngine.SceneManagement.SceneManager.LoadScene(scene);
+                Alif.UI.SceneTransition.Load(scene);
             });
-            Button(panel, "Pilih chapter", new Vector2(.65f, .05f), new Vector2(.95f, .15f), () => UnityEngine.SceneManagement.SceneManager.LoadScene("ChapterSelect"));
+            Button(panel, "Pilih chapter", new Vector2(.65f, .05f), new Vector2(.95f, .15f), () => Alif.UI.SceneTransition.Load("ChapterSelect"));
             Focus(next);
         }
     }

@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using Alif.Core;
 
 namespace Alif.UI
@@ -31,6 +30,7 @@ namespace Alif.UI
                 bool lockedByProgress = !ChapterProgress.IsUnlocked(card.ChapterNumber);
                 bool chapterHasNoScene = string.IsNullOrEmpty(GetChapterSceneName(card.ChapterNumber));
                 card.SetLocked(lockedByProgress || chapterHasNoScene);
+                card.RefreshProgress();
             }
         }
 
@@ -52,12 +52,12 @@ namespace Alif.UI
             if (state.Chapter != chapterNumber || state.Completed) state = state.StartChapter(chapterNumber);
             if (!ChapterProgress.SaveAdventure(state)) return;
             ChapterProgress.SelectChapter(chapterNumber);
-            SceneManager.LoadScene(sceneName);
+            SceneTransition.Load(sceneName);
         }
 
         public void OnBackClicked()
         {
-            SceneManager.LoadScene(MainMenuSceneName);
+            SceneTransition.Load(MainMenuSceneName);
         }
 
         private string GetChapterSceneName(int chapterNumber)

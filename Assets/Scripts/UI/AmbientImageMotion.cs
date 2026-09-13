@@ -1,3 +1,4 @@
+using Alif.Campaign;
 using UnityEngine;
 
 namespace Alif.UI
@@ -28,6 +29,13 @@ namespace Alif.UI
 
         private void Update()
         {
+            if (CampaignUI.ReducedMotion)
+            {
+                _rectTransform.anchoredPosition = _basePosition;
+                _rectTransform.localScale = _baseScale;
+                return;
+            }
+
             float t = Time.time;
 
             float x = Mathf.Sin(t * _panSpeed * Mathf.PI * 2f) * _panAmplitude;

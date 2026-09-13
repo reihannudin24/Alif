@@ -88,9 +88,7 @@ namespace Alif.UI
                 return;
             }
 
-            _canvasGroup.alpha = visible ? 1f : 0f;
-            _canvasGroup.interactable = visible;
-            _canvasGroup.blocksRaycasts = visible;
+            PopupFade.To(this, _canvasGroup, visible);
         }
 
         private void HandleConfirmClicked()

@@ -1,4 +1,5 @@
 using System.Collections;
+using Alif.Campaign;
 using TMPro;
 using UnityEngine;
 
@@ -97,6 +98,18 @@ namespace Alif.UI
 
         private IEnumerator AnimateBubble(float duration)
         {
+            // ReducedMotion: tampil-hilang tanpa pop/float — tetap terbaca, tanpa gerakan.
+            if (CampaignUI.ReducedMotion)
+            {
+                _bubbleRoot.transform.localScale = Vector3.one;
+                _bubbleRoot.transform.localPosition = _offset;
+                _bubbleRoot.SetActive(true);
+                yield return new WaitForSeconds(duration);
+                _bubbleRoot.SetActive(false);
+                _activeRoutine = null;
+                yield break;
+            }
+
             _bubbleRoot.SetActive(true);
             Vector3 basePos = _offset;
             Vector3 startScale = Vector3.zero;

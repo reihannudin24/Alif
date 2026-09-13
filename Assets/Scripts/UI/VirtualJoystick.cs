@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 
 namespace Alif.UI
 {
@@ -42,7 +43,12 @@ namespace Alif.UI
             _touchArea = touchArea;
             _background = background;
             _knob = knob;
-            SetMode(mode);
+            // Perangkat tanpa layar sentuh (desktop) dan belum ada preferensi tersimpan:
+            // joystick disembunyikan default — keyboard/mouse sudah lengkap. Mode tetap
+            // bisa diubah dari pengaturan jeda; preferensi tersimpan selalu diutamakan.
+            bool autoHideDesktop = !PlayerPrefs.HasKey(ModePreferenceKey)
+                && Touchscreen.current == null && !Application.isMobilePlatform;
+            SetMode(autoHideDesktop ? JoystickMode.Hidden : mode);
         }
 
         public static JoystickMode ParseMode(int value)
