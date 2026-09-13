@@ -23,11 +23,14 @@ namespace Alif.EditorTools
     public static class AlifAdventureBuilder
     {
         const string VariantC = "Assets/Sprites/Generated/VariantC/";
-        public static readonly string[] ScenePaths = new[] { "MainMenu", "ChapterSelect", "Chapter1Cutscene", "Chapter1Ending", "Chapter2Cutscene" }
+        // Hanya scene yang benar-benar dimuat runtime (SceneTransition/SceneManager by name):
+        // menu, chapter select, cutscene, ending, dan dunia AdventureChapter1-5. Scene asli
+        // (SampleScene, Chapter2-5Gameplay, AdventureMenu) tetap ada di project untuk
+        // tooling editor tetapi tidak ikut ke build.
+        public static readonly string[] ScenePaths = new[] { "MainMenu", "ChapterSelect", "Chapter1Cutscene", "Chapter2Cutscene", "Chapter1Ending" }
             .Select(n=>"Assets/Scenes/"+n+".unity")
             .Concat(Enumerable.Range(1,5).Select(c=>"Assets/Scenes/Adventure/"+AdventureGame.SceneFor(c)+".unity"))
-            .Concat(new[]{"Assets/Scenes/Adventure/AdventureMenu.unity","Assets/Scenes/SampleScene.unity"})
-            .Concat(Enumerable.Range(2,4).Select(c=>"Assets/Scenes/Chapter"+c+"Gameplay.unity")).ToArray();
+            .ToArray();
 
         [MenuItem("Alif/Adventure/Validate Campaign and Configure Build")]
         public static void Build()
