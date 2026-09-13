@@ -5,6 +5,10 @@
     "Alif.Battle.Model",
     "Unity.InputSystem",
     "Unity.TextMeshPro",
-    "Unity.ugui"
+    "Unity.ugui",
+    "UniTask",
+    "LitMotion",
+    "YarnSpinner.Unity",
+    "LitMotion.Extensions"
   ]
 }

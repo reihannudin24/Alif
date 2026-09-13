@@ -1,5 +1,23 @@
 {
   "dependencies": {
+    "com.annulusgames.lit-motion": {
+      "version": "https://github.com/annulusgames/LitMotion.git?path=src/LitMotion/Assets/LitMotion",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {
+        "com.unity.burst": "1.6.0",
+        "com.unity.collections": "1.5.1",
+        "com.unity.mathematics": "1.0.1"
+      },
+      "hash": "ab6e92bfe78ff911def2fd3c4e9c79bb5a186946"
+    },
+    "com.cysharp.unitask": {
+      "version": "https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "ceac8d6946b1125fe782cd171fbcb245b567dbf9"
+    },
     "com.unity.2d.animation": {
       "version": "16.0.0",
       "depth": 0,
@@ -345,6 +363,13 @@
         "com.unity.modules.jsonserialize": "1.0.0"
       },
       "url": "https://packages.unity.com"
+    },
+    "dev.yarnspinner.unity": {
+      "version": "https://github.com/YarnSpinnerTool/YarnSpinner-Unity.git#v3.2.8",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "bfc5b6a2e8bc8978e777caeea3a827a0d408cc7d"
     },
     "com.unity.modules.accessibility": {
       "version": "1.0.0",
