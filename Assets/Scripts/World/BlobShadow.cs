@@ -36,21 +36,22 @@ namespace Alif.World
             return shadow;
         }
 
-        private void Awake()
-        {
-            // Dibuat lewat Ensure() → sudah ter-initialisasi; jalankan Awake hanya untuk
-            // komponen yang dipasang manual via Inspector.
-            if (_renderer == null) Initialize(0.55f);
-        }
-
         private void Initialize(float width)
         {
+            // AddComponent memanggil Awake seketika — Initialize dipanggil ulang oleh Ensure(),
+            // jadi harus idempotent. Duplikat SpriteRenderer dulu melempar NRE yang memutus
+            // sisa Awake pemanggilnya (termasuk wiring input PlayerController).
+            if (_renderer != null) return;
+
             _ownerRenderer = GetComponentInParent<SpriteRenderer>();
             _renderer = gameObject.AddComponent<SpriteRenderer>();
             _renderer.sprite = GetOrCreateSharedSprite();
             _renderer.color = new Color(0f, 0f, 0f, 1f);
             _renderer.sortingLayerName = "Default";
-            _renderer.transform.localScale = new Vector3(width, width * 0.5f, 1f);
+            // width = lebar dunia yang diinginkan; skala dihitung dari ukuran sprite asli,
+            // bukan angka lokal mentah (dulu 0.55 dianggap skala → bayangan jadi mikro).
+            Vector2 spriteSize = _renderer.sprite.bounds.size;
+            _renderer.transform.localScale = new Vector3(width / spriteSize.x, width * 0.5f / spriteSize.y, 1f);
         }
 
         private void LateUpdate()
