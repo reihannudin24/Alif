@@ -47,10 +47,11 @@ Do not commit credentials or generated caches/build intermediates. Preserve exis
 Alif includes an embedded multi-agent graph system and semantic repository finder to accelerate development:
 
 ### 1. Embedded Tools & Skills
+- **`find-assets`** ([`.agents/skills/find-assets/`](./.agents/skills/find-assets/)): Search, inspect, fetch, and surgically modify existing 2D game assets (palette swap, tint, nearest-neighbor scale, slice, composite) with automatic Unity `.meta` pairing. Run via `./Tools/alif find-assets`.
 - **`find-repo`** ([`.agents/skills/find-repo/`](./.agents/skills/find-repo/)): Embedded semantic search engine for finding open-source Unity mechanics, shaders, dialogue examples, and peer repositories. Run via `./Tools/alif find-repo "<query>"`.
 - **`alif-agent`** ([`.agents/skills/alif-agent/`](./.agents/skills/alif-agent/)): Specialized multi-agent state graph (`Tools/alif-agent/alif_graph.py`) with nodes for Orchestration, Repo Hunting, Design Asset Generation, Level Architecture, Gameplay Dev, QA Verification, Self-Healing, and Evolution.
 - **`alif-asset-gen`** (`Tools/alif-asset-gen/`): Generates and validates schema-compliant TileRPG world specs, procedural pixel art tiles/props, reaction emotes (`EmoteBubble`), and Yarn narrative files with paired `.meta` files. Run via `./Tools/alif asset-gen`.
-- **Workspace Skills** ([`.agents/skills/`](./.agents/skills/)): Includes `create-game-assets`, `pixel-art-sprites`, `level-design`, `procedural-gen`, `rpg`, `game-feel`, `dialogue-systems`, `unity-tilemap-2d`, `unity-developer`, `unity-scriptableobjects`, `optimize-text-mesh-pro`, `optimize-web`, `itch-publish`.
+- **Workspace Skills** ([`.agents/skills/`](./.agents/skills/)): Includes `find-assets`, `create-game-assets`, `pixel-art-sprites`, `audio-design`, `game-ui-ux`, `camera-systems`, `save-systems`, `unity-animation`, `game-ai`, `sprite-editor`, `level-design`, `procedural-gen`, `rpg`, `game-feel`, `dialogue-systems`, `unity-tilemap-2d`, `unity-developer`, `unity-scriptableobjects`, `optimize-text-mesh-pro`, `optimize-web`, `itch-publish`.
 
 ### 2. Supported Agent Commands
 ```bash
@@ -60,6 +61,10 @@ Alif includes an embedded multi-agent graph system and semantic repository finde
 ./Tools/alif agent memory            # Display prompt-ready architecture rules
 ./Tools/alif agent evolve            # Run recursive self-improvement cycle
 ./Tools/alif find-repo "<query>"     # Discover GitHub references
+./Tools/alif find-assets search "<query>" # Search local project & CC0 assets
+./Tools/alif find-assets inspect <path>   # Inspect image dimensions, palette, and .meta
+./Tools/alif find-assets modify <in> -o <out> --tint "#2ecc71" --scale 2x # Modify existing asset
+./Tools/alif find-assets fetch <id>  # Fetch CC0 asset pack into project
 ./Tools/alif asset-gen generate-spec <name> --theme market|garden|station # Create valid TileRPG world spec
 ./Tools/alif asset-gen create-tile <name> --type market_stall|crate|tree   # Create pixel art tile + .meta
 ./Tools/alif asset-gen create-emote <name> --type alert|heart|sparkle     # Create EmoteBubble sprite + .meta

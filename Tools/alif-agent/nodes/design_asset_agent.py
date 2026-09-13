@@ -13,15 +13,22 @@ import sys
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
-# Add Tools/alif-asset-gen to path
+# Add Tools/alif-asset-gen and Tools/find-assets to path
 tools_dir = Path(__file__).resolve().parent.parent.parent
 alif_root = tools_dir.parent
 asset_gen_dir = tools_dir / "alif-asset-gen"
+find_assets_dir = tools_dir / "find-assets"
 if str(asset_gen_dir) not in sys.path:
     sys.path.insert(0, str(asset_gen_dir))
+if str(find_assets_dir) not in sys.path:
+    sys.path.insert(0, str(find_assets_dir))
 
 from generator import AssetGenerator
 from validator import SpecValidator
+try:
+    import find_assets
+except ImportError:
+    find_assets = None
 
 
 class DesignAssetAgentNode:
@@ -35,6 +42,33 @@ class DesignAssetAgentNode:
         task = state.get("task", "")
         t_lower = task.lower()
         generated_assets: List[Dict[str, Any]] = []
+
+        # 0. Asset Modification / Adaptation via find-assets
+        has_modify = any(w in t_lower for w in ["modify", "adapt", "tint", "recolor", "emerald", "gold", "golden", "green button", "autumn", "night"])
+        if has_modify and find_assets is not None:
+            # Determine base asset and transformation
+            if "button" in t_lower:
+                base_path = self.alif_root / "Assets/Sprites/External/UI_Pack/blue_button00.png"
+                if "emerald" in t_lower or "green" in t_lower:
+                    out_path = self.alif_root / "Assets/Sprites/Modified/emerald_button.png"
+                    find_assets.modify_asset(base_path, out_path, tint_color="#2ecc71", tint_strength=0.75)
+                    generated_assets.append({"type": "modified_ui", "path": str(out_path.relative_to(self.alif_root))})
+                elif "gold" in t_lower:
+                    out_path = self.alif_root / "Assets/Sprites/Modified/gold_button.png"
+                    find_assets.modify_asset(base_path, out_path, tint_color="#f1c40f", tint_strength=0.8)
+                    generated_assets.append({"type": "modified_ui", "path": str(out_path.relative_to(self.alif_root))})
+            elif "crate" in t_lower:
+                base_path = self.alif_root / "Assets/Sprites/Generated/Tiles/tile_crate.png"
+                if base_path.exists():
+                    out_path = self.alif_root / "Assets/Sprites/Modified/crate_mossy.png"
+                    find_assets.modify_asset(base_path, out_path, recolor_pairs=["#733c19:#2d641e"], recolor_tolerance=30)
+                    generated_assets.append({"type": "modified_tile", "path": str(out_path.relative_to(self.alif_root))})
+            elif "tree" in t_lower and "autumn" in t_lower:
+                base_path = self.alif_root / "Assets/Sprites/Generated/Tiles/tile_tree.png"
+                if base_path.exists():
+                    out_path = self.alif_root / "Assets/Sprites/Modified/tile_tree_autumn.png"
+                    find_assets.modify_asset(base_path, out_path, tint_color="#e6781e", tint_strength=0.6)
+                    generated_assets.append({"type": "modified_tile", "path": str(out_path.relative_to(self.alif_root))})
 
         # 1. Determine asset types requested
         has_tile = any(w in t_lower for w in ["tile", "tileset", "stall", "tree", "bench", "prop", "wall", "ground"])

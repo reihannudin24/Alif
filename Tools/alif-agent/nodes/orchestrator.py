@@ -19,7 +19,7 @@ class OrchestratorNode:
             return "RESEARCH"
         if any(w in t for w in ["test", "lint", "validate", "check", "verify", "ci"]):
             return "QA_VALIDATION"
-        if any(w in t for w in ["asset", "sprite", "emote", "art", "tileset", "texture", "props", "manifest"]):
+        if any(w in t for w in ["asset", "sprite", "emote", "art", "tileset", "texture", "props", "manifest", "modify", "recolor", "tint", "button", "icon"]):
             return "DESIGN_ASSETS"
         if any(w in t for w in ["tile", "level", "room", "map", "world", "spawn", "schema", "market", "garden", "station"]):
             return "WORLD_DESIGN"

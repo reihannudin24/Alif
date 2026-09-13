@@ -1,7 +1,7 @@
 # Alif Agent Evolving Memory Ledger
 
 > Auto-updated by the Alif Recursive Evolution Engine (`./Tools/alif agent evolve`).
-> Last updated: 2026-09-13 10:30:55
+> Last updated: 2026-09-13 10:41:49
 
 ## 📐 Architectural Rules & Invariants
 
@@ -25,7 +25,7 @@ Four-space indentation, braces on the same line, PascalCase public types/methods
 
 ## 🔍 Discovered Project Symbols
 - **Total Core C# Classes**: 94
-- **Yarn Dialogue Nodes**: BuSiti_Intro, BuSiti_MarketIntro, Station_NoticeBoard
+- **Yarn Dialogue Nodes**: AgentGeneratedStory, BuSiti_Intro, BuSiti_MarketIntro, Station_NoticeBoard
 - **Authored Tile Specs**: AgentGardenWorld, AgentMarketWorld, MarketBazaar, sample-world
 
 ## 🛡️ Error & Resolution Registry
@@ -42,8 +42,8 @@ Four-space indentation, braces on the same line, PascalCase public types/methods
   - *Solution*: Use pure C# representations or domain coordinates in Alif.Adventure.Model
 
 ## 🔄 Evolution Cycles History
-- `[2026-09-13T10:29:22.601313]` Task 'Generate market stall asset and world spec' (DESIGN_ASSETS) completed. Healed: True, Repos linked: 0.
-- `[2026-09-13T10:29:44.227489]` Task 'Generate market stall asset and world spec' (DESIGN_ASSETS) completed. Healed: False, Repos linked: 0.
 - `[2026-09-13T10:30:11.308751]` Evolved knowledge base: 94 C# symbols, 3 Yarn nodes, 3 tile specs. Discovered 0 new symbols.
 - `[2026-09-13T10:30:55.750090]` Task 'Design a garden map with stone benches and trees' (WORLD_DESIGN) completed. Healed: False, Repos linked: 0.
 - `[2026-09-13T10:30:55.837249]` Evolved knowledge base: 94 C# symbols, 3 Yarn nodes, 4 tile specs. Discovered 0 new symbols.
+- `[2026-09-13T10:41:31.995824]` Task 'Create an emerald button for dialogue choices' (DESIGN_ASSETS) completed. Healed: False, Repos linked: 0.
+- `[2026-09-13T10:41:49.994990]` Evolved knowledge base: 94 C# symbols, 4 Yarn nodes, 4 tile specs. Discovered 0 new symbols.

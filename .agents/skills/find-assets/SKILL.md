@@ -1,0 +1,119 @@
+---
+name: find-assets
+description: Search, inspect, fetch, and modify existing game assets (2D sprites, tilesets, UI elements, audio) instead of creating them from scratch. Use whenever asked to find sprites, reuse existing tiles, modify textures, recolor assets, slice spritesheets, or adapt CC0/Kenney packs for Unity.
+---
+
+# Alif Asset Finder & Modification System (`find-assets`)
+
+Find, inspect, adapt, and transform existing 2D game assets rather than authoring from scratch.
+
+Creating pixel art or UI sprites from zero is often redundant when high-quality assets already exist within the repository (`Assets/Sprites/`, `Assets/Audio/`, `Assets/Sprites/External/`) or in public domain / CC0 collections (Kenney, OpenGameArt). `find-assets` enables developers and autonomous agents to locate matching base assets and adapt them surgically (palette swaps, pixel-art scaling, spritesheet slicing, tinting, compositing) with automatic Unity 6000 `.meta` file pairing.
+
+---
+
+## 🚀 When to Use This Skill
+
+Activate this skill when:
+- Needing a new sprite or tile that is a variation of an existing one (e.g., "autumn tree", "dark wood stall", "green dialog button", "golden coin").
+- Searching the project or open catalogs for existing UI components, RPG tiles, character sprites, or sound effects.
+- Extracting a single tile or prop from a larger spritesheet (e.g. `RPGpack_sheet_2X.png` or `blueSheet.png`).
+- Scaling pixel art up or down without blurry bicubic filtering.
+- Inspecting image properties, dimensions, alpha transparency, or color palettes.
+- Ensuring all newly imported or modified assets immediately comply with Unity 6000 TextureImporter invariants (`.meta` files, `filterMode: 0` Point, `spritePixelsToUnits: 100`).
+
+---
+
+## 🛠️ CLI Commands & Workflows
+
+All commands are runnable directly via `./Tools/alif find-assets` or `python3 Tools/find-assets/find_assets.py`:
+
+### 1. Search Assets (`search`)
+Search across local project assets and open CC0 catalogs by keyword or category:
+```bash
+# Search for buttons or crates
+./Tools/alif find-assets search "crate"
+./Tools/alif find-assets search "button" --category ui
+
+# Output JSON for agent automation
+./Tools/alif find-assets search "tile" --json
+```
+
+### 2. Inspect Asset (`inspect`)
+Analyze dimensions, pixel format, alpha channel, Unity `.meta` presence, and dominant color palette:
+```bash
+./Tools/alif find-assets inspect Assets/Sprites/External/UI_Pack/blue_button00.png
+```
+
+### 3. Modify & Transform Asset (`modify`)
+Apply a pipeline of transformations and save the modified asset with guaranteed Unity `.meta` generation:
+
+#### A. Palette Swap / Recolor
+Replace specific hex colors with tolerance matching:
+```bash
+# Recolor red accents to green
+./Tools/alif find-assets modify Assets/Sprites/Generated/Tiles/tile_crate.png \
+    -o Assets/Sprites/Modified/crate_mossy.png \
+    --recolor "#733c19:#2d641e"
+```
+
+#### B. Color Tint (Preserving Luminance)
+Tint an entire sprite (e.g. create emerald, ruby, or obsidian UI button variants):
+```bash
+# Tint blue button to emerald green
+./Tools/alif find-assets modify Assets/Sprites/External/UI_Pack/blue_button00.png \
+    -o Assets/Sprites/Modified/green_button.png \
+    --tint "#2ecc71" --tint-strength 0.7
+```
+
+#### C. Pixel-Perfect Scaling
+Scale pixel art using nearest-neighbor interpolation to prevent blur:
+```bash
+# Scale 2x or to specific dimensions
+./Tools/alif find-assets modify Assets/Sprites/External/RPG_Pack/rpgTile000.png \
+    -o Assets/Sprites/Modified/rpgTile000_2x.png \
+    --scale 2x
+```
+
+#### D. Spritesheet Slicing
+Extract a sub-rectangle `X,Y,WIDTH,HEIGHT` from a spritesheet:
+```bash
+# Slice a 64x64 tile from a spritesheet
+./Tools/alif find-assets modify Assets/Sprites/External/RPG_Pack/RPGpack_sheet_2X.png \
+    -o Assets/Sprites/Modified/sliced_roof.png \
+    --slice "0,128,64,64"
+```
+
+#### E. Icon Overlay & Compositing
+Combine an icon onto a button or tile base:
+```bash
+./Tools/alif find-assets modify Assets/Sprites/Modified/green_button.png \
+    -o Assets/Sprites/Modified/green_button_checkmark.png \
+    --overlay Assets/Sprites/External/UI_Pack/blue_boxCheckmark.png \
+    --position center
+```
+
+### 4. Fetch Open CC0 Asset Packs (`fetch`)
+Download verified CC0 asset packages into `Assets/Sprites/External/` non-interactively:
+```bash
+# Fetch Kenney RPG town tiles
+./Tools/alif find-assets fetch kenney-rpg-urban
+
+# List available catalog packs
+./Tools/alif find-assets catalog
+```
+
+---
+
+## 📐 Asset Invariants & Best Practices
+
+1. **Never Handcraft When You Can Modify**: Before coding a procedural generator or drawing from scratch, always run `./Tools/alif find-assets search "<intent>"` to check for existing base art.
+2. **Nearest-Neighbor Preservation**: Always scale 2D pixel art with Point filtering and nearest-neighbor sampling. Never use bicubic/bilinear filtering for pixel art sprites.
+3. **Paired `.meta` Files**: Any asset generated by `find-assets` is automatically paired with a `.meta` file configured for 2D sprites (`filterMode: 0`, `spritePixelsToUnits: 100`, `alphaIsTransparency: 1`).
+4. **Folder Metadata**: Parent folders inside `Assets/` are verified and receive matching `.meta` files (`folderAsset: yes`).
+
+---
+
+## 📚 References
+
+- [Open Asset Sources Catalog](./references/open_asset_sources.md)
+- [Asset Modification Recipes & Color Palettes](./references/asset_modification_recipes.md)

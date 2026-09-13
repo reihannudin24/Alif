@@ -70,8 +70,11 @@ case "$COMMAND" in
     asset-gen)
         python3 "$ROOT/Tools/alif-asset-gen/cli.py" "$@"
         ;;
+    find-assets)
+        python3 "$ROOT/Tools/find-assets/find_assets.py" "$@"
+        ;;
     *)
-        echo "Usage: ./Tools/alif {status|validate|lint-level|apply-variant-c|generate-tile-rpg [spec]|test-edit|test-play|test-all|quick-check|build-web|build-mac|find-repo|agent|asset-gen}"
+        echo "Usage: ./Tools/alif {status|validate|lint-level|apply-variant-c|generate-tile-rpg [spec]|test-edit|test-play|test-all|quick-check|build-web|build-mac|find-repo|find-assets|agent|asset-gen}"
         [ "$COMMAND" = "help" ] || exit 2
         ;;
 esac

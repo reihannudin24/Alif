@@ -1,0 +1,9 @@
+title: AgentGeneratedStory
+tags: character:alif portrait:alif
+---
+Alif: Halo! Senang bertemu denganmu di sini.
+-> Ada yang bisa saya bantu?
+    <<jump AgentGeneratedStory_Help>>
+-> Saya hanya melihat-lihat saja.
+    <<jump AgentGeneratedStory_Browse>>
+===
