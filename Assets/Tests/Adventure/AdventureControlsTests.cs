@@ -68,6 +68,26 @@ namespace Alif.Adventure.Tests
             }
             finally { Object.DestroyImmediate(go); }
         }
+
+        [Test]
+        public void SavedPositionUsesThePlayersActualFeetAgainstSolidInteractables()
+        {
+            var player=new GameObject("player",typeof(Rigidbody2D),typeof(CapsuleCollider2D),typeof(PlayerController));
+            player.transform.localScale=Vector3.one*2;
+            var capsule=player.GetComponent<CapsuleCollider2D>();capsule.offset=new Vector2(0,-.34f);capsule.size=new Vector2(.32f,.22f);
+            var blocker=new GameObject("solid interactable",typeof(BoxCollider2D));blocker.layer=7;blocker.transform.position=new Vector2(0,-.68f);
+            try
+            {
+                var bodyField=typeof(PlayerController).GetField("_rigidbody",BindingFlags.NonPublic|BindingFlags.Instance);
+                if(bodyField.GetValue(player.GetComponent<PlayerController>())==null)
+                    typeof(PlayerController).GetMethod("Awake",BindingFlags.NonPublic|BindingFlags.Instance).Invoke(player.GetComponent<PlayerController>(),null);
+                Physics2D.SyncTransforms();
+                Assert.That(player.GetComponent<PlayerController>().CanStandAt(Vector2.zero),Is.False);
+                blocker.transform.position=Vector2.right*2;Physics2D.SyncTransforms();
+                Assert.That(player.GetComponent<PlayerController>().CanStandAt(Vector2.zero),Is.True);
+            }
+            finally { Object.DestroyImmediate(player);Object.DestroyImmediate(blocker); }
+        }
     }
 
     public sealed class TestInteractable : MonoBehaviour, IInteractable

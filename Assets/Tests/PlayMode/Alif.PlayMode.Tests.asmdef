@@ -1,5 +1,5 @@
 {
   "name": "Alif.PlayMode.Tests",
-  "references": ["Alif.Runtime", "Alif.Adventure.Model"],
+  "references": ["Alif.Runtime", "Alif.Adventure.Model", "Unity.InputSystem"],
   "optionalUnityReferences": ["TestAssemblies"]
 }

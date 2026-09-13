@@ -39,6 +39,7 @@ namespace Alif.Adventure
     [Serializable] public sealed class AdventureState
     {
         public int Version = 3, Chapter = 1, Area, Money = 100000, Bank = 1000000, HighestUnlocked = 1;
+        public int TutorialStep;
         [NonSerialized] public bool ReadOnlySave;
         public bool HasPosition;
         public float X = 0, Y = -2.5f;
@@ -126,11 +127,12 @@ namespace Alif.Adventure
         }
         public bool Valid()
         {
-            if (Version != 3 || Chapter < 1 || Chapter > 5 || HighestUnlocked < Chapter || HighestUnlocked > 5 ||
+            if (Version != 3 || Chapter < 1 || Chapter > 5 || HighestUnlocked < Chapter || HighestUnlocked > 5 || TutorialStep < 0 || TutorialStep > 3 ||
                 Area < 0 || Area >= AdventureContent.Get(Chapter).Areas.Length || Money < 0 || Money > 2000000 || Bank < 0 || Bank > 2000000 || !float.IsFinite(X) || !float.IsFinite(Y) ||
                 Math.Abs(X) > 500 || Math.Abs(Y) > 500 || !float.IsFinite(PlaySeconds) || PlaySeconds < 0 ||
                 Tasks == null || Evidence == null || Discoveries == null || CompletedChapters == null) return false;
             var chapter = AdventureContent.Get(Chapter);
+            if (TutorialStep > 0 && (Chapter != 1 || Area != chapter.StartArea || IntroductionSeen || Completed || Tasks.Count > 0)) return false;
             if (Tasks.Any(t => t == null || t.Id == null) || Tasks.Select(t => t.Id).Distinct().Count() != Tasks.Count) return false;
             foreach (var p in Tasks)
             {

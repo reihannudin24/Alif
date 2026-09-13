@@ -67,6 +67,7 @@ namespace Alif.Player
         private FacingDirection _currentFacing = FacingDirection.South;
         private Vector2 _feetOffset;
         private Vector2 _feetHalfExtents = new Vector2(0.16f, 0.12f);
+        private CapsuleCollider2D _feetCollider;
         private bool _isSprinting;
         private float _footstepTimer;
         private float _lastBumpTime;
@@ -85,6 +86,18 @@ namespace Alif.Player
         public void ConfigureAdventure() { _interactableLayer = 1 << 7; _interactRadius = 1.35f; _moveSpeed = 3f; }
         public void SetAdventureDirection(Vector2 direction) { _adventureDirection = direction; }
         public bool MovementLocked => _movementLocked || _movementOwners.Count > 0;
+        public bool CanStandAt(Vector2 bodyPosition)
+        {
+            Vector2 feet=FeetCenterAt(bodyPosition),size=FeetHalfExtents*2f;
+            Collider2D[] hits=_feetCollider
+                ?Physics2D.OverlapCapsuleAll(feet,size,_feetCollider.direction,transform.eulerAngles.z)
+                :Physics2D.OverlapBoxAll(feet,size,transform.eulerAngles.z);
+            foreach (Collider2D hit in hits)
+                if (!hit.isTrigger && hit.attachedRigidbody != _rigidbody) return false;
+            return true;
+        }
+        private Vector2 FeetCenterAt(Vector2 bodyPosition) => bodyPosition+(Vector2)transform.TransformVector(_feetOffset);
+        private Vector2 FeetHalfExtents => Vector2.Scale(_feetHalfExtents,new Vector2(Mathf.Abs(transform.lossyScale.x),Mathf.Abs(transform.lossyScale.y)));
         private bool InputBlocked => MovementLocked || (GameManager.Instance != null &&
             (GameManager.Instance.CurrentState == GameManager.GameState.Paused || GameManager.Instance.CurrentState == GameManager.GameState.Dialogue || GameManager.Instance.CurrentState == GameManager.GameState.Combat));
         private bool InteractionBlocked => InputBlocked;
@@ -97,12 +110,12 @@ namespace Alif.Player
             PhysicsMaterial2D frictionlessMat = _runtimeMaterial = new PhysicsMaterial2D("PlayerFrictionless") { friction = 0f, bounciness = 0f };
             _rigidbody.sharedMaterial = frictionlessMat;
 
-            CapsuleCollider2D feetCollider = GetComponent<CapsuleCollider2D>();
-            if (feetCollider != null)
+            _feetCollider = GetComponent<CapsuleCollider2D>();
+            if (_feetCollider != null)
             {
-                feetCollider.sharedMaterial = frictionlessMat;
-                _feetOffset = feetCollider.offset;
-                _feetHalfExtents = feetCollider.size * 0.5f;
+                _feetCollider.sharedMaterial = frictionlessMat;
+                _feetOffset = _feetCollider.offset;
+                _feetHalfExtents = _feetCollider.size * 0.5f;
             }
 
             // Pastikan kedalaman render Y-sorting otomatis terpasang
@@ -260,7 +273,8 @@ namespace Alif.Player
                 return Vector2.zero;
             }
 
-            Vector2 currentFeet = _rigidbody.position + _feetOffset;
+            Vector2 currentFeet = FeetCenterAt(_rigidbody.position);
+            Vector2 feetHalfExtents = FeetHalfExtents;
 
             // Hanya aktif ketika Player sedang berada di map yang punya whitelist lantai.
             // Area lain yang belum dimigrasikan tetap berjalan dengan collider lamanya.
@@ -270,7 +284,7 @@ namespace Alif.Player
             }
 
             Vector2 displacement = requestedVelocity * Time.fixedDeltaTime;
-            if (WalkableArea.ContainsFootprint(currentFeet + displacement, _feetHalfExtents))
+            if (WalkableArea.ContainsFootprint(currentFeet + displacement, feetHalfExtents))
             {
                 return requestedVelocity;
             }
@@ -280,15 +294,15 @@ namespace Alif.Player
             Vector2 xVelocity = new Vector2(requestedVelocity.x, 0f);
             Vector2 yVelocity = new Vector2(0f, requestedVelocity.y);
             bool canMoveX = Mathf.Abs(xVelocity.x) > 0.0001f
-                && WalkableArea.ContainsFootprint(currentFeet + xVelocity * Time.fixedDeltaTime, _feetHalfExtents);
+                && WalkableArea.ContainsFootprint(currentFeet + xVelocity * Time.fixedDeltaTime, feetHalfExtents);
             bool canMoveY = Mathf.Abs(yVelocity.y) > 0.0001f
-                && WalkableArea.ContainsFootprint(currentFeet + yVelocity * Time.fixedDeltaTime, _feetHalfExtents);
+                && WalkableArea.ContainsFootprint(currentFeet + yVelocity * Time.fixedDeltaTime, feetHalfExtents);
 
             if (canMoveX && canMoveY)
             {
                 // Evaluasi apakah langkah diagonal parsial bisa lolos sebelum mengorbankan salah satu sumbu
                 Vector2 partialDisplacement = requestedVelocity * 0.65f * Time.fixedDeltaTime;
-                if (WalkableArea.ContainsFootprint(currentFeet + partialDisplacement, _feetHalfExtents))
+                if (WalkableArea.ContainsFootprint(currentFeet + partialDisplacement, feetHalfExtents))
                 {
                     return requestedVelocity * 0.65f;
                 }

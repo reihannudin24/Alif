@@ -142,6 +142,22 @@ namespace Alif.EditorTools
             finally{RestoreSetup(setup);}
             Build();
         }
+        [MenuItem("Alif/Adventure/Repair Chapter 1 Depth Ordering")]
+        public static void RepairChapterOneDepthOrdering()
+        {
+            if(EditorApplication.isPlaying)throw new InvalidOperationException("Stop Play Mode first.");
+            if(!Application.isBatchMode&&!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())return;
+            var setup=EditorSceneManager.GetSceneManagerSetup();
+            try
+            {
+                var scene=EditorSceneManager.OpenScene("Assets/Scenes/Adventure/AdventureChapter1.unity");
+                foreach(string name in new[]{"Station_NoticeBoard","Gang_DirectionSign","PetugasStasiun","VariantC_StationLuggage","VariantC_StationTimetable","VariantC_GangPlanterCrates","VariantC_ReceiptTray","VariantC_Condiments","VariantC_ServingCounter"})
+                {var go=Named(name);if(go)ConfigureStaticYSort(go);}
+                EditorSceneManager.MarkSceneDirty(scene);EditorSceneManager.SaveScene(scene);
+            }
+            finally{RestoreSetup(setup);}
+            Debug.Log("[Alif] Chapter 1 depth ordering repaired without rebuilding the scene.");
+        }
         static void RepairChapterOneScene()
         {
             string path="Assets/Scenes/Adventure/AdventureChapter1.unity";
@@ -165,6 +181,7 @@ namespace Alif.EditorTools
             var cashier=Required("BuSiti_Kasir");
             station.transform.position=new Vector2(2.6f,-1.55f);
             SetSprite(station,game.SignFamilySprites.ElementAtOrDefault(0),1.35f);
+            ConfigureStaticYSort(station);
             BindPoint(game,station,"Papan arah",0,(Vector2)station.transform.position+new Vector2(0,-.7f));
 
             var buGang=CloneNpc(Required("BuSiti_Kasir"),"BuSiti_Gang",new Vector2(38.35f,-21.35f));
@@ -177,6 +194,7 @@ namespace Alif.EditorTools
             var gangSign=new GameObject("Gang_DirectionSign");gangSign.transform.position=new Vector2(42.15f,-18.95f);
             var signRenderer=gangSign.AddComponent<SpriteRenderer>();signRenderer.sprite=game.SignFamilySprites.ElementAtOrDefault(1)??game.DocumentIcon;signRenderer.sortingOrder=20;
             if(signRenderer.sprite)gangSign.transform.localScale=Vector3.one*(1.35f/signRenderer.sprite.bounds.size.y);
+            ConfigureStaticYSort(gangSign);
             BindPoint(game,gangSign,"Papan arah",2,new Vector2(42.15f,-20.1f));
 
             BindPoint(game,menu,"Papan menu",3,(Vector2)menu.transform.position+new Vector2(0,-.45f));
@@ -212,7 +230,13 @@ namespace Alif.EditorTools
         static GameObject AddAmbience(string name,Sprite sprite,Vector2 position,float height,int order)
         {
             var go=new GameObject(name);go.transform.position=position;var renderer=go.AddComponent<SpriteRenderer>();renderer.sprite=sprite;renderer.sortingOrder=order;
-            if(sprite)go.transform.localScale=Vector3.one*(height/sprite.bounds.size.y);return go;
+            if(sprite)go.transform.localScale=Vector3.one*(height/sprite.bounds.size.y);ConfigureStaticYSort(go);return go;
+        }
+        static void ConfigureStaticYSort(GameObject go)
+        {
+            var sort=go.GetComponent<YSortOrder>()??go.AddComponent<YSortOrder>();
+            var settings=new SerializedObject(sort);settings.FindProperty("_offsetY").floatValue=0;settings.FindProperty("_isStatic").boolValue=true;settings.ApplyModifiedPropertiesWithoutUndo();
+            var renderer=go.GetComponent<SpriteRenderer>();if(renderer)renderer.sortingOrder=1000-Mathf.RoundToInt(go.transform.position.y*100);
         }
         static void SetSprite(GameObject go,Sprite sprite,float height)
         {

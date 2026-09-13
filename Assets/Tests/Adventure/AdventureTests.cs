@@ -69,6 +69,19 @@ namespace Alif.Adventure.Tests
             Assert.Throws<System.ArgumentOutOfRangeException>(()=>s.StartChapter(5));
         }
         [Test]
+        public void TutorialCheckpointReloadsWhileOldSavesAndReplaysSkipIt()
+        {
+            var tutorial=new AdventureState {TutorialStep=2};
+            Assert.That(AdventureSave.Decode(JsonUtility.ToJson(tutorial)).TutorialStep,Is.EqualTo(2));
+            Assert.That(tutorial.StartChapter(1).TutorialStep,Is.Zero);
+
+            string oldJson=JsonUtility.ToJson(new AdventureState()).Replace("\"TutorialStep\":0,","");
+            Assert.That(AdventureSave.Decode(oldJson).TutorialStep,Is.Zero);
+
+            tutorial.IntroductionSeen=true;
+            Assert.That(tutorial.Valid(),Is.False);
+        }
+        [Test]
         public void EveryRequiredTargetHasAreaAndEveryPuzzleHasValidOptions()
         {
             for(int c=1;c<=5;c++)

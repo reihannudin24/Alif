@@ -46,7 +46,7 @@ namespace Alif.Adventure
         ICampaignEncounter _encounter;
         MonoBehaviour _encounterComponent;
         public ICampaignEncounter ActiveEncounter => _encounter;
-        public string CurrentTaskId => CurrentTask?.Id ?? "";
+        public string CurrentTaskId => TutorialActive ? "" : CurrentTask?.Id ?? "";
         public int PuzzleStepIndex => _task == null ? -1 : State.Progress(_task.Id)?.Step ?? 0;
         AdventureTask CurrentTask => Content?.Tasks.FirstOrDefault(t => State.Progress(t.Id)?.Complete != true);
         RectTransform _canvas, _modal, _hud, _safeRoot;
@@ -54,6 +54,7 @@ namespace Alif.Adventure
         Image _guideArrow;
         GameObject _touchControls;
         VirtualJoystick _joystick;
+        Button _skipTutorial;
         Rect _lastSafeArea;
         int _lastScreenWidth, _lastScreenHeight;
         PlayerController _player;
@@ -68,11 +69,15 @@ namespace Alif.Adventure
         bool _transition, _paused;
         Vector2? _walkTarget;
         Vector2 _lastWalkPosition;
+        Vector2 _tutorialLastPosition;
+        float _tutorialDistance;
         float _stuckTime;
         CampaignActivity _resumeScreen;
         int _journalPage;
         const string MenuScene = "MainMenu";
+        const string TutorialTarget = "Papan arah";
         public static string SceneFor(int chapter) => "AdventureChapter"+chapter;
+        public bool TutorialActive => Chapter==1 && State?.TutorialStep>0;
         void Start()
         {
             if (Chapter == 0) { SceneManager.LoadScene(MenuScene); return; }
@@ -94,6 +99,17 @@ namespace Alif.Adventure
             DialogueManager.Instance.OnDialogueCompleted+=DialogueCompleted;
             if(!string.IsNullOrEmpty(notice)) Toast(notice,10);
             if(State.Completed) {ShowEnding();return;}
+            if(TutorialActive) BeginTutorial();
+            else BeginChapterIntroduction(notice);
+        }
+        void BeginTutorial()
+        {
+            SetPlaying();
+            _tutorialLastPosition=_player.transform.position;_tutorialDistance=0;
+            Toast(State.TutorialStep==1?"Tutorial dimulai • bergerak sejauh satu langkah":"Tutorial dilanjutkan dari checkpoint",6);
+        }
+        void BeginChapterIntroduction(string notice="")
+        {
             if(!State.IntroductionSeen)
                 Say("Alif",Content.Introduction,()=>{State.IntroductionSeen=true;Save();},"Mulai menjelajah");
             else {SetPlaying();Toast(string.IsNullOrEmpty(notice)?"Checkpoint dimuat • "+Content.Areas[State.Area]:notice,8);}
@@ -122,8 +138,7 @@ namespace Alif.Adventure
         }
         bool SafePosition(Vector2 position)
         {
-            var feet=position+new Vector2(0,-.34f);
-            return !Physics2D.OverlapCircleAll(feet,.1f).Any(c=>!c.isTrigger&&c.gameObject!=_player.gameObject&&c.gameObject.layer!=7);
+            return _player.CanStandAt(position);
         }
         public bool CanExplore => Activity==CampaignActivity.World&&!_transition&&!_paused && !(DialogueManager.Instance?.IsDialogueActive??false);
         void BuildHud()
@@ -147,6 +162,7 @@ namespace Alif.Adventure
             if(BatikDividerSprite)Icon(top.transform,BatikDividerSprite,new Vector2(.08f,.02f),new Vector2(.92f,.16f));
             Button(_hud,"Jurnal",new Vector2(.79f,.895f),new Vector2(.885f,.965f),()=>Journal(0),JournalButtonSprite);
             Button(_hud,"Jeda",new Vector2(.895f,.895f),new Vector2(.99f,.965f),Pause,PauseButtonSprite);
+            _skipTutorial=Button(_hud,"Lewati tutorial",new Vector2(.79f,.81f),new Vector2(.99f,.88f),SkipTutorial);
 
             _guideArrow=CampaignUI.Rect(_hud,"Route arrow",new Vector2(.31f,.82f),new Vector2(.345f,.87f)).gameObject.AddComponent<Image>();
             _guideArrow.sprite=InteractionArrow;_guideArrow.preserveAspect=true;_guideArrow.raycastTarget=false;_guideArrow.gameObject.SetActive(false);
@@ -222,6 +238,14 @@ namespace Alif.Adventure
         void RefreshHud()
         {
             if(!_objective)return;
+            if(_skipTutorial)_skipTutorial.gameObject.SetActive(TutorialActive);
+            if(TutorialActive)
+            {
+                _location.text=$"BAB {Chapter}  •  {Content.Areas[State.Area]}";
+                _objective.text=State.TutorialStep==1?"TUTORIAL 1/3   Bergerak satu langkah":State.TutorialStep==2?"TUTORIAL 2/3   Baca papan arah":"TUTORIAL 3/3   Buka lalu tutup Jurnal";
+                foreach(var p in _points)if(p.Label)p.Label.gameObject.SetActive(State.TutorialStep==2&&p.Target==TutorialTarget&&p.Area==0);
+                return;
+            }
             var t=CurrentTask;int done=Content.Tasks.Count(x=>State.Progress(x.Id)?.Complete==true);
             _location.text=$"BAB {Chapter}  •  {Content.Areas[State.Area]}";
             _objective.text=t==null?"Perjalanan bab selesai":$"{done+1}/{Content.Tasks.Length}   {t.Title}";
@@ -247,25 +271,43 @@ namespace Alif.Adventure
             var collider=_player.InteractionTarget;
             var nearest=collider?collider.GetComponentInParent<AdventurePoint>():null;
             bool near=nearest!=null;
-            _prompt.text=near?"E • "+nearest.Target:"";
+            _prompt.text=near&&(!TutorialActive||(State.TutorialStep==2&&nearest.Target==TutorialTarget))?"E • "+nearest.Target:"";
+            if(TutorialActive)
+            {
+                UpdateTutorial(pos);
+                if(State.TutorialStep==1){_guide.text="WASD / panah / joystick untuk bergerak";_guideArrow.gameObject.SetActive(false);}
+                else if(State.TutorialStep==3){_guide.text="J atau tombol Jurnal • lalu tutup Jurnal";_guideArrow.gameObject.SetActive(false);}
+                else ShowGuide(_points.Find(p=>p.Target==TutorialTarget&&p.Area==0)?.transform,pos,TutorialTarget);
+                if(Time.unscaledTime-_savedAt>20)Save(false);
+                return;
+            }
             var target=CurrentTask;
             Transform guide=null;
             if(target!=null)
             {
                 var door=target.Area==State.Area?null:NextDoor(target.Area);
                 guide=target.Area==State.Area?_points.Find(p=>p.Target==target.Target&&p.Area==target.Area)?.transform:door?.transform;
-                if(guide)
-                {
-                    Vector2 delta=(Vector2)guide.position-pos;
-                    bool horizontal=Mathf.Abs(delta.x)>Mathf.Abs(delta.y);
-                    float angle=horizontal?(delta.x>0?90:-90):(delta.y>0?180:0);
-                    _guideArrow.rectTransform.localEulerAngles=new Vector3(0,0,angle);_guideArrow.gameObject.SetActive(true);
-                    string direction=horizontal?(delta.x>0?"Kanan":"Kiri"):(delta.y>0?"Atas":"Bawah");
-                    _guide.text=direction+"  •  "+(target.Area==State.Area?target.Target:"Pintu ke "+Content.Areas[door.DestinationArea]);
-                }
+                if(guide)ShowGuide(guide,pos,target.Area==State.Area?target.Target:"Pintu ke "+Content.Areas[door.DestinationArea]);
             }
             if(!guide){_guide.text="";_guideArrow.gameObject.SetActive(false);}
             if(Time.unscaledTime-_savedAt>20)Save(false);
+        }
+        void UpdateTutorial(Vector2 position)
+        {
+            if(State.TutorialStep!=1)return;
+            _tutorialDistance+=Vector2.Distance(position,_tutorialLastPosition);_tutorialLastPosition=position;
+            if(_tutorialDistance<1f)return;
+            State.TutorialStep=2;Save(false);RefreshHud();Toast("Bagus • dekati Papan arah dan tekan E atau tombol interaksi",6);
+        }
+        void ShowGuide(Transform guide,Vector2 position,string target)
+        {
+            if(!guide){_guide.text="";_guideArrow.gameObject.SetActive(false);return;}
+            Vector2 delta=(Vector2)guide.position-position;
+            bool horizontal=Mathf.Abs(delta.x)>Mathf.Abs(delta.y);
+            float angle=horizontal?(delta.x>0?90:-90):(delta.y>0?180:0);
+            _guideArrow.rectTransform.localEulerAngles=new Vector3(0,0,angle);_guideArrow.gameObject.SetActive(true);
+            string direction=horizontal?(delta.x>0?"Kanan":"Kiri"):(delta.y>0?"Atas":"Bawah");
+            _guide.text=direction+"  •  "+target;
         }
         SceneDoor NextDoor(int targetArea)
         {
@@ -283,6 +325,13 @@ namespace Alif.Adventure
         public void Interact(string target)
         {
             if(!CanExplore)return;
+            if(TutorialActive)
+            {
+                if(State.TutorialStep!=2||target!=TutorialTarget||State.Area!=0){Toast("Ikuti langkah tutorial yang tampil di atas",4);return;}
+                Say("Alif","Papan ini menunjukkan jalan keluar stasiun dan arah Warung Bu Siti. Interaksi berhasil—sekarang coba buka Jurnal.",()=>
+                {State.TutorialStep=3;Save(false);RefreshHud();Toast("Buka Jurnal dengan J atau tombol Jurnal, lalu tutup kembali",7);});
+                return;
+            }
             var t=CurrentTask;
             if(t==null){ShowEnding();return;}
             if(t.Target!=target||t.Area!=State.Area){Toast("Tugas berikutnya: "+t.Title,5);return;}
@@ -298,12 +347,14 @@ namespace Alif.Adventure
         public void Discover()
         {
             if(Activity!=CampaignActivity.World)return;
+            if(TutorialActive){Toast("Selesaikan atau lewati tutorial sebelum menjelajah",4);return;}
             var line=Content.Optional[Mathf.Min(State.Area,Content.Optional.Length-1)].Split('|');
             Say(line[0],line[1],()=>{string id=$"c{Chapter}.optional.{State.Area}";if(!State.Discoveries.Contains(id))State.Discoveries.Add(id);Save();});
         }
         public void Travel(SceneDoor door)
         {
             if(!CanExplore)return;
+            if(TutorialActive){Toast("Selesaikan atau lewati tutorial sebelum meninggalkan stasiun",5);return;}
             _transition=true;
             SceneFadeController.Instance.TransitionTo(_player,_player.GetComponent<Rigidbody2D>(),door.Destination,Camera.main.GetComponent<CameraFollow>(),()=>
             {
@@ -337,7 +388,21 @@ namespace Alif.Adventure
             GameManager.Instance?.SetState(GameManager.GameState.Dialogue);
             var shade=Panel(_modal,Vector2.zero,Vector2.one);shade.color=new Color(.08f,.13f,.16f,.73f);
         }
-        void CloseModal(){if(_modal){_modal.gameObject.SetActive(false);Destroy(_modal.gameObject);}_buttons.Clear();SetPlaying();}
+        void CloseModal()
+        {
+            bool completedTutorialJournal=Activity==CampaignActivity.Journal&&TutorialActive&&State.TutorialStep==3;
+            if(_modal){_modal.gameObject.SetActive(false);Destroy(_modal.gameObject);}_buttons.Clear();SetPlaying();
+            if(completedTutorialJournal)CompleteTutorial();
+        }
+        public void SkipTutorial()
+        {
+            if(!TutorialActive)return;
+            State.TutorialStep=0;Save(false);RefreshHud();Toast("Tutorial dilewati",3);BeginChapterIntroduction();
+        }
+        void CompleteTutorial()
+        {
+            State.TutorialStep=0;Save(false);RefreshHud();Toast("Tutorial selesai",3);BeginChapterIntroduction();
+        }
         RectTransform Card(CampaignActivity screen,string eyebrow,string title)
         {
             ClearModal(screen);

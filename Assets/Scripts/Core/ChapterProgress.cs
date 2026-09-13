@@ -46,7 +46,7 @@ namespace Alif.Core
                 PlayerPrefs.DeleteKey($"Alif_Chapter_{chapter}_Clues");
             }
 
-            PlayerPrefs.Save();
+            SaveAdventure(new Alif.Adventure.AdventureState { TutorialStep = 1 });
         }
 
         public static void SelectChapter(int chapterNumber)
