@@ -38,6 +38,19 @@ case "$COMMAND" in
         unity test "$ROOT" --editor-version "$VERSION" --mode "$MODE" \
             --report-format nunit,junit --output "$ROOT/Logs/TestResults/${MODE}.xml" --timeout 900
         ;;
+    test-all)
+        "$ROOT/Tools/alif" test-edit
+        "$ROOT/Tools/alif" test-play
+        ;;
+    quick-check)
+        echo "=== Validating TileRPG JSON specs ==="
+        python3 -m json.tool "$ROOT/Assets/AI/TileRpg/Specs/sample-world.json" > /dev/null
+        echo "=== Running EditMode unit tests ==="
+        "$ROOT/Tools/alif" test-edit
+        echo "=== Running Level integrity linting ==="
+        "$ROOT/Tools/alif" lint-level
+        echo "=== Quick check completed successfully ==="
+        ;;
     build-web)
         unity build "$ROOT" --editor-version "$VERSION" --target WebGL \
             --execute-method Alif.EditorTools.AlifAdventureBuilder.BuildWeb \
@@ -49,7 +62,7 @@ case "$COMMAND" in
             --output-path "$ROOT/Build/macOS/Alif.app" --allow-dirty-build --timeout 1800
         ;;
     *)
-        echo "Usage: ./Tools/alif {status|validate|lint-level|apply-variant-c|generate-tile-rpg [spec]|test-edit|test-play|build-web|build-mac}"
+        echo "Usage: ./Tools/alif {status|validate|lint-level|apply-variant-c|generate-tile-rpg [spec]|test-edit|test-play|test-all|quick-check|build-web|build-mac}"
         [ "$COMMAND" = "help" ] || exit 2
         ;;
 esac
