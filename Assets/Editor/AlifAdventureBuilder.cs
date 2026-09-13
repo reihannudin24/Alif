@@ -158,12 +158,43 @@ namespace Alif.EditorTools
             finally{RestoreSetup(setup);}
             Debug.Log("[Alif] Chapter 1 depth ordering repaired without rebuilding the scene.");
         }
+        [MenuItem("Alif/Adventure/Repair Chapter 1 Collision")]
+        public static void RepairChapterOneCollision()
+        {
+            if(EditorApplication.isPlaying)throw new InvalidOperationException("Stop Play Mode first.");
+            if(!Application.isBatchMode&&!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())return;
+            var setup=EditorSceneManager.GetSceneManagerSetup();
+            try
+            {
+                var scene=EditorSceneManager.OpenScene("Assets/Scenes/Adventure/AdventureChapter1.unity");
+                SyncChapterOneCollision();
+                EditorSceneManager.MarkSceneDirty(scene);EditorSceneManager.SaveScene(scene);
+            }
+            finally{RestoreSetup(setup);}
+            Build();
+            Debug.Log("[Alif] Chapter 1 collision resynced from the authoritative builder tables.");
+        }
+        static void SyncChapterOneCollision()
+        {
+            // Whitelist lantai hasil edit manual (duplikat "WalkableArea_X (1)", kotak
+            // KoridorTengah yang menyusut, dst.) dibersihkan menyeluruh dulu — termasuk yang
+            // ter-parent di luar root normalnya — supaya builder membangun ulang set yang benar
+            // dan auto-installer runtime WalkableArea tidak menganggap scene "sudah punya".
+            foreach(var area in Find<WalkableArea>())Object.DestroyImmediate(area.gameObject);
+            AlifDemoSceneBuilder.RebuildChapterOneCollision();
+            // Easter egg warisan SampleScene (kucing & koin) bukan konten Adventure; pelitanya
+            // yang layer Interactable malah mencuri tombol E di dekat "Papan arah" tutorial.
+            foreach(string legacy in new[]{"Cat_SiBelang","Secret_LuckyCoin"})
+            {var go=Named(legacy);if(go)go.SetActive(false);}
+            Physics2D.SyncTransforms();
+        }
         static void RepairChapterOneScene()
         {
             string path="Assets/Scenes/Adventure/AdventureChapter1.unity";
             var scene=EditorSceneManager.OpenScene(path);
             var game=Find<AdventureGame>().Single();
             ApplyVariantCReferences(game);
+            SyncChapterOneCollision();
             game.Centers=new[]{Vector2.zero,new Vector2(0,-20),new Vector2(40,-20),new Vector2(40,-40)};
             game.Spawns=new[]{new Vector2(0,-2.5f),new Vector2(0,-21),new Vector2(40,-21),new Vector2(39.35f,-43.38f)};
 
@@ -204,14 +235,36 @@ namespace Alif.EditorTools
 
             var petugas=AddAmbience("PetugasStasiun",game.ReactionPoseSprites.ElementAtOrDefault(0),new Vector2(-4.35f,-1.65f),1.25f,18);
             ConfigureReaction(petugas,game.ReactionPoseSprites.ElementAtOrDefault(0),game.EmoteSprites.ElementAtOrDefault(1));
-            AddAmbience("VariantC_StationLuggage",game.LocationPropSprites.ElementAtOrDefault(0),new Vector2(4.45f,-1.62f),1.15f,16);
-            AddAmbience("VariantC_StationTimetable",game.LocationPropSprites.ElementAtOrDefault(1),new Vector2(-3.15f,-1.65f),.9f,15);
-            AddAmbience("VariantC_GangPlanterCrates",game.LocationPropSprites.ElementAtOrDefault(2),new Vector2(35.25f,-19.05f),1.15f,14);
-            AddAmbience("VariantC_ReceiptTray",game.LocationPropSprites.ElementAtOrDefault(3),new Vector2(38.35f,-39.05f),.55f,30);
-            AddAmbience("VariantC_Condiments",game.LocationPropSprites.ElementAtOrDefault(4),new Vector2(42.55f,-39.05f),.65f,30);
-            AddAmbience("VariantC_ServingCounter",game.LocationPropSprites.ElementAtOrDefault(5),new Vector2(43.45f,-38.15f),1.25f,18);
+            AddPetugasFeet(petugas);
+            AddAmbience("VariantC_StationLuggage",game.LocationPropSprites.ElementAtOrDefault(0),new Vector2(4.45f,-1.62f),1.15f,16,.5f);
+            AddAmbience("VariantC_StationTimetable",game.LocationPropSprites.ElementAtOrDefault(1),new Vector2(-3.15f,-1.65f),.9f,15,.35f);
+            // Crates dulu di x=35.25 — di luar batas gambar Warung Depan (x 35.6..44.4), mengambang
+            // di void hitam. Ditampilkan di garis lantai gang, dekat dinding kiri.
+            AddAmbience("VariantC_GangPlanterCrates",game.LocationPropSprites.ElementAtOrDefault(2),new Vector2(36.1f,-21.35f),1.15f,14,.6f);
+            // Prop meja kasir/counter memakai pivot bawah: y = permukaan atas counter dunia
+            // (kasir -37.385, CounterSajiKanan -39.06) supaya duduk di atas furnitur, bukan melayang.
+            AddAmbience("VariantC_ReceiptTray",game.LocationPropSprites.ElementAtOrDefault(3),new Vector2(36.6f,-37.385f),.55f,30);
+            AddAmbience("VariantC_Condiments",game.LocationPropSprites.ElementAtOrDefault(4),new Vector2(42.55f,-39.06f),.65f,30);
+            AddAmbience("VariantC_ServingCounter",game.LocationPropSprites.ElementAtOrDefault(5),new Vector2(43.45f,-39.06f),1.25f,18);
+            AssertInteractPointsReachable();
             EditorUtility.SetDirty(game);EditorSceneManager.MarkSceneDirty(scene);EditorSceneManager.SaveScene(scene,path);
             Debug.Log("[Alif] Chapter 1 uses six explicit interaction props across the authored four-area route.");
+        }
+        static void AssertInteractPointsReachable()
+        {
+            var player=Find<PlayerController>().Single();
+            foreach(var point in Find<AdventurePoint>())
+            {
+                Vector2 trigger=point.GetComponent<Collider2D>().transform.position;
+                bool reachable=false;
+                for(int ring=0;ring<8&&!reachable;ring++)
+                    for(int i=0;i<16&&!reachable;i++)
+                    {
+                        float a=i*Mathf.PI/8;Vector2 candidate=trigger+new Vector2(Mathf.Cos(a),Mathf.Sin(a))*(.45f+ring*.15f);
+                        if(player.CanStandAt(candidate))reachable=true;
+                    }
+                if(!reachable)throw new InvalidOperationException("Prop collider menutup jalur ke interact point: "+point.name);
+            }
         }
         static GameObject Named(string name)=>Find<Transform>().FirstOrDefault(t=>t.name==name)?.gameObject;
         static GameObject Required(string name)=>Named(name)??throw new InvalidOperationException("Missing Chapter 1 object: "+name);
@@ -227,10 +280,24 @@ namespace Alif.EditorTools
             var reaction=npc.GetComponent<AdventureNpcReaction>()??npc.AddComponent<AdventureNpcReaction>();
             reaction.Body=npc.GetComponentInChildren<SpriteRenderer>();reaction.ReactionPose=pose;reaction.EmoteSprite=emote;EditorUtility.SetDirty(reaction);
         }
-        static GameObject AddAmbience(string name,Sprite sprite,Vector2 position,float height,int order)
+        static GameObject AddAmbience(string name,Sprite sprite,Vector2 position,float height,int order,float feetWidth=0f)
         {
             var go=new GameObject(name);go.transform.position=position;var renderer=go.AddComponent<SpriteRenderer>();renderer.sprite=sprite;renderer.sortingOrder=order;
-            if(sprite)go.transform.localScale=Vector3.one*(height/sprite.bounds.size.y);ConfigureStaticYSort(go);return go;
+            if(sprite)go.transform.localScale=Vector3.one*(height/sprite.bounds.size.y);
+            if(feetWidth>0f)AddFeetBlocker(go,feetWidth);
+            ConfigureStaticYSort(go);return go;
+        }
+        // Prop ambience berdiri di lantai diberi "kaki" solid tipis supaya Alif tidak
+        // menembusnya; prop di atas counter melewati ini (furnitur di bawahnya sudah solid).
+        static void AddFeetBlocker(GameObject go,float width)
+        {
+            var feet=go.AddComponent<BoxCollider2D>();feet.size=new Vector2(width,.12f);feet.offset=new Vector2(0,.06f);
+            feet.sharedMaterial=AssetDatabase.LoadAssetAtPath<PhysicsMaterial2D>("Assets/Settings/Frictionless2D.physicsMaterial2D");
+        }
+        static void AddPetugasFeet(GameObject go)
+        {
+            var feet=go.AddComponent<CapsuleCollider2D>();feet.direction=CapsuleDirection2D.Horizontal;feet.size=new Vector2(.3f,.2f);feet.offset=new Vector2(0,.1f);
+            feet.sharedMaterial=AssetDatabase.LoadAssetAtPath<PhysicsMaterial2D>("Assets/Settings/Frictionless2D.physicsMaterial2D");
         }
         static void ConfigureStaticYSort(GameObject go)
         {

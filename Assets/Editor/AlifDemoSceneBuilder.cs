@@ -218,6 +218,11 @@ namespace Alif.EditorTools
             // otomatis muncul begitu scene ini pertama kali dimuat, sebelum interaksi ke NPC lain.
             BuildOpeningMonologue(playerController);
 
+            // 5d. Easter egg stasiun (kucing, koin, papan informasi). Wajib ikut dibangun:
+            // Station_NoticeBoard dipakai ulang oleh Adventure Chapter 1 sebagai "Papan arah"
+            // (tutorial), jadi rebuild SampleScene tanpa langkah ini bikin repair chapter 1 gagal.
+            BuildFunEasterEggs(playerController);
+
             // Hubungkan DialogueManager ke PlayerController (supaya movement terkunci saat dialog).
             SetSerializedRef(dialogueManager, "_playerController", playerController);
 
@@ -608,6 +613,19 @@ namespace Alif.EditorTools
 
             // WarungBuSiti_Interior.jpg 1600x1359px, PPU 200 -> half extents (4.0, 3.3975).
             BuildAreaBackground("Background_WarungDalam", WarungDalamSpritePath, WarungDalamOrigin, 4.0f, 3.3975f, WarungDalamScale);
+        }
+
+        // Ketiga builder area di atas idempotent: FindOrCreateRoot menemukan root yang sudah
+        // ada di scene aktif, semua anak VoidBlocker/BoundaryWall/PropBlocker/WalkableArea
+        // dibersihkan, lalu dibangun ulang persis dari tabel di file ini. Dipakai oleh
+        // AlifAdventureBuilder untuk menyinkronkan AdventureChapter1.unity — scene hasil clone
+        // pernah ter-edit manual sampai whitelist lantainya menyusut dan duplikat, sehingga
+        // player tersangkut di ambang pintu (bad collision).
+        internal static void RebuildChapterOneCollision()
+        {
+            BuildBackground();
+            BuildStasiunLuar();
+            BuildWarungBuSiti();
         }
 
         // ---------------------------------------------------------------
