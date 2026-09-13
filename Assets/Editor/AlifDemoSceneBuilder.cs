@@ -3190,6 +3190,59 @@ namespace Alif.EditorTools
             return AssetDatabase.LoadAssetAtPath<Sprite>(relativePath);
         }
 
+        // Bayangan kontak ellipse lembut untuk prop dunia yang berdiri di lantai (asset
+        // baked — versi runtime ada di BlobShadow untuk karakter). Prop pixel-art tanpa
+        // bayangan tampak melayang di atas background painted.
+        internal static Sprite GetOrCreatePropShadowSprite()
+        {
+            const string relativePath = "Assets/Sprites/UI/PropShadow.png";
+            Sprite existing = AssetDatabase.LoadAssetAtPath<Sprite>(relativePath);
+            if (existing != null)
+            {
+                return existing;
+            }
+
+            EnsureFolder("Assets/Sprites/UI");
+
+            const int width = 64;
+            const int height = 32;
+            var tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            var pixels = new Color[width * height];
+            float cx = width * 0.5f - 0.5f, cy = height * 0.5f - 0.5f;
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    float dx = (x - cx) / (width * 0.5f);
+                    float dy = (y - cy) / (height * 0.5f);
+                    float distance = Mathf.Sqrt(dx * dx + dy * dy);
+                    float alpha = Mathf.Clamp01(1f - distance);
+                    pixels[y * width + x] = new Color(0f, 0f, 0f, alpha * alpha * 0.4f);
+                }
+            }
+            tex.SetPixels(pixels);
+            tex.Apply();
+
+            byte[] png = tex.EncodeToPNG();
+            Object.DestroyImmediate(tex);
+
+            string projectRoot = Directory.GetParent(Application.dataPath).FullName;
+            File.WriteAllBytes(Path.Combine(projectRoot, relativePath), png);
+            AssetDatabase.ImportAsset(relativePath);
+
+            var importer = (TextureImporter)AssetImporter.GetAtPath(relativePath);
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.filterMode = FilterMode.Bilinear; // bayangan memang lembut
+            importer.alphaIsTransparency = true;
+            importer.mipmapEnabled = false;
+            importer.spritePixelsPerUnit = 100f;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.SaveAndReimport();
+
+            return AssetDatabase.LoadAssetAtPath<Sprite>(relativePath);
+        }
+
         private static float RoundedRectEdgeAlpha(int x, int y, int width, int height, int r)
         {
             float px = x + 0.5f;

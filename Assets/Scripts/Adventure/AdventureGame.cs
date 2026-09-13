@@ -452,9 +452,10 @@ namespace Alif.Adventure
         Button Button(Transform parent,string label,Vector2 min,Vector2 max,Action click,Sprite sprite=null)
         {
             var b=CampaignUI.Button(parent,label,min,max,()=>{if(Time.unscaledTime-_openedAt<.13f)return;click();});
-            sprite=sprite?sprite:HudButtonSprite;
-            b.image.color=sprite?Color.white:new Color(.30f,.18f,.11f);ApplySprite(b.image,sprite);
-            var colors=b.colors;colors.selectedColor=Gold;colors.highlightedColor=Gold;colors.pressedColor=new Color(.67f,.48f,.25f);b.colors=colors;
+            // Default: frame pixel 9-slice (dulu warna flat) — sprite eksplisit tetap menang.
+            sprite=sprite?sprite:(HudButtonSprite?HudButtonSprite:Campaign.CampaignUI.PixelButtonSprite());
+            b.image.color=Color.white;ApplySprite(b.image,sprite);
+            var colors=b.colors;colors.selectedColor=Gold;colors.highlightedColor=Gold;colors.pressedColor=new Color(.74f,.62f,.42f);b.colors=colors;
             var text=b.GetComponentInChildren<TMP_Text>();text.fontSize=Mathf.RoundToInt(19*_textScale);text.color=Paper;
             _buttons.Add(b);return b;
         }

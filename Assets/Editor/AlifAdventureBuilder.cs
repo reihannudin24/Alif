@@ -120,7 +120,7 @@ namespace Alif.EditorTools
                             var activity=point.AddComponent<AdventurePoint>();activity.Game=game;activity.Area=group.Key;activity.Target=target;
                             var visual=new GameObject("Marker").AddComponent<SpriteRenderer>();visual.transform.SetParent(point.transform,false);visual.sprite=game.DocumentIcon;visual.sortingOrder=YSortOrder.PromptOrderBase;
                             if(visual.sprite)visual.transform.localScale=Vector3.one*(.5f/visual.sprite.bounds.size.y);
-                            var label=new GameObject("Objective label").AddComponent<TextMeshPro>();label.transform.SetParent(point.transform,false);label.transform.localPosition=new Vector3(0,.65f,0);label.fontSize=2.1f;label.alignment=TextAlignmentOptions.Center;label.rectTransform.sizeDelta=new Vector2(3,1);label.text=target;activity.Label=label;label.GetComponent<MeshRenderer>().sortingOrder=YSortOrder.PromptOrderBase+20;
+                            var label=new GameObject("Objective label").AddComponent<TextMeshPro>();label.transform.SetParent(point.transform,false);label.transform.localPosition=new Vector3(0,.65f,0);label.fontSize=.55f;label.alignment=TextAlignmentOptions.Center;label.rectTransform.sizeDelta=new Vector2(4,.6f);label.text=target;activity.Label=label;label.GetComponent<MeshRenderer>().sortingOrder=YSortOrder.PromptOrderBase+20;
                             var arrow=new GameObject("InteractionArrow").AddComponent<SpriteRenderer>();arrow.transform.SetParent(point.transform,false);arrow.transform.localPosition=new Vector3(0,1,0);arrow.sprite=game.InteractionArrow;arrow.sortingOrder=YSortOrder.PromptOrderBase+10;arrow.gameObject.SetActive(false);
                         }
                     }
@@ -246,12 +246,46 @@ namespace Alif.EditorTools
             }
             foreach(var mesh in Find<MeshRenderer>())
             {
-                if(mesh.name!="Objective label"&&mesh.name!="KeycapE")continue;
-                int target=mesh.name=="Objective label"?YSortOrder.PromptOrderBase+20:YSortOrder.PromptOrderBase+2;
+                if(mesh.name!="Objective label"&&mesh.name!="KeycapE"&&mesh.name!="Door label")continue;
+                int target=mesh.name=="Objective label"?YSortOrder.PromptOrderBase+20:mesh.name=="KeycapE"?YSortOrder.PromptOrderBase+2:YSortOrder.PromptOrderBase+15;
                 if(mesh.sortingLayerName=="Default"&&mesh.sortingOrder!=target)
                 {mesh.sortingOrder=target;changed=true;}
+                // Label dunia lama dibuat dengan fontSize raksasa (2.1 unit ≈ sepertiga layar);
+                // normalisasi ke kapsiun kecil di atas prop/pintu.
+                if(mesh.name!="KeycapE")
+                {
+                    var tmp=mesh.GetComponent<TMP_Text>();
+                    if(tmp!=null)
+                    {
+                        float size=mesh.name=="Objective label"?.55f:.6f;
+                        if(!Mathf.Approximately(tmp.fontSize,size))
+                        {tmp.fontSize=size;changed=true;}
+                        var delta=mesh.name=="Objective label"?new Vector2(4,.6f):new Vector2(3.5f,.5f);
+                        if(tmp.rectTransform.sizeDelta!=delta)
+                        {tmp.rectTransform.sizeDelta=delta;changed=true;}
+                    }
+                }
             }
             return changed;
+        }
+        // Pasang bayangan kontak baked di kaki prop berdiri (aset PropShadow.png) — urut
+        // tepat di bawah propnya, di atas background. Idempotent per prop.
+        static void AttachPropShadow(GameObject prop, float width = 0.6f)
+        {
+            if (prop == null || prop.transform.Find("ContactShadow") != null) return;
+            var propRenderer = prop.GetComponent<SpriteRenderer>();
+            if (propRenderer == null) return;
+            var shadow = new GameObject("ContactShadow");
+            shadow.transform.SetParent(prop.transform, false);
+            shadow.transform.localPosition = new Vector3(0f, 0.04f, 0f);
+            var renderer = shadow.AddComponent<SpriteRenderer>();
+            renderer.sprite = AlifDemoSceneBuilder.GetOrCreatePropShadowSprite();
+            renderer.sortingOrder = propRenderer.sortingOrder - 1;
+            if (renderer.sprite)
+            {
+                Vector2 size = renderer.sprite.bounds.size;
+                shadow.transform.localScale = new Vector3(width / size.x, width * 0.5f / size.y, 1f);
+            }
         }
         static void SyncChapterOneCollision()
         {
@@ -291,13 +325,14 @@ namespace Alif.EditorTools
             var menu=Required("PapanMenu_Interact");
             var receipt=Required("MejaTungguPesanan");
             var cashier=Required("BuSiti_Kasir");
-            // Papan arah tutorial berdiri di koridor tengah — satu-satunya area yang pasti
-            // lantai kosong (tanpa furnitur painted). Dulu di RuangTunggu (y -1.55/-2.45),
-            // zona furnitur painted berlanjut lebih dalam dari whitelist sehingga kaki papan
-            // tampak mengambang di atas bangku painted (flag QA visual berulang).
-            station.transform.position=new Vector2(0.15f,-1.5f);
-            SetSprite(station,game.SignFamilySprites.ElementAtOrDefault(0),1.35f);
+            // Papan arah tutorial HARUS di RuangTunggu dekat (2.6,-2.25): alur tutorial
+            // membawa pemain jalan ke kanan dari spawn lalu interact, dan smoke test
+            // PlayMode mengunci geometri itu. Grounding visual ditangani contact shadow
+            // (dulu tampak melayang di atas bangku painted karena tanpa bayangan kaki).
+            station.transform.position=new Vector2(2.6f,-2.2f);
+            SetSprite(station,game.SignFamilySprites.ElementAtOrDefault(0),1.05f);
             ConfigureStaticYSort(station);
+            AttachPropShadow(station,.75f);
             BindPoint(game,station,"Papan arah",0,(Vector2)station.transform.position+new Vector2(0,-.7f));
 
             var buGang=CloneNpc(Required("BuSiti_Kasir"),"BuSiti_Gang",new Vector2(38.35f,-21.35f));
@@ -324,11 +359,15 @@ namespace Alif.EditorTools
             var petugas=AddAmbience("PetugasStasiun",game.ReactionPoseSprites.ElementAtOrDefault(0),new Vector2(-4.35f,-1.72f),1.25f,18);
             ConfigureReaction(petugas,game.ReactionPoseSprites.ElementAtOrDefault(0),game.EmoteSprites.ElementAtOrDefault(1));
             AddPetugasFeet(petugas);
-            AddAmbience("VariantC_StationLuggage",game.LocationPropSprites.ElementAtOrDefault(0),new Vector2(4.45f,-2.35f),1.15f,16,.5f);
-            AddAmbience("VariantC_StationTimetable",game.LocationPropSprites.ElementAtOrDefault(1),new Vector2(-3.15f,-2.35f),.9f,15,.35f);
+            AttachPropShadow(petugas,.55f);
+            var luggage=AddAmbience("VariantC_StationLuggage",game.LocationPropSprites.ElementAtOrDefault(0),new Vector2(4.45f,-2.35f),1.15f,16,.5f);
+            AttachPropShadow(luggage,.7f);
+            var timetable=AddAmbience("VariantC_StationTimetable",game.LocationPropSprites.ElementAtOrDefault(1),new Vector2(-3.15f,-2.35f),.9f,15,.35f);
+            AttachPropShadow(timetable,.55f);
             // Crates dulu di x=35.25 — di luar batas gambar Warung Depan (x 35.6..44.4), mengambang
             // di void hitam. Ditampilkan di garis lantai gang, dekat dinding kiri.
-            AddAmbience("VariantC_GangPlanterCrates",game.LocationPropSprites.ElementAtOrDefault(2),new Vector2(36.1f,-21.35f),1.15f,14,.6f);
+            var crates=AddAmbience("VariantC_GangPlanterCrates",game.LocationPropSprites.ElementAtOrDefault(2),new Vector2(36.1f,-21.35f),1.15f,14,.6f);
+            AttachPropShadow(crates,.75f);
             // Prop meja kasir/counter memakai pivot bawah: y = permukaan atas counter dunia
             // (kasir -37.385, CounterSajiKanan -39.06) supaya duduk di atas furnitur, bukan melayang.
             AddAmbience("VariantC_ReceiptTray",game.LocationPropSprites.ElementAtOrDefault(3),new Vector2(36.6f,-37.385f),.55f,30);
@@ -428,7 +467,7 @@ namespace Alif.EditorTools
             var collider=trigger.AddComponent<CircleCollider2D>();collider.isTrigger=true;collider.radius=.42f;
             var point=trigger.AddComponent<AdventurePoint>();point.Game=game;point.Area=area;point.Target=target;point.Reaction=prop.GetComponent<AdventureNpcReaction>();
             var bounds=prop.GetComponentInChildren<SpriteRenderer>()?.bounds??new Bounds(prop.transform.position,Vector3.one);
-            var label=new GameObject("Objective label").AddComponent<TextMeshPro>();label.transform.SetParent(prop.transform,true);label.transform.position=new Vector3(bounds.center.x,bounds.max.y+.22f,0);label.fontSize=2.1f;label.alignment=TextAlignmentOptions.Center;label.rectTransform.sizeDelta=new Vector2(3,1);label.text=target;point.Label=label;label.GetComponent<MeshRenderer>().sortingOrder=YSortOrder.PromptOrderBase+20;
+            var label=new GameObject("Objective label").AddComponent<TextMeshPro>();label.transform.SetParent(prop.transform,true);label.transform.position=new Vector3(bounds.center.x,bounds.max.y+.22f,0);label.fontSize=.6f;label.alignment=TextAlignmentOptions.Center;label.rectTransform.sizeDelta=new Vector2(4,.6f);label.overflowMode=TextOverflowModes.Overflow;label.color=CampaignUI.Paper;label.outlineColor=Color.black;label.outlineWidth=.18f;label.text=target;point.Label=label;label.GetComponent<MeshRenderer>().sortingOrder=YSortOrder.PromptOrderBase+20;
             var arrow=new GameObject("InteractionArrow").AddComponent<SpriteRenderer>();arrow.transform.SetParent(prop.transform,true);arrow.transform.position=new Vector3(bounds.center.x,bounds.max.y+.65f,0);arrow.sprite=game.InteractionArrow;arrow.sortingOrder=YSortOrder.PromptOrderBase+10;arrow.gameObject.SetActive(false);
             return point;
         }
@@ -467,7 +506,7 @@ namespace Alif.EditorTools
             var spawn=new GameObject(label+" spawn");spawn.transform.position=destination;
             var go=new GameObject(label);go.transform.position=position;var trigger=go.AddComponent<BoxCollider2D>();trigger.size=new Vector2(.7f,.7f);trigger.isTrigger=true;
             var door=go.AddComponent<SceneDoor>();var so=new SerializedObject(door);so.FindProperty("_destination").objectReferenceValue=spawn.transform;so.ApplyModifiedPropertiesWithoutUndo();
-            var text=new GameObject("Door label").AddComponent<TextMeshPro>();text.transform.SetParent(go.transform,false);text.fontSize=2;text.text=label;text.alignment=TextAlignmentOptions.Center;text.rectTransform.sizeDelta=new Vector2(3,1);
+            var text=new GameObject("Door label").AddComponent<TextMeshPro>();text.transform.SetParent(go.transform,false);text.fontSize=.6f;text.text=label;text.alignment=TextAlignmentOptions.Center;text.rectTransform.sizeDelta=new Vector2(3.5f,.5f);
         }
         public static void ValidateContent()
         {

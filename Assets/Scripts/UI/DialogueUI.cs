@@ -84,6 +84,36 @@ namespace Alif.UI
 
         private void Awake()
         {
+            // Styling runtime: dialogue box, tombol Lanjut, dan tombol pilihan mendapat frame
+            // pixel 9-slice yang sama dengan HUD adventure — dulu persegi semi-transparan
+            // polos. Sprite builder (kalau ada) tetap menang; patch hanya mengisi yang kosong.
+            if (_dialogueBoxRoot != null)
+            {
+                var panelImage = _dialogueBoxRoot.GetComponent<Image>();
+                if (panelImage != null && panelImage.sprite == null)
+                {
+                    panelImage.sprite = CampaignUI.PixelPanelSprite();
+                    panelImage.type = Image.Type.Sliced;
+                    panelImage.color = Color.white;
+                }
+            }
+            if (_nextButton != null && _nextButton.image != null && _nextButton.image.sprite == null)
+            {
+                _nextButton.image.sprite = CampaignUI.PixelButtonSprite();
+                _nextButton.image.type = Image.Type.Sliced;
+                _nextButton.image.color = Color.white;
+            }
+            if (_choiceButtonPrefab != null)
+            {
+                var prefabImage = _choiceButtonPrefab.GetComponent<Image>();
+                if (prefabImage != null && prefabImage.sprite == null)
+                {
+                    prefabImage.sprite = CampaignUI.PixelPanelSprite();
+                    prefabImage.type = Image.Type.Sliced;
+                    prefabImage.color = Color.white;
+                }
+            }
+
             if (_nextButton != null)
             {
                 _nextButton.onClick.AddListener(HandleNextClicked);
