@@ -15,6 +15,7 @@ MonoBehaviour:
   CharacterName: Naya
   Description: Teman satu tim yang ramah dan selalu bawa laporan.
   Portrait: {fileID: 21300000, guid: d28596f6070e14b0fb73b41213b3d406, type: 3}
+  WorldSprite: {fileID: 21300000, guid: 81d9eaadb0b60481481bf607b7d45074, type: 3}
   AnimatorController: {fileID: 9100000, guid: ff21b355bf2e14792a18e210d694413e, type: 2}
   _relationshipLevel: 0
   _affinityPoints: 0

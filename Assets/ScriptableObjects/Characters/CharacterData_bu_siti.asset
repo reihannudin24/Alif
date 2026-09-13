@@ -15,6 +15,7 @@ MonoBehaviour:
   CharacterName: Bu Siti
   Description: Ibu-ibu ramah di sekitar kantor, suka menyapa duluan.
   Portrait: {fileID: 21300000, guid: 5f1c3cf5239074b40ab4342219575cfb, type: 3}
+  WorldSprite: {fileID: 21300000, guid: 745eda645bbdd416b97a0c3a84f73c58, type: 3}
   AnimatorController: {fileID: 9100000, guid: 76719584d9ab74a268189da01063a9fc, type: 2}
   _relationshipLevel: 0
   _affinityPoints: 0

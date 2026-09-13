@@ -15,6 +15,7 @@ MonoBehaviour:
   CharacterName: Pak Ustad
   Description: Sesepuh yang baik hati dan bijaksana.
   Portrait: {fileID: 21300000, guid: 3e2b150a2776c46ff931e618f2d93e7d, type: 3}
+  WorldSprite: {fileID: 21300000, guid: 7b7c60aba310c47fa8f7bf884924da50, type: 3}
   AnimatorController: {fileID: 9100000, guid: 84997322b42a74902ab79f9ec82f50b6, type: 2}
   _relationshipLevel: 0
   _affinityPoints: 0

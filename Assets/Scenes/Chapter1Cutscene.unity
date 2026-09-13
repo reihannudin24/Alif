@@ -410,7 +410,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -1067,7 +1067,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -1355,13 +1355,10 @@ MonoBehaviour:
     IntroText: 'Solo, sore itu.
 
 
-      Setelah bertahun-tahun merantau ke Jakarta,
-      Alif akhirnya kembali menginjakkan kaki di kota kelahirannya.
+      Setelah bertahun-tahun merantau ke Jakarta, Alif akhirnya kembali menginjakkan kaki di kota kelahirannya.
 
 
-      Ia belum
-      tahu, kepulangan ini akan membawanya pada satu misi yang tak pernah ia bayangkan
-      sebelumnya...'
+      Ia belum tahu, kepulangan ini akan membawanya pada satu misi yang tak pernah ia bayangkan sebelumnya...'
   - Parts:
     - Image: {fileID: 21300000, guid: a9bb8427272a448e1ada0e36960700dd, type: 3}
       AnchorMin: {x: 0, y: 0.5}
@@ -1389,8 +1386,7 @@ MonoBehaviour:
       AnchorMin: {x: 0.5, y: 0}
       AnchorMax: {x: 1, y: 0.5}
       SpeakerName: Alif (Batin)
-      Line: Perut udah keroncongan nih. Makan ayam geprek di warung Bu Siti deket
-        sini enak kali ya.
+      Line: Perut udah keroncongan nih. Makan ayam geprek di warung Bu Siti deket sini enak kali ya.
     IntroText: 
   _slotImages:
   - {fileID: 1354261955}
@@ -1667,7 +1663,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -1804,7 +1800,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -1960,7 +1956,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 6e72656bu
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1

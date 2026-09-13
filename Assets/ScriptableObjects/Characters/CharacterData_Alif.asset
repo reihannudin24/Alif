@@ -15,6 +15,7 @@ MonoBehaviour:
   CharacterName: Alif
   Description: Pemain utama.
   Portrait: {fileID: 21300000, guid: 45a7b4c3ae2a74ecc8e98c4aa6d878b7, type: 3}
+  WorldSprite: {fileID: 21300000, guid: 0b21749b6a5654973b846baaa4216669, type: 3}
   AnimatorController: {fileID: 0}
   _relationshipLevel: 0
   _affinityPoints: 0

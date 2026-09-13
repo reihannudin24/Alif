@@ -15,6 +15,7 @@ MonoBehaviour:
   CharacterName: Raka
   Description: Rekan kerja percaya diri dengan senyum menggoda.
   Portrait: {fileID: 21300000, guid: dfbba4f54c76e42d5bd61989fb7b0330, type: 3}
+  WorldSprite: {fileID: 21300000, guid: a81cbac56d99a4b50b6fa1205cf5dd4f, type: 3}
   AnimatorController: {fileID: 9100000, guid: a9b6b588a0a074307a55f3350ba6a79a, type: 2}
   _relationshipLevel: 0
   _affinityPoints: 0
