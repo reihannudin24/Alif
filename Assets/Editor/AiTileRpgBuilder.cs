@@ -185,7 +185,17 @@ namespace Alif.EditorTools
             Tilemap map = gameObject.AddComponent<Tilemap>();
             TilemapRenderer renderer = gameObject.AddComponent<TilemapRenderer>();
             renderer.sortingOrder = order;
-            if (collision) gameObject.AddComponent<TilemapCollider2D>();
+            if (collision)
+            {
+                // Composite merges per-tile boxes into one outline so players never
+                // catch on the seams between adjacent solid tiles.
+                Rigidbody2D body = gameObject.AddComponent<Rigidbody2D>();
+                body.bodyType = RigidbodyType2D.Static;
+                TilemapCollider2D tiles = gameObject.AddComponent<TilemapCollider2D>();
+                tiles.usedByComposite = true;
+                CompositeCollider2D composite = gameObject.AddComponent<CompositeCollider2D>();
+                composite.geometryType = CompositeCollider2D.GeometryType.Polygons;
+            }
             return map;
         }
 

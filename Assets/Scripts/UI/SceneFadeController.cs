@@ -64,8 +64,8 @@ namespace Alif.UI
 
             if (playerRb != null)
             {
-                playerRb.position = destination.position;
-                playerRb.transform.position = destination.position;
+                playerRb.position = ResolveLanding(player, destination.position);
+                playerRb.transform.position = playerRb.position;
                 playerRb.linearVelocity = Vector2.zero;
             }
 
@@ -161,8 +161,8 @@ namespace Alif.UI
 
             if (playerRb != null)
             {
-                playerRb.position = destination.position;
-                playerRb.transform.position = destination.position;
+                playerRb.position = ResolveLanding(player, destination.position);
+                playerRb.transform.position = playerRb.position;
                 playerRb.linearVelocity = Vector2.zero;
             }
 
@@ -179,6 +179,15 @@ namespace Alif.UI
                 player.SetMovementLocked(this, false);
             }
             onComplete?.Invoke();
+        }
+
+        /// <summary>
+        /// Tujuan teleport lolos pengecekan standing-spot Player supaya teleport runtime tidak
+        /// pernah menaruh Player di dalam collider solid.
+        /// </summary>
+        private static Vector2 ResolveLanding(PlayerController player, Vector3 destination)
+        {
+            return player != null ? player.ResolveSafeLandingPosition(destination) : (Vector2)destination;
         }
 
         private IEnumerator Fade(float from, float to)

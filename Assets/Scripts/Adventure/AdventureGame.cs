@@ -82,7 +82,6 @@ namespace Alif.Adventure
         Vector2 _lastWalkPosition;
         Vector2 _tutorialLastPosition;
         float _tutorialDistance;
-        float _stuckTime;
         CampaignActivity _resumeScreen;
         int _journalPage;
         const string MenuScene = "MainMenu";
@@ -398,24 +397,6 @@ namespace Alif.Adventure
         {
             var door = NextDoor(area);
             if (door != null) Travel(door);
-        }
-        public void WarpToArea(int areaIndex, Vector2 position)
-        {
-            if (!_player) return;
-            _player.transform.position = position;
-            _player.StopMotion();
-            if (State != null)
-            {
-                State.Area = areaIndex;
-                State.X = position.x;
-                State.Y = position.y;
-                State.HasPosition = true;
-            }
-            Camera.main?.GetComponent<CameraFollow>()?.SnapToTarget();
-            SetPlaying();
-            RefreshHud();
-            string areaName = (Content?.Areas != null && areaIndex >= 0 && areaIndex < Content.Areas.Length) ? Content.Areas[areaIndex] : $"Area {areaIndex}";
-            Toast($"Warp -> {areaName}", 2);
         }
         public bool Save(bool show=true)
         {

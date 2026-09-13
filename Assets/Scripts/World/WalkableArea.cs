@@ -99,6 +99,12 @@ namespace Alif.World
         }
 
         /// <summary>
+        /// True bila scene ini memiliki area lantai terjaga sama sekali. Map lama yang belum
+        /// dimigrasi tidak punya area, jadi pengecekan whitelist boleh dilewati.
+        /// </summary>
+        public static bool HasAreas => ActiveAreas.Count > 0;
+
+        /// <summary>
         /// True bila titik kaki sedang berada di salah satu area lantai yang dijaga.
         /// Dipakai agar map lama yang belum punya WalkableArea tetap memakai physics biasa.
         /// </summary>

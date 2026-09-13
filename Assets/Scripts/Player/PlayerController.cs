@@ -74,6 +74,16 @@ namespace Alif.Player
         private Vector2 _smoothVelocity;
         private CameraFollow _cameraFollow;
         private bool _sprintZoomActive;
+        // Buffer physics reuse untuk scan interaksi — hindari alokasi array tiap frame.
+        private readonly Collider2D[] _overlapBuffer = new Collider2D[16];
+        private float _promptScanTimer;
+        private static readonly Dictionary<Collider2D, IInteractable> InteractableCache = new Dictionary<Collider2D, IInteractable>();
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticCache()
+        {
+            InteractableCache.Clear();
+        }
 
         // Bendera sederhana untuk mengunci input pergerakan, misalnya saat dialog sedang berlangsung.
         private bool _movementLocked = false;
@@ -88,6 +98,18 @@ namespace Alif.Player
         public bool MovementLocked => _movementLocked || _movementOwners.Count > 0;
         public bool CanStandAt(Vector2 bodyPosition)
         {
+            // Edit-mode (validator/teleport safety) tidak lewat Awake — resolve malas supaya
+            // collider sendiri tetap dikenali dan probe memakai geometri kaki yang sebenarnya.
+            if (_rigidbody == null || _feetCollider == null)
+            {
+                _rigidbody = GetComponent<Rigidbody2D>();
+                _feetCollider = GetComponent<CapsuleCollider2D>();
+                if (_feetCollider != null)
+                {
+                    _feetOffset = _feetCollider.offset;
+                    _feetHalfExtents = _feetCollider.size * 0.5f;
+                }
+            }
             Vector2 feet=FeetCenterAt(bodyPosition),size=FeetHalfExtents*2f;
             Collider2D[] hits=_feetCollider
                 ?Physics2D.OverlapCapsuleAll(feet,size,_feetCollider.direction,transform.eulerAngles.z)
@@ -95,6 +117,34 @@ namespace Alif.Player
             foreach (Collider2D hit in hits)
                 if (!hit.isTrigger && hit.attachedRigidbody != _rigidbody) return false;
             return true;
+        }
+
+        /// <summary>
+        /// Posisi pendaratan teleport yang aman: tujuan pintu sudah divalidasi saat build, tapi
+        /// kalau runtime ternyata tertutup collider solid (prop bergeser, objek spawn di titik
+        /// door), geser ke titik berdiri terdekat yang bebas daripada menempelkan Player
+        /// ke dalam blocker. Kalau semua kandidat gagal, kembalikan tujuan apa adanya.
+        /// </summary>
+        public Vector2 ResolveSafeLandingPosition(Vector2 desiredPosition)
+        {
+            if (CanStandAt(desiredPosition)) return desiredPosition;
+
+            for (int ring = 1; ring <= 2; ring++)
+            {
+                float radius = 0.35f * ring;
+                for (int i = 0; i < 8; i++)
+                {
+                    float angle = i * (Mathf.PI * 2f / 8f);
+                    Vector2 candidate = desiredPosition + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;
+                    if (!CanStandAt(candidate)) continue;
+                    // Di map ber-whitelist, kandidat juga harus di atas lantai sah supaya
+                    // Player tidak mendarat di region non-walkable yang hanya tampak seperti lantai.
+                    if (WalkableArea.HasAreas && !WalkableArea.ContainsPoint(FeetCenterAt(candidate))) continue;
+                    return candidate;
+                }
+            }
+
+            return desiredPosition;
         }
         private Vector2 FeetCenterAt(Vector2 bodyPosition) => bodyPosition+(Vector2)transform.TransformVector(_feetOffset);
         private Vector2 FeetHalfExtents => Vector2.Scale(_feetHalfExtents,new Vector2(Mathf.Abs(transform.lossyScale.x),Mathf.Abs(transform.lossyScale.y)));
@@ -123,6 +173,9 @@ namespace Alif.Player
             {
                 gameObject.AddComponent<YSortOrder>();
             }
+
+            // Bayangan kaki mengikat karakter ke lantai background painted
+            BlobShadow.Ensure(transform, new Vector3(0f, _feetOffset.y - _feetHalfExtents.y + 0.04f, 0f));
 
             // Physics2D biasanya berjalan 50 Hz, sedangkan render umumnya 60 Hz atau lebih.
             // Tanpa interpolation, sprite terlihat melompat antar-tick saat berjalan dan
@@ -189,7 +242,14 @@ namespace Alif.Player
 
             UpdateFacingDirection();
             UpdateAnimation();
-            UpdateInteractionPrompt();
+            // Scan proximity interaksi tidak perlu per-frame; 12 Hz cukup responsif untuk
+            // panah prompt dan jauh lebih murah daripada overlap tiap frame.
+            _promptScanTimer -= Time.deltaTime;
+            if (_promptScanTimer <= 0f)
+            {
+                _promptScanTimer = 0.08f;
+                UpdateInteractionPrompt();
+            }
             HandleMouseClick();
             HandleFootstepSound();
             if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
@@ -378,12 +438,14 @@ namespace Alif.Player
         private Collider2D FindNearestInteractableCollider()
         {
             if (InteractionBlocked) return null;
-            var hits = Physics2D.OverlapCircleAll(transform.position, _interactRadius, _interactableLayer);
+            int count = Physics2D.OverlapCircleNonAlloc(transform.position, _interactRadius, _overlapBuffer, _interactableLayer);
             Collider2D best = null;
             int bestPriority = int.MinValue;
             float bestFacing = float.MinValue, bestDistance = float.MaxValue;
-            foreach (var hit in hits)
+            for (int i = 0; i < count; i++)
             {
+                Collider2D hit = _overlapBuffer[i];
+                if (hit == null) continue;
                 if (GetInteractable(hit) == null) continue;
                 Vector2 delta = hit.ClosestPoint(transform.position) - (Vector2)transform.position;
                 float distance = delta.magnitude;
@@ -493,7 +555,30 @@ namespace Alif.Player
                 return null;
             }
 
-            Transform current = collider.transform;
+            // Pencarian IInteractable menaiki hierarchy mengalokasikan array GetComponents —
+            // cache hasil per-collider; entri hanya sah selama MonoBehaviour-nya masih hidup
+            // dan aktif (di-disable = harus dihitung ulang saat aktif kembali).
+            if (InteractableCache.TryGetValue(collider, out IInteractable cached))
+            {
+                if (cached is MonoBehaviour cachedBehaviour && cachedBehaviour != null && cachedBehaviour.isActiveAndEnabled)
+                {
+                    return cached;
+                }
+                InteractableCache.Remove(collider);
+            }
+
+            IInteractable found = FindInteractableUpward(collider.transform);
+            if (found != null)
+            {
+                if (InteractableCache.Count > 256) InteractableCache.Clear();
+                InteractableCache[collider] = found;
+            }
+            return found;
+        }
+
+        private static IInteractable FindInteractableUpward(Transform start)
+        {
+            Transform current = start;
             while (current != null)
             {
                 MonoBehaviour[] behaviours = current.GetComponents<MonoBehaviour>();

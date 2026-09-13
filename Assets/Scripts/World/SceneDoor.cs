@@ -95,7 +95,7 @@ namespace Alif.World
             Rigidbody2D rb = other.attachedRigidbody;
             if (rb != null)
             {
-                rb.position = _destination.position;
+                rb.position = player != null ? player.ResolveSafeLandingPosition(_destination.position) : (Vector2)_destination.position;
             }
             else
             {
