@@ -34,6 +34,7 @@ namespace Alif.UI
             if (InventorySystem.Instance != null)
             {
                 InventorySystem.Instance.OnInventoryChanged += RefreshAllSlots;
+                InventorySystem.Instance.OnSelectionChanged += HandleSelectionChanged;
                 RefreshAllSlots();
             }
         }
@@ -43,30 +44,43 @@ namespace Alif.UI
             if (InventorySystem.Instance != null)
             {
                 InventorySystem.Instance.OnInventoryChanged -= RefreshAllSlots;
+                InventorySystem.Instance.OnSelectionChanged -= HandleSelectionChanged;
             }
         }
 
         private void RefreshAllSlots()
         {
             IReadOnlyList<InventorySlot> slots = InventorySystem.Instance.Slots;
+            int selected = InventorySystem.Instance.SelectedIndex;
 
             for (int i = 0; i < _slotViews.Count && i < slots.Count; i++)
             {
                 if (_slotViews[i] != null)
                 {
                     _slotViews[i].Refresh(slots[i]);
+                    _slotViews[i].SetSelected(i == selected);
+                }
+            }
+        }
+
+        private void HandleSelectionChanged(int selectedIndex)
+        {
+            for (int i = 0; i < _slotViews.Count; i++)
+            {
+                if (_slotViews[i] != null)
+                {
+                    _slotViews[i].SetSelected(i == selectedIndex);
                 }
             }
         }
 
         /// <summary>
-        /// Dipanggil InventorySlotUI saat slot diklik. Sederhana: bisa dipakai untuk
-        /// "select item" atau "use item" sesuai kebutuhan game nantinya.
+        /// Dipanggil InventorySlotUI saat slot diklik: pilih item di slot tersebut
+        /// (klik kedua pada slot yang sama membatalkan seleksi). Slot kosong diabaikan.
         /// </summary>
         public void HandleSlotClicked(int slotIndex)
         {
-            Debug.Log($"Inventory slot {slotIndex} diklik.");
-            // TODO: hubungkan ke logic pakai/pilih item sesuai kebutuhan game.
+            InventorySystem.Instance.Select(slotIndex);
         }
 
         /// <summary>

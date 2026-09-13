@@ -40,7 +40,13 @@ namespace Alif.Systems
         // Dipanggil setiap kali isi inventory berubah, supaya InventoryUI tinggal redraw semua slot.
         public event Action OnInventoryChanged;
 
+        // Dipanggil setiap kali slot terpilih berubah (termasuk saat seleksi dibatalkan).
+        public event Action<int> OnSelectionChanged;
+
         public IReadOnlyList<InventorySlot> Slots => _slots;
+
+        /// <summary>Index slot yang sedang dipilih pemain (-1 = tidak ada).</summary>
+        public int SelectedIndex { get; private set; } = -1;
 
         private void Awake()
         {
@@ -54,7 +60,11 @@ namespace Alif.Systems
             InitializeSlots();
         }
 
-        private void InitializeSlots()
+        /// <summary>
+        /// Siapkan ulang semua slot jadi kosong. Dipanggil dari Awake; dibuat publik
+        /// agar EditMode tests bisa menyiapkan instance tanpa Play Mode.
+        /// </summary>
+        public void InitializeSlots()
         {
             _slots.Clear();
             for (int i = 0; i < _slotCount; i++)
@@ -94,6 +104,28 @@ namespace Alif.Systems
         }
 
         /// <summary>
+        /// Pilih slot yang berisi item; memilih slot yang sama dua kali membatalkan seleksi.
+        /// Slot kosong tidak bisa dipilih. Mengembalikan true saat seleksi berubah.
+        /// </summary>
+        public bool Select(int slotIndex)
+        {
+            if (slotIndex < 0 || slotIndex >= _slots.Count) return false;
+            if (slotIndex == SelectedIndex)
+            {
+                // Klik kedua pada slot yang sama membatalkan seleksi.
+                if (SelectedIndex == -1) return false;
+                SelectedIndex = -1;
+                OnSelectionChanged?.Invoke(SelectedIndex);
+                return true;
+            }
+            if (_slots[slotIndex].IsEmpty) return false;
+
+            SelectedIndex = slotIndex;
+            OnSelectionChanged?.Invoke(SelectedIndex);
+            return true;
+        }
+
+        /// <summary>
         /// Kurangi/hapus item dari slot tertentu berdasarkan index.
         /// </summary>
         public void RemoveItemAt(int slotIndex, int quantity = 1)
@@ -113,6 +145,11 @@ namespace Alif.Systems
             if (slot.Quantity <= 0)
             {
                 slot.Clear();
+                if (SelectedIndex == slotIndex)
+                {
+                    SelectedIndex = -1;
+                    OnSelectionChanged?.Invoke(SelectedIndex);
+                }
             }
 
             OnInventoryChanged?.Invoke();

@@ -80,9 +80,11 @@ namespace Alif.Core
 
         /// <summary>
         /// Picu getaran layar (screen shake) untuk memberi dampak fisik dan kepuasan visual.
+        /// Dilewati total saat Reduced Motion aktif — getaran adalah efek gerak murni.
         /// </summary>
         public void Shake(float duration = 0.15f, float intensity = 0.08f)
         {
+            if (PlayerPrefs.GetInt("Alif_ReducedMotion", 0) == 1) return;
             _shakeTimeRemaining = Mathf.Max(_shakeTimeRemaining, duration);
             _shakeIntensity = Mathf.Max(_shakeIntensity, intensity);
         }
@@ -143,12 +145,8 @@ namespace Alif.Core
                 _shakeIntensity = 0f;
             }
 
-            Vector3 baseTargetPos = _target.position + _currentLookAhead + _offset;
-            Vector3 desiredPosition = ClampToBounds(baseTargetPos) + _shakeOffset;
-            transform.position = Vector3.Lerp(transform.position, desiredPosition, 1f - Mathf.Exp(-_smoothSpeed * dt));
-
-            // Zoom sprint dijalankan di sini (bukan oleh pemanggil) supaya laju perubahannya
-            // konsisten dan ClampToBounds di atas selalu membaca ukuran kamera terkini.
+            // Zoom sprint dijalankan SEBELUM clamp supaya ClampToBounds di bawah selalu
+            // membaca ukuran viewport terkini (bukan ukuran frame sebelumnya).
             float zoomTarget = _sprintZoom && PlayerPrefs.GetInt("Alif_ReducedMotion", 0) == 0 ? 0.4f : 0f;
             if (!Mathf.Approximately(_sprintZoomOffset, zoomTarget))
             {
@@ -156,6 +154,12 @@ namespace Alif.Core
                 if (_camera != null && _camera.orthographic)
                     _camera.orthographicSize = _baseOrthoSize + _sprintZoomOffset;
             }
+
+            // Shake ikut di-clamp: offset digabung SEBELUM ClampToBounds supaya getaran
+            // tidak menarik kamera keluar batas peta (mencegah void hitam di tepi).
+            Vector3 baseTargetPos = _target.position + _currentLookAhead + _offset + _shakeOffset;
+            Vector3 desiredPosition = ClampToBounds(baseTargetPos);
+            transform.position = Vector3.Lerp(transform.position, desiredPosition, 1f - Mathf.Exp(-_smoothSpeed * dt));
         }
 
         /// <summary>

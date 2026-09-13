@@ -48,7 +48,18 @@ namespace Alif.Adventure
         public ICampaignEncounter ActiveEncounter => _encounter;
         public string CurrentTaskId => TutorialActive ? "" : CurrentTask?.Id ?? "";
         public int PuzzleStepIndex => _task == null ? -1 : State.Progress(_task.Id)?.Step ?? 0;
-        AdventureTask CurrentTask => Content?.Tasks.FirstOrDefault(t => State.Progress(t.Id)?.Complete != true);
+        // Loop eksplisit (bukan LINQ) — getter ini dibaca tiap frame dari Update.
+        AdventureTask CurrentTask
+        {
+            get
+            {
+                if(Content==null)return null;
+                var tasks=Content.Tasks;
+                for(int i=0;i<tasks.Length;i++)
+                    if(State.Progress(tasks[i].Id)?.Complete!=true)return tasks[i];
+                return null;
+            }
+        }
         RectTransform _canvas, _modal, _hud, _safeRoot;
         TMP_Text _objective, _location, _toast, _prompt, _guide;
         Image _guideArrow;
@@ -249,7 +260,9 @@ namespace Alif.Adventure
                 foreach(var p in _points)if(p.Label)p.Label.gameObject.SetActive(State.TutorialStep==2&&p.Target==TutorialTarget&&p.Area==0);
                 return;
             }
-            var t=CurrentTask;int done=Content.Tasks.Count(x=>State.Progress(x.Id)?.Complete==true);
+            var t=CurrentTask;int done=0;
+            var tasks=Content.Tasks;
+            for(int i=0;i<tasks.Length;i++)if(State.Progress(tasks[i].Id)?.Complete==true)done++;
             _location.text=$"BAB {Chapter}  •  {Content.Areas[State.Area]}";
             _objective.text=t==null?"Perjalanan bab selesai":$"{done+1}/{Content.Tasks.Length}   {t.Title}";
             foreach(var p in _points)
@@ -280,7 +293,7 @@ namespace Alif.Adventure
                 UpdateTutorial(pos);
                 if(State.TutorialStep==1){_guide.text="WASD / panah / joystick untuk bergerak";_guideArrow.gameObject.SetActive(false);}
                 else if(State.TutorialStep==3){_guide.text="J atau tombol Jurnal • lalu tutup Jurnal";_guideArrow.gameObject.SetActive(false);}
-                else ShowGuide(_points.Find(p=>p.Target==TutorialTarget&&p.Area==0)?.transform,pos,TutorialTarget);
+                else ShowGuide(FindPoint(TutorialTarget,0)?.transform,pos,TutorialTarget);
                 if(Time.unscaledTime-_savedAt>20)Save(false);
                 return;
             }
@@ -289,7 +302,7 @@ namespace Alif.Adventure
             if(target!=null)
             {
                 var door=target.Area==State.Area?null:NextDoor(target.Area);
-                guide=target.Area==State.Area?_points.Find(p=>p.Target==target.Target&&p.Area==target.Area)?.transform:door?.transform;
+                guide=target.Area==State.Area?FindPoint(target.Target,target.Area)?.transform:door?.transform;
                 if(guide)ShowGuide(guide,pos,target.Area==State.Area?target.Target:"Pintu ke "+Content.Areas[door.DestinationArea]);
             }
             if(!guide){_guide.text="";_guideArrow.gameObject.SetActive(false);}
@@ -312,12 +325,29 @@ namespace Alif.Adventure
             string direction=horizontal?(delta.x>0?"Kanan":"Kiri"):(delta.y>0?"Atas":"Bawah");
             _guide.text=direction+"  •  "+target;
         }
+        AdventurePoint FindPoint(string target,int area)
+        {
+            for(int i=0;i<_points.Count;i++)
+            {
+                var p=_points[i];
+                if(p.Target==target&&p.Area==area)return p;
+            }
+            return null;
+        }
+        int _doorFrom=-1,_doorTo=-1;SceneDoor _doorCache;
         SceneDoor NextDoor(int targetArea)
         {
+            // Peta pintu tidak berubah saat runtime; BFS cukup sekali per pasangan area
+            // (dihitung ulang hanya setelah Travel/Warp mengubah State.Area).
+            if(_doorFrom==State.Area&&_doorTo==targetArea)return _doorCache;
             var queue=new Queue<int>();var first=new Dictionary<int,SceneDoor>();queue.Enqueue(State.Area);first[State.Area]=null;
             while(queue.Count>0){int from=queue.Dequeue();foreach(var d in _doors.Where(d=>d.SourceArea==from))
-            {if(first.ContainsKey(d.DestinationArea))continue;first[d.DestinationArea]=first[from]??d;if(d.DestinationArea==targetArea)return first[d.DestinationArea];queue.Enqueue(d.DestinationArea);}}
-            return null;
+            {if(first.ContainsKey(d.DestinationArea))continue;first[d.DestinationArea]=first[from]??d;if(d.DestinationArea==targetArea)return CacheDoor(targetArea,first[d.DestinationArea]);queue.Enqueue(d.DestinationArea);}}
+            return CacheDoor(targetArea,null);
+        }
+        SceneDoor CacheDoor(int targetArea,SceneDoor door)
+        {
+            _doorFrom=State.Area;_doorTo=targetArea;_doorCache=door;return door;
         }
         void CycleFocus(int direction)
         {

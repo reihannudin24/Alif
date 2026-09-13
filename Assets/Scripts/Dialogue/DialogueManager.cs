@@ -259,8 +259,8 @@ namespace Alif.Dialogue
 
             if (!string.IsNullOrEmpty(completedEventId))
             {
-                Debug.Log($"Dialogue selesai, event id: {completedEventId}");
-                // TODO: hubungkan ke quest/event system sesuai kebutuhan game.
+                // Event id diumumkan lewat CampaignEvents; sistem quest/jurnal tinggal subscribe.
+                Campaign.CampaignEvents.NotifyCompleted(completedEventId);
             }
         }
     }

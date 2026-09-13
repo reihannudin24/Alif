@@ -19,11 +19,32 @@ namespace Alif.UI
         private int _slotIndex;
         private InventoryUI _owner;
         private Vector3 _dragStartPosition;
+        private bool _selected;
+
+        // Warna aksen emas dari palet UI Alif untuk menandai slot terpilih.
+        private static readonly Color SelectedTint = new Color(1f, 0.87f, 0.55f, 1f);
 
         public void Setup(int slotIndex, InventoryUI owner)
         {
             _slotIndex = slotIndex;
             _owner = owner;
+        }
+
+        /// <summary>
+        /// Tandai slot ini sebagai sedang dipilih (tint emas pada icon dan jumlah).
+        /// </summary>
+        public void SetSelected(bool selected)
+        {
+            if (_selected == selected) return;
+            _selected = selected;
+            ApplySelectionTint();
+        }
+
+        private void ApplySelectionTint()
+        {
+            Color tint = _selected ? SelectedTint : Color.white;
+            if (_iconImage != null && _iconImage.enabled) _iconImage.color = tint;
+            if (_quantityLabel != null) _quantityLabel.color = tint;
         }
 
         /// <summary>
@@ -43,6 +64,8 @@ namespace Alif.UI
             {
                 _quantityLabel.text = hasItem && slotData.Quantity > 1 ? slotData.Quantity.ToString() : string.Empty;
             }
+
+            ApplySelectionTint();
         }
 
         public void OnPointerClick(PointerEventData eventData)
