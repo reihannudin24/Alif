@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-VERSION="$(sed -n 's/^m_EditorVersion: //p' "$ROOT/ProjectSettings/ProjectVersion.txt")"
+VERSION="$(sed -n 's/^m_EditorVersion: //p' "$ROOT/ProjectSettings/ProjectVersion.txt" || echo "6000.6.0f1")"
 COMMAND="${1:-help}"
 shift || true
 
@@ -61,8 +61,14 @@ case "$COMMAND" in
             --execute-method Alif.EditorTools.AlifAdventureBuilder.BuildMac \
             --output-path "$ROOT/Build/macOS/Alif.app" --allow-dirty-build --timeout 1800
         ;;
+    find-repo)
+        python3 "$ROOT/Tools/find-repo/find_repo.py" "$@"
+        ;;
+    agent)
+        python3 "$ROOT/Tools/alif-agent/cli.py" "$@"
+        ;;
     *)
-        echo "Usage: ./Tools/alif {status|validate|lint-level|apply-variant-c|generate-tile-rpg [spec]|test-edit|test-play|test-all|quick-check|build-web|build-mac}"
+        echo "Usage: ./Tools/alif {status|validate|lint-level|apply-variant-c|generate-tile-rpg [spec]|test-edit|test-play|test-all|quick-check|build-web|build-mac|find-repo|agent}"
         [ "$COMMAND" = "help" ] || exit 2
         ;;
 esac

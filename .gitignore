@@ -127,3 +127,8 @@ test-results.xml
 # AI tool workspaces & caches
 .codex/
 .zcode/
+
+# Python cache & bytecode
+__pycache__/
+*.py[cod]
+*$py.class

@@ -39,3 +39,30 @@ Existing commits use short imperative descriptions such as `Update Chapter 2 sto
 ## Configuration and Safety
 
 Do not commit credentials or generated caches/build intermediates. Preserve existing authored scenes and uncommitted work. Validate the campaign before building, and inspect the Unity Console after script or scene changes.
+
+---
+
+## AI Agent Workflows & Recursive Self-Improvement
+
+Alif includes an embedded multi-agent graph system and semantic repository finder to accelerate development:
+
+### 1. Embedded Tools & Skills
+- **`find-repo`** ([`.agents/skills/find-repo/`](./.agents/skills/find-repo/)): Embedded semantic search engine for finding open-source Unity mechanics, shaders, dialogue examples, and peer repositories. Run via `./Tools/alif find-repo "<query>"`.
+- **`alif-agent`** ([`.agents/skills/alif-agent/`](./.agents/skills/alif-agent/)): Specialized multi-agent state graph (`Tools/alif-agent/alif_graph.py`) with nodes for Orchestration, Repo Hunting, Level Architecture, Gameplay Dev, QA Verification, Self-Healing, and Evolution.
+
+### 2. Supported Agent Commands
+```bash
+./Tools/alif agent run "<task>"      # Execute the specialized agentic graph
+./Tools/alif agent run "<task>" --dry-run # Plan without mutating files
+./Tools/alif agent status            # Inspect system health and learned symbols
+./Tools/alif agent memory            # Display prompt-ready architecture rules
+./Tools/alif agent evolve            # Run recursive self-improvement cycle
+./Tools/alif find-repo "<query>"     # Discover GitHub references
+```
+
+### 3. Recursive Learning Protocol
+Whenever you introduce new C# classes, assemblies, Yarn dialogue nodes, or TileRPG world specs, run:
+```bash
+./Tools/alif agent evolve
+```
+The evolution engine will scan project diffs, register newly created symbols in `Tools/alif-agent/memory/knowledge_base.json`, update `Docs/agent_memory/README.md`, and refine agent operational heuristics over time.

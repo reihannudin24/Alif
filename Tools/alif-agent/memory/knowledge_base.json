@@ -1,0 +1,256 @@
+{
+  "version": "1.0.0",
+  "project": "Alif",
+  "unity_version": "6000.6.0f1",
+  "render_pipeline": "URP",
+  "frameworks": [
+    "Unity Input System",
+    "uGUI / TextMeshPro",
+    "Yarn Spinner (dev.yarnspinner.unity)",
+    "UniTask",
+    "LitMotion",
+    "NUnit (Unity Test Framework)"
+  ],
+  "architectural_rules": [
+    {
+      "id": "ASM_SEPARATION",
+      "title": "Decoupled Domain Models",
+      "rule": "Alif.Adventure.Model and Alif.Battle.Model must be pure C# with 0 UnityEngine dependencies. MonoBehaviours live in Alif.Runtime."
+    },
+    {
+      "id": "WALKABLE_OVERLAP",
+      "title": "Floor Whitelist Doorway Overlap",
+      "rule": "Ambang pintu (doorways) between WalkableArea boxes must overlap by at least 0.2f units to prevent player snagging."
+    },
+    {
+      "id": "FEET_COLLIDERS",
+      "title": "Prop Feet Colliders",
+      "rule": "Props standing on the floor use small feet colliders at ground level, never full-body solid blockers."
+    },
+    {
+      "id": "YARN_DIALOGUE",
+      "title": "Plaintext Yarn Narrative",
+      "rule": "Dialogue scripts reside in Assets/Dialogue/*.yarn. Node headers: title, tags. Choices use -> and <<jump>>."
+    },
+    {
+      "id": "TILERPG_SCHEMA",
+      "title": "TileRPG Schema Conformance",
+      "rule": "TileRPG world specs must adhere to Tools/ai-tile-rpg/world.schema.json with valid ground and collision layers."
+    },
+    {
+      "id": "CODE_STYLE",
+      "title": "C# PascalCase & 4-Space Indent",
+      "rule": "Four-space indentation, braces on the same line, PascalCase public types/methods, camelCase locals."
+    }
+  ],
+  "discovered_symbols": {
+    "assemblies": [
+      "Alif.Adventure.Model",
+      "Alif.Adventure.Tests",
+      "Alif.Battle.Model",
+      "Alif.Battle.Tests",
+      "Alif.PlayMode.Tests",
+      "Alif.Runtime",
+      "Assembly-CSharp-Editor"
+    ],
+    "core_classes": [
+      "ActionCombatSession",
+      "ActionEncounterController",
+      "ActionEncounterDefinition",
+      "ActivityBoard",
+      "AdventureChapter",
+      "AdventureGame",
+      "AdventureNpcReaction",
+      "AdventurePoint",
+      "AdventureState",
+      "AdventureTask",
+      "AiTileRpgBuilder",
+      "AlifAdventureBuilder",
+      "AlifDevConsole",
+      "AlifLevelValidator",
+      "AlifYarnDialogueRunner",
+      "AmbientImageMotion",
+      "AtmController",
+      "AtmUI",
+      "AudioManager",
+      "BattleEncounterController",
+      "BattleEncounterDefinition",
+      "BattlePhase",
+      "BattleResponse",
+      "BattleSession",
+      "BattleStage",
+      "BossPhase",
+      "ButtonJuice",
+      "CameraBounds",
+      "CameraFollow",
+      "CampaignActivity",
+      "Chapter2StoryController",
+      "Chapter2StoryPoint",
+      "ChapterAdventure",
+      "ChapterCardUI",
+      "ChapterSelectController",
+      "CharacterData",
+      "CurrencySystem",
+      "CutscenePanelPart",
+      "CutscenePlayerController",
+      "CutsceneScene",
+      "DialogueChoice",
+      "DialogueData",
+      "DialogueLine",
+      "DialogueManager",
+      "DialogueUI",
+      "EmoteBubble",
+      "EmoteType",
+      "EncounterResult",
+      "EnergySystem",
+      "FacingDirection",
+      "FloatingCombatText",
+      "FloatingPrompt",
+      "FootstepDustEffect",
+      "GameManager",
+      "GameState",
+      "HUDController",
+      "ICampaignEncounter",
+      "IInteractable",
+      "InteractableObject",
+      "InteractionPriority",
+      "InteractionPromptFX",
+      "InventorySlot",
+      "InventorySlotUI",
+      "InventorySystem",
+      "InventoryUI",
+      "InvestigationPoint",
+      "ItemPickup",
+      "JoystickMode",
+      "LuckyCoinPickup",
+      "MainMenuController",
+      "NPCController",
+      "ObjectiveUI",
+      "OpeningMonologueTrigger",
+      "PauseMenuController",
+      "PlayerAnimation",
+      "PlayerController",
+      "PointType",
+      "PuzzleStep",
+      "QuitConfirmationUI",
+      "RestaurantStoryPoint",
+      "RestaurantStoryTrigger",
+      "SceneDoor",
+      "SceneFadeController",
+      "SceneLoader",
+      "ScoreBalanceFeedbackUI",
+      "ScoreSystem",
+      "StationCat",
+      "TaskProgress",
+      "TimeSystem",
+      "TravelConfirmationUI",
+      "UIManager",
+      "VirtualJoystick",
+      "WalkableArea",
+      "YSortOrder"
+    ],
+    "cli_workflows": [
+      "validate",
+      "lint-level",
+      "generate-tile-rpg",
+      "test-edit",
+      "test-play",
+      "test-all",
+      "quick-check",
+      "build-web",
+      "build-mac"
+    ],
+    "yarn_nodes": [
+      "BuSiti_Intro",
+      "Station_NoticeBoard"
+    ],
+    "tile_specs": [
+      "sample-world"
+    ]
+  },
+  "error_registry": [
+    {
+      "error_type": "DOORWAY_SNAG",
+      "symptom": "Player stuck at room transition or doorway threshold",
+      "cause": "WalkableArea doorway overlap is less than 0.2f",
+      "solution": "Expand adjoining WalkableArea box boundaries so they overlap by >= 0.2f in world units"
+    },
+    {
+      "error_type": "MISSING_META",
+      "symptom": "Asset unassigned or GUID lost after reload",
+      "cause": "Asset file added without corresponding .meta file",
+      "solution": "Run unity CLI to generate .meta or commit paired .meta file"
+    },
+    {
+      "error_type": "ASSEMBLY_DEPENDENCY_LEAK",
+      "symptom": "Compile error: UnityEngine not found in Alif.Adventure.Model",
+      "cause": "Using UnityEngine types (Vector3, GameObject, Transform) inside domain models",
+      "solution": "Use pure C# representations or domain coordinates in Alif.Adventure.Model"
+    }
+  ],
+  "discovered_repos": [
+    {
+      "name": "Lazusion/persona2-innocent-sin-cn-hanization-ai-research",
+      "description": "[AI-Generated] Persona 2 Innocent Sin PSP ROM Hacking + Chinese Translation Research. This repo is for reference only, likely incomplete - no playable patch provided. 2 AI models (Copilot & Claude Code) + 1 human collaborated on unpacking CPK, decoding 5720 dialogues, analyzing syscg font system.",
+      "stars": 2,
+      "url": "https://github.com/Lazusion/persona2-innocent-sin-cn-hanization-ai-research",
+      "relevant_to_task": "Search reference repos for dialogue systems",
+      "added_at": "2026-09-13T10:16:48.024172"
+    }
+  ],
+  "evolution_cycles": [
+    {
+      "timestamp": "2026-09-13T10:14:50.426665",
+      "summary": "Task 'Build market level with fruit stall' (WORLD_DESIGN) completed. Healed: False, Repos linked: 0.",
+      "changes_analyzed": 0,
+      "new_symbols": [
+        "AgentGeneratedWorld"
+      ]
+    },
+    {
+      "timestamp": "2026-09-13T10:14:59.771489",
+      "summary": "Task 'Build market level with fruit stall' (WORLD_DESIGN) completed. Healed: False, Repos linked: 0.",
+      "changes_analyzed": 0,
+      "new_symbols": [
+        "AgentGeneratedWorld"
+      ]
+    },
+    {
+      "timestamp": "2026-09-13T10:15:12.152969",
+      "summary": "Evolved knowledge base: 94 C# symbols, 2 Yarn nodes, 1 tile specs. Discovered 83 new symbols.",
+      "changes_analyzed": 371,
+      "new_symbols": [
+        "SceneFadeController",
+        "BattleEncounterController",
+        "ObjectiveUI",
+        "ScoreBalanceFeedbackUI",
+        "FacingDirection",
+        "DialogueChoice",
+        "BattlePhase",
+        "JoystickMode",
+        "InventorySlot",
+        "ScoreSystem"
+      ]
+    },
+    {
+      "timestamp": "2026-09-13T10:16:20.295490",
+      "summary": "Task 'Design a bazaar market with 2 food stalls' (WORLD_DESIGN) completed. Healed: False, Repos linked: 0.",
+      "changes_analyzed": 0,
+      "new_symbols": [
+        "AgentGeneratedWorld"
+      ]
+    },
+    {
+      "timestamp": "2026-09-13T10:16:29.310848",
+      "summary": "Task 'Search reference repos for dialogue systems' (RESEARCH) completed. Healed: False, Repos linked: 1.",
+      "changes_analyzed": 0,
+      "new_symbols": []
+    },
+    {
+      "timestamp": "2026-09-13T10:16:48.025271",
+      "summary": "Task 'Search reference repos for dialogue systems' (RESEARCH) completed. Healed: False, Repos linked: 1.",
+      "changes_analyzed": 0,
+      "new_symbols": []
+    }
+  ]
+}
