@@ -11,6 +11,11 @@ namespace Alif.World
     [RequireComponent(typeof(SpriteRenderer))]
     public class YSortOrder : MonoBehaviour
     {
+        // Band sorting untuk prompt/marker dunia (panah interaksi, keycap E, label objektif):
+        // HARUS di atas plafon Y-sort dunia. Order Y-sort = 1000 - y*100, dan peta terdalam
+        // (Warung Dalam, y=-40) menyentuh 5000 — band 8000+ memberi margin aman.
+        public const int PromptOrderBase = 8000;
+
         [Tooltip("Offset Y dari pivot ke titik tumpu kaki (misalnya -0.35 untuk karakter).")]
         [SerializeField] private float _offsetY = -0.3f;
 

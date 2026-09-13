@@ -749,7 +749,8 @@ namespace Alif.EditorTools
             character.transform.position = new Vector3(position.x, position.y, 0f);
 
             SpriteRenderer renderer = GetOrAddComponent<SpriteRenderer>(character);
-            renderer.sprite = characterData.Portrait;
+            // Sprite dunia = frame pixel-art (WorldSprite); Portrait ilustrasi hanya buat dialogue box.
+            renderer.sprite = characterData.WorldSprite != null ? characterData.WorldSprite : characterData.Portrait;
             renderer.sortingOrder = SortingOrderCharacters;
 
             Animator animator = GetOrAddComponent<Animator>(character);
@@ -1361,7 +1362,7 @@ namespace Alif.EditorTools
             npc.layer = LayerIndexInteractable;
 
             SpriteRenderer sr = GetOrAddComponent<SpriteRenderer>(npc);
-            sr.sprite = characterData.Portrait;
+            sr.sprite = characterData.WorldSprite != null ? characterData.WorldSprite : characterData.Portrait;
             sr.sortingOrder = SortingOrderCharacters;
 
             // Solid foot collider di kaki NPC agar pemain tidak menembus badan
@@ -1486,7 +1487,7 @@ namespace Alif.EditorTools
             {
                 importer.textureType = TextureImporterType.Sprite;
                 importer.spriteImportMode = SpriteImportMode.Single;
-                importer.filterMode = FilterMode.Bilinear;
+                importer.filterMode = FilterMode.Bilinear; // ilustrasi halus buat dialogue box
                 importer.alphaIsTransparency = true;
                 importer.mipmapEnabled = false;
                 importer.SaveAndReimport();
@@ -1523,7 +1524,8 @@ namespace Alif.EditorTools
 
             SpriteRenderer sr = GetOrAddComponent<SpriteRenderer>(arrow);
             sr.sprite = GetOrCreateTriangleSprite("InteractionArrow", new Color(1f, 1f, 1f, 0.95f), 64);
-            sr.sortingOrder = SortingOrderCharacters + 10;
+            // Band prompt: selalu di atas sprite dunia Y-sort (lihat YSortOrder.PromptOrderBase).
+            sr.sortingOrder = YSortOrder.PromptOrderBase + 10;
 
             FloatingPrompt prompt = GetOrAddComponent<FloatingPrompt>(arrow);
             prompt.SetBasePosition(new Vector3(localOffset.x, localOffset.y, 0f));
@@ -2412,7 +2414,20 @@ namespace Alif.EditorTools
             GameObject slot = FindOrCreateChild(parent, $"Slot_{index}");
             RectTransform slotRT = slot.GetComponent<RectTransform>() ?? slot.AddComponent<RectTransform>();
             slotRT.sizeDelta = new Vector2(60, 60);
-            AddImage(slotRT, new Color(0.93f, 0.87f, 0.74f, 1f));
+            // Frame pixel-art 9-slice menggantikan warna flat — hotbar ikut bahasa visual
+            // pixel UI yang sama dengan joystick/tombol VariantC.
+            Image slotImage = GetOrAddComponent<Image>(slot);
+            Sprite frame = GetOrCreateSlotFrameSprite();
+            if (frame != null)
+            {
+                slotImage.sprite = frame;
+                slotImage.type = Image.Type.Sliced;
+                slotImage.color = Color.white;
+            }
+            else
+            {
+                slotImage.color = new Color(0.93f, 0.87f, 0.74f, 1f); // fallback warna flat
+            }
             GetOrAddComponent<LayoutElement>(slot).preferredWidth = 60;
             slot.GetComponent<LayoutElement>().preferredHeight = 60;
 
@@ -2568,7 +2583,7 @@ namespace Alif.EditorTools
             AudioClip clickSfx = AssetDatabase.LoadAssetAtPath<AudioClip>(ClickSfxClipPath);
             if (clickSfx == null)
             {
-                Debug.LogWarning("[Alif] SFX klik tombol belum digenerate — jalankan menu 'Alif > 6) Generate Placeholder Audio' dulu, lalu build ulang scene ini.");
+                Debug.LogWarning("[Alif] SFX klik tombol belum digenerate — jalankan menu 'Alif > 6) Generate Game Audio' dulu, lalu build ulang scene ini.");
             }
 
             return (audioManager, clickSfx);
@@ -2989,7 +3004,9 @@ namespace Alif.EditorTools
             var importer = (TextureImporter)AssetImporter.GetAtPath(relativePath);
             importer.textureType = TextureImporterType.Sprite;
             importer.spriteImportMode = SpriteImportMode.Single;
-            importer.filterMode = FilterMode.Bilinear;
+            // Point: ikon primitif dipakai berdampingan dengan sprite pixel-art di world —
+            // bilinear membuatnya tampak blur/kabur di samping art yang crisp.
+            importer.filterMode = FilterMode.Point;
             importer.alphaIsTransparency = true;
             importer.mipmapEnabled = false;
             importer.spritePixelsPerUnit = 200f;
@@ -3041,7 +3058,7 @@ namespace Alif.EditorTools
             var importer = (TextureImporter)AssetImporter.GetAtPath(relativePath);
             importer.textureType = TextureImporterType.Sprite;
             importer.spriteImportMode = SpriteImportMode.Single;
-            importer.filterMode = FilterMode.Bilinear;
+            importer.filterMode = FilterMode.Point;
             importer.alphaIsTransparency = true;
             importer.mipmapEnabled = false;
             importer.textureCompression = TextureImporterCompression.Uncompressed;
@@ -3102,7 +3119,7 @@ namespace Alif.EditorTools
             var importer = (TextureImporter)AssetImporter.GetAtPath(relativePath);
             importer.textureType = TextureImporterType.Sprite;
             importer.spriteImportMode = SpriteImportMode.Single;
-            importer.filterMode = FilterMode.Bilinear;
+            importer.filterMode = FilterMode.Point;
             importer.alphaIsTransparency = true;
             importer.mipmapEnabled = false;
             importer.textureCompression = TextureImporterCompression.Uncompressed;
@@ -3113,6 +3130,66 @@ namespace Alif.EditorTools
 
         // Alpha 0..1 buat 1 piksel (x,y) dalam persegi rounded-corner ukuran width x height,
         // radius sudut r — 1 penuh di tengah, di-soften 1px persis di lengkungan sudut.
+        // Frame slot inventory pixel-art 48x48 dengan border 9-slice 4px — krem senada
+        // tema UI kayu/kertas, shading tipis di tepi bawah-kanan dalam untuk kesan kedalaman.
+        // Dipakai Image.Type.Sliced supaya border tetap 4px di ukuran slot berapa pun.
+        internal static Sprite GetOrCreateSlotFrameSprite()
+        {
+            const string relativePath = "Assets/Sprites/UI/SlotFrame.png";
+            Sprite existing = AssetDatabase.LoadAssetAtPath<Sprite>(relativePath);
+            if (existing != null)
+            {
+                return existing;
+            }
+
+            EnsureFolder("Assets/Sprites/UI");
+
+            const int size = 48;
+            const int border = 4;
+            var borderColor = new Color(0.35f, 0.25f, 0.14f, 1f);
+            var fillColor = new Color(0.93f, 0.87f, 0.74f, 1f);
+            var shadeColor = new Color(0.85f, 0.78f, 0.62f, 1f);
+
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            var pixels = new Color[size * size];
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    bool onBorder = x < border || x >= size - border || y < border || y >= size - border;
+                    Color pixel = borderColor;
+                    if (!onBorder)
+                    {
+                        bool innerShade = x >= size - border - 2 || y < border + 2;
+                        pixel = innerShade ? shadeColor : fillColor;
+                    }
+                    pixels[y * size + x] = pixel;
+                }
+            }
+            tex.SetPixels(pixels);
+            tex.Apply();
+
+            byte[] png = tex.EncodeToPNG();
+            Object.DestroyImmediate(tex);
+
+            string projectRoot = Directory.GetParent(Application.dataPath).FullName;
+            File.WriteAllBytes(Path.Combine(projectRoot, relativePath), png);
+            AssetDatabase.ImportAsset(relativePath);
+
+            var importer = (TextureImporter)AssetImporter.GetAtPath(relativePath);
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.filterMode = FilterMode.Point;
+            importer.alphaIsTransparency = true;
+            importer.mipmapEnabled = false;
+            importer.spritePixelsPerUnit = 100f;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.spriteBorder = new Vector4(border, border, border, border);
+            importer.SaveAndReimport();
+
+            return AssetDatabase.LoadAssetAtPath<Sprite>(relativePath);
+        }
+
         private static float RoundedRectEdgeAlpha(int x, int y, int width, int height, int r)
         {
             float px = x + 0.5f;

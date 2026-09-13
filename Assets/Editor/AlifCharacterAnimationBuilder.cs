@@ -231,6 +231,9 @@ namespace Alif.EditorTools
             data.CharacterName = displayName;
             data.Description = description;
             data.Portrait = portrait;
+            // Sprite dunia selalu frame pixel-art south idle — portrait ilustrasi boleh
+            // dipakai untuk dialogue box, tapi SpriteRenderer dunia harus skala karakter.
+            data.WorldSprite = AssetDatabase.LoadAssetAtPath<Sprite>($"{charFolder}/Idle/rotations/south.png");
             data.AnimatorController = controller;
             EditorUtility.SetDirty(data);
         }

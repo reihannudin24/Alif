@@ -39,10 +39,11 @@ namespace Alif.EditorTools
 
             var errors = new List<string>();
 
-            // 1. Walkable Areas sanity
+            // 1. Walkable Areas sanity (whitelist bersifat opsional per arsitektur — map tanpa
+            // whitelist memakai physics biasa, jadi absennya bukan error, cukup peringatan).
             if (walkableAreas.Length == 0)
             {
-                errors.Add("No WalkableArea components found in scene.");
+                Debug.LogWarning("[AlifLevelValidator] No WalkableArea components found in scene; floor whitelist checks are skipped (plain physics mode).");
             }
             foreach (var area in walkableAreas)
             {
@@ -110,6 +111,80 @@ namespace Alif.EditorTools
                 }
             }
 
+            // 5. Prop grounding & overlap — prop berdiri (feet blocker tipis di akar sprite)
+            // harus menapak lantai whitelist (kalau regionnya memakai whitelist), tidak
+            // menumpuk feet prop lain, dan tidak menanam diri ke blocker dinding/void.
+            var feetProps = new List<(GameObject owner, Collider2D feet)>();
+            foreach (var renderer in UnityEngine.Object.FindObjectsByType<SpriteRenderer>(FindObjectsInactive.Include))
+            {
+                var go = renderer.gameObject;
+                if (go.GetComponentInParent<PlayerController>(true) != null) continue; // player bergerak, posisinya bukan authored
+                Collider2D feet = null;
+                foreach (var collider in go.GetComponents<Collider2D>())
+                {
+                    if (collider.isTrigger) continue;
+                    var box = collider as BoxCollider2D;
+                    var capsule = collider as CapsuleCollider2D;
+                    if ((box != null && box.size.y <= 0.25f) || (capsule != null && capsule.size.y <= 0.3f)) { feet = collider; break; }
+                }
+                if (feet != null) feetProps.Add((go, feet));
+            }
+
+            var whitelistColliders = walkableAreas.Select(a => a.GetComponent<Collider2D>()).Where(c => c != null).ToArray();
+            foreach (var (owner, feet) in feetProps)
+            {
+                var bounds = feet.bounds;
+                var feetPoint = new Vector2(bounds.center.x, bounds.min.y + 0.05f);
+                bool nearWhitelist = whitelistColliders.Any(c => c.bounds.SqrDistance(feetPoint) <= 16f);
+                bool insideWhitelist = whitelistColliders.Any(c => c.OverlapPoint(feetPoint));
+                if (nearWhitelist && !insideWhitelist)
+                {
+                    errors.Add($"Prop '{owner.name}' feet at {feetPoint} hover outside the walkable whitelist.");
+                }
+
+                foreach (var blocker in UnityEngine.Object.FindObjectsByType<Collider2D>(FindObjectsInactive.Include))
+                {
+                    if (blocker == feet || blocker.isTrigger || blocker.transform.IsChildOf(owner.transform)) continue;
+                    if (!(blocker.name.StartsWith("VoidBlocker_") || blocker.name.StartsWith("BoundaryWall_") || blocker.name.StartsWith("PropBlocker_"))) continue;
+                    if (bounds.Intersects(blocker.bounds))
+                    {
+                        errors.Add($"Prop '{owner.name}' is embedded in solid blocker '{blocker.name}'.");
+                    }
+                }
+            }
+            for (int i = 0; i < feetProps.Count; i++)
+            {
+                for (int j = i + 1; j < feetProps.Count; j++)
+                {
+                    if (feetProps[i].feet.bounds.Intersects(feetProps[j].feet.bounds))
+                    {
+                        errors.Add($"Props '{feetProps[i].owner.name}' and '{feetProps[j].owner.name}' overlap each other's feet colliders.");
+                    }
+                }
+            }
+
+            // 6. Band sorting prompt eksklusif — hanya prompt/marker (panah, keycap, label,
+            // marker objektif) yang boleh berada di atas PromptOrderBase di layer Default.
+            string[] promptNames = { "InteractionArrow", "Marker", "Objective label", "KeycapE" };
+            foreach (var renderer in UnityEngine.Object.FindObjectsByType<SpriteRenderer>(FindObjectsInactive.Include))
+            {
+                if (renderer.sortingLayerName != "Default") continue;
+                bool isPrompt = promptNames.Contains(renderer.name);
+                if (!isPrompt && renderer.sortingOrder >= YSortOrder.PromptOrderBase)
+                {
+                    errors.Add($"SpriteRenderer '{renderer.name}' (order {renderer.sortingOrder}) intrudes into the prompt sorting band.");
+                }
+            }
+            foreach (var mesh in UnityEngine.Object.FindObjectsByType<MeshRenderer>(FindObjectsInactive.Include))
+            {
+                if (mesh.sortingLayerName != "Default") continue;
+                bool isPrompt = promptNames.Contains(mesh.name);
+                if (isPrompt && mesh.sortingOrder < YSortOrder.PromptOrderBase)
+                {
+                    errors.Add($"World prompt '{mesh.name}' (order {mesh.sortingOrder}) sorts below the prompt band and hides behind Y-sorted sprites.");
+                }
+            }
+
             if (errors.Count > 0)
             {
                 string msg = $"[AlifLevelValidator] FAILED with {errors.Count} error(s):\n - " + string.Join("\n - ", errors);
@@ -124,11 +199,10 @@ namespace Alif.EditorTools
 
         public static void ValidateAllScenes()
         {
-            string[] scenesToTest = new[]
-            {
-                "Assets/Scenes/Adventure/AdventureChapter1.unity",
-                "Assets/Scenes/SampleScene.unity"
-            };
+            var scenesToTest = Enumerable.Range(1, 5)
+                .Select(c => $"Assets/Scenes/Adventure/AdventureChapter{c}.unity")
+                .Concat(new[] { "Assets/Scenes/SampleScene.unity" })
+                .ToArray();
 
             foreach (var scenePath in scenesToTest)
             {

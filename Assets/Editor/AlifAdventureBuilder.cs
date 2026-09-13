@@ -16,6 +16,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 using Object = UnityEngine.Object;
 
 namespace Alif.EditorTools
@@ -71,7 +72,11 @@ namespace Alif.EditorTools
                 {
                     string path="Assets/Scenes/Adventure/"+AdventureGame.SceneFor(chapter)+".unity";
                     var existing=EditorSceneManager.OpenScene(path);
-                    if(Find<PlayerController>().Length>0)continue; // Preserve authored/repaired worlds on repeated runs.
+                    bool hasWorld=Find<PlayerController>().Length>0;
+                    if(hasWorld&&RepairNpcWorldSprites())EditorSceneManager.SaveScene(existing); // Migrasi sprite NPC dunia tanpa rebuild.
+                    if(hasWorld&&RepairInventorySlotFrames())EditorSceneManager.SaveScene(existing); // Slot flat -> frame pixel-art.
+                    if(hasWorld&&RepairPromptSortingBand())EditorSceneManager.SaveScene(existing); // Prompt lama -> band YSortOrder.PromptOrderBase.
+                    if(hasWorld)continue; // Preserve authored/repaired worlds on repeated runs.
                     bool kos=chapter==2||chapter==3;
                     var scene=EditorSceneManager.OpenScene(kos?"Assets/Scenes/Chapter2Gameplay.unity":"Assets/Scenes/SampleScene.unity");
                     foreach(var behaviour in Find<MonoBehaviour>())
@@ -113,13 +118,14 @@ namespace Alif.EditorTools
                             point.transform.position=FindFreePosition(desired,game.Centers[group.Key],player);
                             var collider=point.AddComponent<CircleCollider2D>();collider.isTrigger=true;collider.radius=.3f;
                             var activity=point.AddComponent<AdventurePoint>();activity.Game=game;activity.Area=group.Key;activity.Target=target;
-                            var visual=new GameObject("Marker").AddComponent<SpriteRenderer>();visual.transform.SetParent(point.transform,false);visual.sprite=game.DocumentIcon;visual.sortingOrder=100;
+                            var visual=new GameObject("Marker").AddComponent<SpriteRenderer>();visual.transform.SetParent(point.transform,false);visual.sprite=game.DocumentIcon;visual.sortingOrder=YSortOrder.PromptOrderBase;
                             if(visual.sprite)visual.transform.localScale=Vector3.one*(.5f/visual.sprite.bounds.size.y);
-                            var label=new GameObject("Objective label").AddComponent<TextMeshPro>();label.transform.SetParent(point.transform,false);label.transform.localPosition=new Vector3(0,.65f,0);label.fontSize=2.1f;label.alignment=TextAlignmentOptions.Center;label.rectTransform.sizeDelta=new Vector2(3,1);label.text=target;activity.Label=label;
-                            var arrow=new GameObject("InteractionArrow").AddComponent<SpriteRenderer>();arrow.transform.SetParent(point.transform,false);arrow.transform.localPosition=new Vector3(0,1,0);arrow.sprite=game.InteractionArrow;arrow.sortingOrder=110;arrow.gameObject.SetActive(false);
+                            var label=new GameObject("Objective label").AddComponent<TextMeshPro>();label.transform.SetParent(point.transform,false);label.transform.localPosition=new Vector3(0,.65f,0);label.fontSize=2.1f;label.alignment=TextAlignmentOptions.Center;label.rectTransform.sizeDelta=new Vector2(3,1);label.text=target;activity.Label=label;label.GetComponent<MeshRenderer>().sortingOrder=YSortOrder.PromptOrderBase+20;
+                            var arrow=new GameObject("InteractionArrow").AddComponent<SpriteRenderer>();arrow.transform.SetParent(point.transform,false);arrow.transform.localPosition=new Vector3(0,1,0);arrow.sprite=game.InteractionArrow;arrow.sortingOrder=YSortOrder.PromptOrderBase+10;arrow.gameObject.SetActive(false);
                         }
                     }
                     EditorSceneManager.SaveScene(scene,path);
+                    if(RepairNpcWorldSprites()|RepairInventorySlotFrames()|RepairPromptSortingBand())EditorSceneManager.SaveScene(scene); // Hasil clone mewarisi Portrait lama & slot flat dari scene sumber.
                     Debug.Log("[Alif] Repaired missing world: "+path);
                 }
                 RepairChapterOneScene();
@@ -177,6 +183,76 @@ namespace Alif.EditorTools
             Build();
             Debug.Log("[Alif] Chapter 1 collision resynced from the authoritative builder tables.");
         }
+        // SpriteRenderer dunia pernah diisi Portrait ilustrasi (~5 unit, hanya pantas di
+        // dialogue box) — tukar semua renderer yang masih memakai portrait ke pasangan
+        // pixel-art WorldSprite-nya. Self-heal asset CharacterData lama sekaligus.
+        static bool RepairNpcWorldSprites()
+        {
+            bool assetsDirty=false;
+            var portraitToWorld=new Dictionary<Sprite,Sprite>();
+            foreach(var guid in AssetDatabase.FindAssets("t:CharacterData"))
+            {
+                var data=AssetDatabase.LoadAssetAtPath<CharacterData>(AssetDatabase.GUIDToAssetPath(guid));
+                if(data==null||!data.Portrait)continue;
+                if(!data.WorldSprite)
+                {
+                    string folder=data.name.StartsWith("CharacterData_")?data.name.Substring("CharacterData_".Length):data.name;
+                    data.WorldSprite=Sprite($"Assets/Sprites/Characters/{folder}/Idle/rotations/south.png")
+                        ??Sprite($"Assets/Sprites/Characters/{folder.ToLowerInvariant()}/Idle/rotations/south.png");
+                    if(data.WorldSprite){EditorUtility.SetDirty(data);assetsDirty=true;}
+                }
+                if(data.WorldSprite&&!portraitToWorld.ContainsKey(data.Portrait))portraitToWorld[data.Portrait]=data.WorldSprite;
+            }
+            if(assetsDirty)AssetDatabase.SaveAssets();
+            bool sceneChanged=false;
+            foreach(var renderer in Find<SpriteRenderer>())
+                if(renderer.sprite!=null&&portraitToWorld.TryGetValue(renderer.sprite,out var worldSprite))
+                {renderer.sprite=worldSprite;sceneChanged=true;}
+            return sceneChanged;
+        }
+        // Slot inventory hasil clone masih berupa Image warna flat — pasang frame pixel-art
+        // 9-slice yang sama dengan builder supaya hotbar konsisten dengan UI pixel lainnya.
+        static bool RepairInventorySlotFrames()
+        {
+            var frame=AlifDemoSceneBuilder.GetOrCreateSlotFrameSprite();
+            if(frame==null)return false;
+            bool changed=false;
+            foreach(var panel in Find<Transform>().Where(t=>t.name=="Inventory_Panel"))
+                foreach(var slot in panel.Cast<Transform>().Where(t=>t.name.StartsWith("Slot_")))
+                {
+                    var image=slot.GetComponent<Image>();
+                    if(image==null)continue;
+                    if(image.sprite==frame&&image.type==Image.Type.Sliced)continue;
+                    image.sprite=frame;image.type=Image.Type.Sliced;image.color=Color.white;changed=true;
+                }
+            return changed;
+        }
+        // Prompt dunia (panah, marker, label objektif, keycap) yang dibuat sebelum adanya
+        // band sorting masih memakai order lama (110/100/0) dan tertutup sprite Y-sort.
+        // Paksa semua prompt ke band YSortOrder.PromptOrderBase di layer Default.
+        static bool RepairPromptSortingBand()
+        {
+            bool changed=false;
+            foreach(var renderer in Find<SpriteRenderer>())
+            {
+                int target=renderer.name switch
+                {
+                    "InteractionArrow"=>YSortOrder.PromptOrderBase+10,
+                    "Marker"=>YSortOrder.PromptOrderBase,
+                    _=>0,
+                };
+                if(target>0&&renderer.sortingLayerName=="Default"&&renderer.sortingOrder!=target)
+                {renderer.sortingOrder=target;changed=true;}
+            }
+            foreach(var mesh in Find<MeshRenderer>())
+            {
+                if(mesh.name!="Objective label"&&mesh.name!="KeycapE")continue;
+                int target=mesh.name=="Objective label"?YSortOrder.PromptOrderBase+20:YSortOrder.PromptOrderBase+2;
+                if(mesh.sortingLayerName=="Default"&&mesh.sortingOrder!=target)
+                {mesh.sortingOrder=target;changed=true;}
+            }
+            return changed;
+        }
         static void SyncChapterOneCollision()
         {
             // Whitelist lantai hasil edit manual (duplikat "WalkableArea_X (1)", kotak
@@ -187,8 +263,10 @@ namespace Alif.EditorTools
             AlifDemoSceneBuilder.RebuildChapterOneCollision();
             // Easter egg warisan SampleScene (kucing & koin) bukan konten Adventure; pelitanya
             // yang layer Interactable malah mencuri tombol E di dekat "Papan arah" tutorial.
+            // Dihapus benar-benar dari clone Adventure (SampleScene sumber tetap utuh) —
+            // objek mati yang cuma di-SetActive(false) tetap membebani scene & QA visual.
             foreach(string legacy in new[]{"Cat_SiBelang","Secret_LuckyCoin"})
-            {var go=Named(legacy);if(go)go.SetActive(false);}
+            {var go=Named(legacy);if(go)Object.DestroyImmediate(go);}
             Physics2D.SyncTransforms();
         }
         static void RepairChapterOneScene()
@@ -213,7 +291,11 @@ namespace Alif.EditorTools
             var menu=Required("PapanMenu_Interact");
             var receipt=Required("MejaTungguPesanan");
             var cashier=Required("BuSiti_Kasir");
-            station.transform.position=new Vector2(2.6f,-1.55f);
+            // Papan arah tutorial berdiri di koridor tengah — satu-satunya area yang pasti
+            // lantai kosong (tanpa furnitur painted). Dulu di RuangTunggu (y -1.55/-2.45),
+            // zona furnitur painted berlanjut lebih dalam dari whitelist sehingga kaki papan
+            // tampak mengambang di atas bangku painted (flag QA visual berulang).
+            station.transform.position=new Vector2(0.15f,-1.5f);
             SetSprite(station,game.SignFamilySprites.ElementAtOrDefault(0),1.35f);
             ConfigureStaticYSort(station);
             BindPoint(game,station,"Papan arah",0,(Vector2)station.transform.position+new Vector2(0,-.7f));
@@ -236,11 +318,14 @@ namespace Alif.EditorTools
             ConfigureReaction(cashier,game.ReactionPoseSprites.ElementAtOrDefault(1),game.EmoteSprites.ElementAtOrDefault(0));
             BindPoint(game,cashier,"Bu Siti",3,(Vector2)cashier.transform.position+new Vector2(0,-.85f));
 
-            var petugas=AddAmbience("PetugasStasiun",game.ReactionPoseSprites.ElementAtOrDefault(0),new Vector2(-4.35f,-1.65f),1.25f,18);
+            // Semua prop berdiri ditaruh di lantai terbuka (bukan menumpuk furnitur painted):
+            // luggage/timetable dulu di y≈-1.6, tepat di muka kabinet & dinding painted,
+            // sehingga terlihat melayang di atas furnitur (flag QA visual).
+            var petugas=AddAmbience("PetugasStasiun",game.ReactionPoseSprites.ElementAtOrDefault(0),new Vector2(-4.35f,-1.72f),1.25f,18);
             ConfigureReaction(petugas,game.ReactionPoseSprites.ElementAtOrDefault(0),game.EmoteSprites.ElementAtOrDefault(1));
             AddPetugasFeet(petugas);
-            AddAmbience("VariantC_StationLuggage",game.LocationPropSprites.ElementAtOrDefault(0),new Vector2(4.45f,-1.62f),1.15f,16,.5f);
-            AddAmbience("VariantC_StationTimetable",game.LocationPropSprites.ElementAtOrDefault(1),new Vector2(-3.15f,-1.65f),.9f,15,.35f);
+            AddAmbience("VariantC_StationLuggage",game.LocationPropSprites.ElementAtOrDefault(0),new Vector2(4.45f,-2.35f),1.15f,16,.5f);
+            AddAmbience("VariantC_StationTimetable",game.LocationPropSprites.ElementAtOrDefault(1),new Vector2(-3.15f,-2.35f),.9f,15,.35f);
             // Crates dulu di x=35.25 — di luar batas gambar Warung Depan (x 35.6..44.4), mengambang
             // di void hitam. Ditampilkan di garis lantai gang, dekat dinding kiri.
             AddAmbience("VariantC_GangPlanterCrates",game.LocationPropSprites.ElementAtOrDefault(2),new Vector2(36.1f,-21.35f),1.15f,14,.6f);
@@ -343,8 +428,8 @@ namespace Alif.EditorTools
             var collider=trigger.AddComponent<CircleCollider2D>();collider.isTrigger=true;collider.radius=.42f;
             var point=trigger.AddComponent<AdventurePoint>();point.Game=game;point.Area=area;point.Target=target;point.Reaction=prop.GetComponent<AdventureNpcReaction>();
             var bounds=prop.GetComponentInChildren<SpriteRenderer>()?.bounds??new Bounds(prop.transform.position,Vector3.one);
-            var label=new GameObject("Objective label").AddComponent<TextMeshPro>();label.transform.SetParent(prop.transform,true);label.transform.position=new Vector3(bounds.center.x,bounds.max.y+.22f,0);label.fontSize=2.1f;label.alignment=TextAlignmentOptions.Center;label.rectTransform.sizeDelta=new Vector2(3,1);label.text=target;point.Label=label;
-            var arrow=new GameObject("InteractionArrow").AddComponent<SpriteRenderer>();arrow.transform.SetParent(prop.transform,true);arrow.transform.position=new Vector3(bounds.center.x,bounds.max.y+.65f,0);arrow.sprite=game.InteractionArrow;arrow.sortingOrder=110;arrow.gameObject.SetActive(false);
+            var label=new GameObject("Objective label").AddComponent<TextMeshPro>();label.transform.SetParent(prop.transform,true);label.transform.position=new Vector3(bounds.center.x,bounds.max.y+.22f,0);label.fontSize=2.1f;label.alignment=TextAlignmentOptions.Center;label.rectTransform.sizeDelta=new Vector2(3,1);label.text=target;point.Label=label;label.GetComponent<MeshRenderer>().sortingOrder=YSortOrder.PromptOrderBase+20;
+            var arrow=new GameObject("InteractionArrow").AddComponent<SpriteRenderer>();arrow.transform.SetParent(prop.transform,true);arrow.transform.position=new Vector3(bounds.center.x,bounds.max.y+.65f,0);arrow.sprite=game.InteractionArrow;arrow.sortingOrder=YSortOrder.PromptOrderBase+10;arrow.gameObject.SetActive(false);
             return point;
         }
         static T[] Find<T>() where T:Object => Object.FindObjectsByType<T>(FindObjectsInactive.Include,FindObjectsSortMode.None);

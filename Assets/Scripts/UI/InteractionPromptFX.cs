@@ -50,7 +50,7 @@ namespace Alif.UI
             text.rectTransform.sizeDelta = new Vector2(.6f, .6f);
             var mesh = text.GetComponent<MeshRenderer>();
             mesh.sortingLayerName = "Default";
-            mesh.sortingOrder = 112;
+            mesh.sortingOrder = Alif.World.YSortOrder.PromptOrderBase + 2;
         }
 
         private void LateUpdate()

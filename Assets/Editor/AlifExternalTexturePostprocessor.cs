@@ -38,7 +38,10 @@ namespace Alif.EditorTools
             }
             else if (path.StartsWith(ExternalRpgFolder))
             {
-                importer.spritePixelsPerUnit = 256f;
+                // PPU 100 = skala yang dipakai dunia TileRPG demo yang sudah ter-build
+                // (mengubah ke 256 akan mengecilkan tile 2.56x dan merusak layout prefab).
+                // Filter Point supaya tile pixel-art tidak blur.
+                importer.spritePixelsPerUnit = 100f;
                 importer.filterMode = FilterMode.Point;
                 importer.textureCompression = TextureImporterCompression.Uncompressed;
                 settings.spriteAlignment = (int)SpriteAlignment.BottomCenter;

@@ -18,6 +18,8 @@ namespace Alif.Characters
 
         [Header("Visual")]
         public Sprite Portrait; // Ditampilkan di dialogue box
+        [Tooltip("Sprite pixel-art untuk SpriteRenderer dunia (frame idle south). Portrait ilustrasi hanya untuk dialogue box — jangan dipakai di world karena skalanya ~5x karakter.")]
+        public Sprite WorldSprite; // Dipakai scene builder untuk tampilan awal NPC sebelum Animator jalan
         public RuntimeAnimatorController AnimatorController; // Dipakai NPCController untuk animasi
 
         [Header("Relationship / Dating Sim")]
