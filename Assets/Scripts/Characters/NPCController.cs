@@ -62,6 +62,9 @@ namespace Alif.Characters
                 gameObject.AddComponent<YSortOrder>();
             }
 
+            // Bayangan kaki mengikat NPC ke lantai background painted
+            BlobShadow.Ensure(transform, new Vector3(0f, -0.34f, 0f));
+
             // Pastikan EmoteBubble terpasang
             if (GetComponent<EmoteBubble>() == null)
             {
