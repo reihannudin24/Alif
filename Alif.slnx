@@ -5,4 +5,5 @@
   <Project Path="Alif.Battle.Model.csproj" />
   <Project Path="Alif.Battle.Tests.csproj" />
   <Project Path="Alif.Adventure.Model.csproj" />
+  <Project Path="Alif.PlayMode.Tests.csproj" />
 </Solution>
