@@ -31,6 +31,10 @@ namespace Alif.EditorTools
             new Shot{Scene="Assets/Scenes/Chapter1Cutscene.unity",Tag="cutscene-720p",Width=1280,Height=720},
             new Shot{Scene="Assets/Scenes/Adventure/AdventureChapter1.unity",Tag="chapter1-720p",Width=1280,Height=720},
             new Shot{Scene="Assets/Scenes/Adventure/AdventureChapter1.unity",Tag="chapter1-1080p",Width=1920,Height=1080},
+            new Shot{Scene="Assets/Scenes/Adventure/AdventureChapter2.unity",Tag="chapter2-720p",Width=1280,Height=720},
+            new Shot{Scene="Assets/Scenes/Adventure/AdventureChapter3.unity",Tag="chapter3-720p",Width=1280,Height=720},
+            new Shot{Scene="Assets/Scenes/Adventure/AdventureChapter4.unity",Tag="chapter4-720p",Width=1280,Height=720},
+            new Shot{Scene="Assets/Scenes/Adventure/AdventureChapter5.unity",Tag="chapter5-720p",Width=1280,Height=720},
             new Shot{Scene="Assets/Scenes/Chapter1Ending.unity",Tag="ending-720p",Width=1280,Height=720},
         };
 
@@ -119,6 +123,25 @@ namespace Alif.EditorTools
             }
         }
 
+        // Sama seperti CaptureScene, tetapi canvas HUD (ScreenSpaceOverlay) disembunyikan
+        // dulu — thumbnail chapter harus memperlihatkan dunianya saja tanpa joystick/HUD.
+        static bool CaptureWorldOnly(Camera camera,int width,int height,string path)
+        {
+            var hidden=new List<Canvas>();
+            foreach(var canvas in Object.FindObjectsByType<Canvas>(FindObjectsSortMode.None))
+            {
+                if(canvas.renderMode!=RenderMode.ScreenSpaceOverlay||!canvas.isActiveAndEnabled)continue;
+                canvas.gameObject.SetActive(false);
+                hidden.Add(canvas);
+            }
+            try{return CaptureScene(camera,width,height,path);}
+            finally
+            {
+                foreach(var canvas in hidden)
+                    if(canvas!=null)canvas.gameObject.SetActive(true);
+            }
+        }
+
         static Camera FindCamera()
         {
             var main=Camera.main;
@@ -126,6 +149,50 @@ namespace Alif.EditorTools
             foreach(var camera in Object.FindObjectsByType<Camera>(FindObjectsSortMode.None))
                 if(camera.isActiveAndEnabled)return camera;
             return null;
+        }
+
+        // Thumbnail chapter-select ditangkap dari dunia aslinya (bukan art terpisah) supaya
+        // kartu selalu cocok secara visual dengan yang pemain lihat di dalam game.
+        [MenuItem("Alif/QA/Capture Chapter Thumbnails")]
+        public static void CaptureChapterThumbnails()
+        {
+            if(EditorApplication.isPlaying)throw new InvalidOperationException("Stop Play Mode before capturing thumbnails.");
+            if(!Application.isBatchMode&&!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())return;
+            string outputFolder="Assets/Sprites/Campaign";
+            Directory.CreateDirectory(Path.Combine(ProjectRoot(),outputFolder));
+            var setup=EditorSceneManager.GetSceneManagerSetup();
+            int written=0;
+            try
+            {
+                for(int chapter=1;chapter<=5;chapter++)
+                {
+                    string scenePath=$"Assets/Scenes/Adventure/AdventureChapter{chapter}.unity";
+                    if(!File.Exists(scenePath))continue;
+                    var scene=EditorSceneManager.OpenScene(scenePath,OpenSceneMode.Single);
+                    var camera=FindCamera();
+                    if(camera==null){Debug.LogWarning($"[Alif] No camera in {scenePath}; thumbnail skipped.");continue;}
+                    var game=Object.FindAnyObjectByType<Alif.Adventure.AdventureGame>();
+                    // Bidik area pertama chapter — representatif sebagai sampul kartu.
+                    if(game!=null&&game.Centers!=null&&game.Centers.Length>0)
+                        camera.transform.position=new Vector3(game.Centers[0].x,game.Centers[0].y,camera.transform.position.z);
+                    string path=Path.Combine(ProjectRoot(),outputFolder,$"Thumbnail_Chapter{chapter}.png");
+                    if(CaptureWorldOnly(camera,1280,560,path))
+                    {
+                        AssetDatabase.ImportAsset($"{outputFolder}/Thumbnail_Chapter{chapter}.png");
+                        var importer=(TextureImporter)AssetImporter.GetAtPath($"{outputFolder}/Thumbnail_Chapter{chapter}.png");
+                        importer.textureType=TextureImporterType.Sprite;
+                        importer.spriteImportMode=SpriteImportMode.Single;
+                        importer.filterMode=FilterMode.Bilinear; // render dunia painted, bukan pixel-art mentah
+                        importer.mipmapEnabled=false;
+                        importer.spritePixelsPerUnit=100f;
+                        importer.SaveAndReimport();
+                        written++;
+                    }
+                }
+            }
+            finally{RestoreSetup(setup);AssetDatabase.SaveAssets();}
+            Debug.Log($"[Alif] Captured {written} chapter thumbnail(s) to {outputFolder}.");
+            if(written==0)throw new InvalidOperationException("Chapter thumbnail capture produced no images.");
         }
 
         static string ProjectRoot()=>Path.GetFullPath(Path.Combine(Application.dataPath,".."));

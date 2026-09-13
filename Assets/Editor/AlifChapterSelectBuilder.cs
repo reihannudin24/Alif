@@ -46,17 +46,17 @@ namespace Alif.EditorTools
 
         // Ringkasan dari "Storyline Alif - Capstone Project" (5 file .md yang dikirim user) —
         // tiap chapter satu kasus keuangan syariah berbeda (Riba, Gharar, Maysir, Tadlis, Ponzi).
-        // Chapter 2 pakai KosKosan_Lantai1.png (koridor kos dengan pintu bernomor) karena
-        // lokasinya persis sama dengan denah "Kos-kosan Tio" di skrip Chapter 2. Chapter 3-5
-        // belum punya art final (baru ada sketsa denah kasar buat referensi artist), jadi
-        // dikasih placeholder warna dulu.
+        // Chapter 1-2 memakai background art asli; chapter 3-5 memakai thumbnail yang ditangkap
+        // dari dunia Adventure chapter masing-masing (menu "Alif/QA/Capture Chapter Thumbnails"),
+        // jadi kartu selalu cocok dengan yang terlihat di dalam game. Kalau aset belum ada
+        // (fresh clone belum menjalankan capture), fallback ke warna placeholder.
         private static readonly ChapterEntry[] Chapters =
         {
             new ChapterEntry(1, "Chapter 1", "Prolog: Riba & Gharar", "Assets/Sprites/Backgrounds/Stasiun_Depan.jpg"),
             new ChapterEntry(2, "Chapter 2", "Jebakan Riba", "Assets/Sprites/Backgrounds/KosKosan_Lantai1.png"),
-            new ChapterEntry(3, "Chapter 3", "Ilusi Maysir", null),
-            new ChapterEntry(4, "Chapter 4", "Sindikat Tadlis", null),
-            new ChapterEntry(5, "Chapter 5", "The Grand Ponzi", null),
+            new ChapterEntry(3, "Chapter 3", "Ilusi Maysir", "Assets/Sprites/Campaign/Thumbnail_Chapter3.png"),
+            new ChapterEntry(4, "Chapter 4", "Sindikat Tadlis", "Assets/Sprites/Campaign/Thumbnail_Chapter4.png"),
+            new ChapterEntry(5, "Chapter 5", "The Grand Ponzi", "Assets/Sprites/Campaign/Thumbnail_Chapter5.png"),
         };
 
         // Grid 3 kolom x 2 baris (5 kartu terisi, 1 slot kanan-bawah kosong) — posisi relatif
