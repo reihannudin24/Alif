@@ -162,9 +162,13 @@
     ],
     "yarn_nodes": [
       "BuSiti_Intro",
+      "BuSiti_MarketIntro",
       "Station_NoticeBoard"
     ],
     "tile_specs": [
+      "AgentGardenWorld",
+      "AgentMarketWorld",
+      "MarketBazaar",
       "sample-world"
     ]
   },
@@ -250,6 +254,42 @@
       "timestamp": "2026-09-13T10:16:48.025271",
       "summary": "Task 'Search reference repos for dialogue systems' (RESEARCH) completed. Healed: False, Repos linked: 1.",
       "changes_analyzed": 0,
+      "new_symbols": []
+    },
+    {
+      "timestamp": "2026-09-13T10:29:22.601313",
+      "summary": "Task 'Generate market stall asset and world spec' (DESIGN_ASSETS) completed. Healed: True, Repos linked: 0.",
+      "changes_analyzed": 0,
+      "new_symbols": [
+        "AgentMarketWorld"
+      ]
+    },
+    {
+      "timestamp": "2026-09-13T10:29:44.227489",
+      "summary": "Task 'Generate market stall asset and world spec' (DESIGN_ASSETS) completed. Healed: False, Repos linked: 0.",
+      "changes_analyzed": 0,
+      "new_symbols": [
+        "AgentMarketWorld"
+      ]
+    },
+    {
+      "timestamp": "2026-09-13T10:30:11.308751",
+      "summary": "Evolved knowledge base: 94 C# symbols, 3 Yarn nodes, 3 tile specs. Discovered 0 new symbols.",
+      "changes_analyzed": 396,
+      "new_symbols": []
+    },
+    {
+      "timestamp": "2026-09-13T10:30:55.750090",
+      "summary": "Task 'Design a garden map with stone benches and trees' (WORLD_DESIGN) completed. Healed: False, Repos linked: 0.",
+      "changes_analyzed": 0,
+      "new_symbols": [
+        "AgentGeneratedWorld"
+      ]
+    },
+    {
+      "timestamp": "2026-09-13T10:30:55.837249",
+      "summary": "Evolved knowledge base: 94 C# symbols, 3 Yarn nodes, 4 tile specs. Discovered 0 new symbols.",
+      "changes_analyzed": 396,
       "new_symbols": []
     }
   ]

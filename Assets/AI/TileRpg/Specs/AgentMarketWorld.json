@@ -1,0 +1,62 @@
+{
+  "name": "AgentMarketWorld",
+  "width": 12,
+  "height": 8,
+  "cellSize": 1.0,
+  "palette": [
+    {
+      "symbol": ".",
+      "sprite": "Assets/Sprites/External/RPG_Pack/rpgTile000.png",
+      "layer": "ground",
+      "solid": false
+    },
+    {
+      "symbol": "#",
+      "sprite": "Assets/Sprites/External/RPG_Pack/rpgTile025.png",
+      "layer": "collision",
+      "solid": true
+    },
+    {
+      "symbol": ",",
+      "sprite": "Assets/Sprites/External/RPG_Pack/rpgTile001.png",
+      "layer": "ground",
+      "solid": false
+    },
+    {
+      "symbol": "D",
+      "sprite": "Assets/Sprites/External/RPG_Pack/rpgTile010.png",
+      "layer": "detail",
+      "solid": false
+    },
+    {
+      "symbol": "S",
+      "sprite": "Assets/Sprites/Generated/Tiles/tile_stall.png",
+      "layer": "collision",
+      "solid": true
+    },
+    {
+      "symbol": "C",
+      "sprite": "Assets/Sprites/Generated/Tiles/tile_crate.png",
+      "layer": "detail",
+      "solid": false
+    }
+  ],
+  "rows": [
+    "############",
+    "#..........#",
+    "#..........#",
+    "#..SC.SC...#",
+    "#..........#",
+    "#..........#",
+    "#..........#",
+    "############"
+  ],
+  "spawn": {
+    "x": 1,
+    "y": 1
+  },
+  "exit": {
+    "x": 10,
+    "y": 6
+  }
+}

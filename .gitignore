@@ -127,6 +127,8 @@ test-results.xml
 # AI tool workspaces & caches
 .codex/
 .zcode/
+.claude/
+skills-lock.json
 
 # Python cache & bytecode
 __pycache__/

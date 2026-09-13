@@ -84,6 +84,20 @@ class MemoryManager:
         repos.append(repo_info)
         self.save()
 
+    def add_tile_spec(self, spec_name: str) -> None:
+        symbols = self.data.setdefault("discovered_symbols", {})
+        specs = symbols.setdefault("tile_specs", [])
+        if spec_name not in specs:
+            specs.append(spec_name)
+            self.save()
+
+    def add_yarn_node(self, node_name: str) -> None:
+        symbols = self.data.setdefault("discovered_symbols", {})
+        nodes = symbols.setdefault("yarn_nodes", [])
+        if node_name not in nodes:
+            nodes.append(node_name)
+            self.save()
+
     def record_evolution_cycle(self, summary: str, changes_found: int, new_symbols: List[str]) -> None:
         cycles = self.data.setdefault("evolution_cycles", [])
         cycles.append({

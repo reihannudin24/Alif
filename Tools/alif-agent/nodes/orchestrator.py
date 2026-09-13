@@ -8,7 +8,7 @@ from typing import Dict, Any, List
 
 
 class OrchestratorNode:
-    INTENTS = ["RESEARCH", "WORLD_DESIGN", "GAMEPLAY_DEV", "QA_VALIDATION", "FULL_FEATURE"]
+    INTENTS = ["RESEARCH", "DESIGN_ASSETS", "WORLD_DESIGN", "GAMEPLAY_DEV", "QA_VALIDATION", "FULL_FEATURE"]
 
     def __init__(self, memory_manager=None):
         self.memory = memory_manager
@@ -19,7 +19,9 @@ class OrchestratorNode:
             return "RESEARCH"
         if any(w in t for w in ["test", "lint", "validate", "check", "verify", "ci"]):
             return "QA_VALIDATION"
-        if any(w in t for w in ["tile", "level", "room", "map", "world", "spawn", "schema", "market", "garden"]):
+        if any(w in t for w in ["asset", "sprite", "emote", "art", "tileset", "texture", "props", "manifest"]):
+            return "DESIGN_ASSETS"
+        if any(w in t for w in ["tile", "level", "room", "map", "world", "spawn", "schema", "market", "garden", "station"]):
             return "WORLD_DESIGN"
         if any(w in t for w in ["dialogue", "yarn", "combat", "battle", "controller", "player", "model", "script", "c#"]):
             return "GAMEPLAY_DEV"
@@ -28,14 +30,16 @@ class OrchestratorNode:
     def plan_steps(self, task: str, intent: str) -> List[str]:
         if intent == "RESEARCH":
             return ["repo_hunter", "evolution"]
+        elif intent == "DESIGN_ASSETS":
+            return ["design_asset_agent", "qa_verifier", "evolution"]
         elif intent == "WORLD_DESIGN":
-            return ["world_architect", "qa_verifier", "evolution"]
+            return ["design_asset_agent", "world_architect", "qa_verifier", "evolution"]
         elif intent == "QA_VALIDATION":
             return ["qa_verifier", "evolution"]
         elif intent == "GAMEPLAY_DEV":
             return ["gameplay_dev", "qa_verifier", "evolution"]
         else: # FULL_FEATURE
-            return ["repo_hunter", "world_architect", "gameplay_dev", "qa_verifier", "evolution"]
+            return ["repo_hunter", "design_asset_agent", "world_architect", "gameplay_dev", "qa_verifier", "evolution"]
 
     def execute(self, state: Dict[str, Any]) -> Dict[str, Any]:
         task = state.get("task", "")

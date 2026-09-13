@@ -67,7 +67,7 @@ def cmd_status(args):
     print(f"Yarn Dialogue Nodes: {len(symbols.get('yarn_nodes', []))}")
     print(f"TileRPG Specs: {len(symbols.get('tile_specs', []))}")
     print("\nActive Graph Nodes:")
-    for node in ["orchestrator", "repo_hunter", "world_architect", "gameplay_dev", "qa_verifier", "self_healer", "evolution"]:
+    for node in ["orchestrator", "repo_hunter", "design_asset_agent", "world_architect", "gameplay_dev", "qa_verifier", "self_healer", "evolution"]:
         print(f"  - {node}")
     print("========================================")
 

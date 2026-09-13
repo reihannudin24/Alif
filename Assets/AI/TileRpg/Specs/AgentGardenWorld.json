@@ -1,0 +1,62 @@
+{
+  "name": "AgentGardenWorld",
+  "width": 12,
+  "height": 8,
+  "cellSize": 1.0,
+  "palette": [
+    {
+      "symbol": ".",
+      "sprite": "Assets/Sprites/External/RPG_Pack/rpgTile000.png",
+      "layer": "ground",
+      "solid": false
+    },
+    {
+      "symbol": "#",
+      "sprite": "Assets/Sprites/External/RPG_Pack/rpgTile025.png",
+      "layer": "collision",
+      "solid": true
+    },
+    {
+      "symbol": ",",
+      "sprite": "Assets/Sprites/External/RPG_Pack/rpgTile001.png",
+      "layer": "ground",
+      "solid": false
+    },
+    {
+      "symbol": "D",
+      "sprite": "Assets/Sprites/External/RPG_Pack/rpgTile010.png",
+      "layer": "detail",
+      "solid": false
+    },
+    {
+      "symbol": "T",
+      "sprite": "Assets/Sprites/Generated/Tiles/tile_tree.png",
+      "layer": "collision",
+      "solid": true
+    },
+    {
+      "symbol": "F",
+      "sprite": "Assets/Sprites/Generated/Tiles/tile_flower.png",
+      "layer": "detail",
+      "solid": false
+    }
+  ],
+  "rows": [
+    "############",
+    "#..........#",
+    "#.F.T.F.F..#",
+    "#.F.F.T.F..#",
+    "#.T.F.F.T..#",
+    "#.F.T.F.F..#",
+    "#..........#",
+    "############"
+  ],
+  "spawn": {
+    "x": 1,
+    "y": 1
+  },
+  "exit": {
+    "x": 10,
+    "y": 6
+  }
+}

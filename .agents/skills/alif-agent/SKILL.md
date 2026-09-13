@@ -29,7 +29,8 @@ The Alif Agentic Graph orchestrates specialized roles:
 |---|---|
 | **`orchestrator`** | Analyzes developer intent, decomposes tasks into sub-problems, and schedules graph execution. |
 | **`repo_hunter`** | Leverages embedded `find-repo` to search GitHub for reference mechanics, pixel art shaders, or Yarn tools. |
-| **`world_architect`** | Authors and validates 2D TileRPG world specs against `world.schema.json` and prevents spawn on collision. |
+| **`design_asset_agent`** | Plans, generates, and validates 2D pixel art tiles, props, EmoteBubble sprites, and TileRPG specs with paired `.meta`. |
+| **`world_architect`** | Authors and validates 2D TileRPG world specs against `world.schema.json` and ensures BFS path reachability. |
 | **`gameplay_dev`** | Enforces C# PascalCase, 4-space indentation, pure model isolation (zero UnityEngine in models), and Yarn syntax. |
 | **`qa_verifier`** | Executes test suites (`./Tools/alif test-edit`), inspects doorway overlaps (`>= 0.2f`), and flags missing `.meta` files. |
 | **`self_healer`** | Diagnoses validation errors and automatically applies surgical repairs to level specs or code. |
@@ -44,6 +45,12 @@ Run from the Alif repository root:
 ```bash
 # Execute the agent graph on a task
 ./Tools/alif agent run "Design a bazaar market with 2 food stalls"
+
+# Generate specific design assets and world specs
+./Tools/alif asset-gen generate-spec MarketBazaar --theme market
+./Tools/alif asset-gen create-tile stall_fruit --type market_stall
+./Tools/alif asset-gen create-emote emote_sparkle --type sparkle
+./Tools/alif asset-gen validate-all
 
 # Perform planning without mutating files
 ./Tools/alif agent run "Search reference repos for turn-based combat" --dry-run

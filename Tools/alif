@@ -67,8 +67,11 @@ case "$COMMAND" in
     agent)
         python3 "$ROOT/Tools/alif-agent/cli.py" "$@"
         ;;
+    asset-gen)
+        python3 "$ROOT/Tools/alif-asset-gen/cli.py" "$@"
+        ;;
     *)
-        echo "Usage: ./Tools/alif {status|validate|lint-level|apply-variant-c|generate-tile-rpg [spec]|test-edit|test-play|test-all|quick-check|build-web|build-mac|find-repo|agent}"
+        echo "Usage: ./Tools/alif {status|validate|lint-level|apply-variant-c|generate-tile-rpg [spec]|test-edit|test-play|test-all|quick-check|build-web|build-mac|find-repo|agent|asset-gen}"
         [ "$COMMAND" = "help" ] || exit 2
         ;;
 esac

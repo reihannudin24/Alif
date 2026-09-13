@@ -17,6 +17,7 @@ from nodes.gameplay_dev import GameplayDevNode
 from nodes.qa_verifier import QAVerifierNode
 from nodes.self_healer import SelfHealerNode
 from nodes.evolution import EvolutionNode
+from nodes.design_asset_agent import DesignAssetAgentNode
 
 
 class AlifAgentState(dict):
@@ -27,6 +28,7 @@ class AlifAgentState(dict):
             intent="",
             plan=[],
             repo_references=[],
+            generated_assets=[],
             level_spec=None,
             level_spec_valid=True,
             code_changes={},
@@ -46,7 +48,8 @@ class AlifGraph:
         self.nodes = {
             "orchestrator": OrchestratorNode(self.memory),
             "repo_hunter": RepoHunterNode(self.memory),
-            "world_architect": WorldArchitectNode(self.memory),
+            "design_asset_agent": DesignAssetAgentNode(self.memory, self.alif_root),
+            "world_architect": WorldArchitectNode(self.memory, self.alif_root),
             "gameplay_dev": GameplayDevNode(self.memory),
             "qa_verifier": QAVerifierNode(self.memory, self.alif_root),
             "self_healer": SelfHealerNode(self.memory),
@@ -78,7 +81,7 @@ class AlifGraph:
             state = self.execute_node(step, state)
 
             # Check for failures triggering self-healing loop
-            if state.get("errors") and step in ["world_architect", "gameplay_dev", "qa_verifier"]:
+            if state.get("errors") and step in ["world_architect", "gameplay_dev", "qa_verifier", "design_asset_agent"]:
                 state = self.execute_node("self_healer", state)
                 # If healed, re-verify
                 if state.get("can_heal"):

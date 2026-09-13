@@ -1,0 +1,9 @@
+title: BuSiti_MarketIntro
+tags: character:bu siti portrait:bu siti
+---
+Bu Siti: Halo Alif! Sedang mencari bumbu dapur?
+-> Tentu, saya ingin melihat menu.
+    <<jump BuSiti_MarketIntro_Menu>>
+-> Lain kali saja ya, Bu.
+    <<jump BuSiti_MarketIntro_Decline>>
+===
