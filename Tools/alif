@@ -14,6 +14,12 @@ case "$COMMAND" in
     validate)
         unity run "$ROOT" --editor-version "$VERSION" --timeout 600 -- \
             -executeMethod Alif.EditorTools.AlifAdventureBuilder.Build -logFile -
+        unity run "$ROOT" --editor-version "$VERSION" --timeout 600 -- \
+            -executeMethod Alif.EditorTools.AlifLevelValidator.ValidateAll -logFile -
+        ;;
+    lint-level)
+        unity run "$ROOT" --editor-version "$VERSION" --timeout 600 -- \
+            -executeMethod Alif.EditorTools.AlifLevelValidator.ValidateAll -logFile -
         ;;
     apply-variant-c)
         unity run "$ROOT" --editor-version "$VERSION" --timeout 600 -- \
@@ -43,7 +49,7 @@ case "$COMMAND" in
             --output-path "$ROOT/Build/macOS/Alif.app" --allow-dirty-build --timeout 1800
         ;;
     *)
-        echo "Usage: ./Tools/alif {status|validate|apply-variant-c|generate-tile-rpg [spec]|test-edit|test-play|build-web|build-mac}"
+        echo "Usage: ./Tools/alif {status|validate|lint-level|apply-variant-c|generate-tile-rpg [spec]|test-edit|test-play|build-web|build-mac}"
         [ "$COMMAND" = "help" ] || exit 2
         ;;
 esac

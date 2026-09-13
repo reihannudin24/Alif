@@ -68,11 +68,26 @@ namespace Alif.Dialogue
         {
             if (Instance != null && Instance != this)
             {
-                Destroy(gameObject);
-                return;
+                if (Instance.gameObject.scene != gameObject.scene)
+                {
+                    Instance = this;
+                }
+                else
+                {
+                    Destroy(gameObject);
+                    return;
+                }
             }
 
             Instance = this;
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this)
+            {
+                Instance = null;
+            }
         }
 
         /// <summary>

@@ -1,0 +1,25 @@
+title: Station_NoticeBoard
+tags: tutorial, station
+---
+Alif: Papan informasi stasiun. Ada peta kawasan sekitar dan jadwal angkot ke Pasar Rebo.
+Alif: Menurut peta, pintu keluar plaza ada di sebelah barat, lalu jalan setapak menuju Warung Bu Siti mengarah ke selatan.
+-> Catat rute ke Jurnal
+    Alif: Rute stasiun telah dicatat di jurnal perjalanan.
+    <<set $hasStationMap = true>>
+-> Selesai membaca
+    Alif: Aku harus segera menemui Bu Siti sebelum warungnya ramai.
+===
+
+title: BuSiti_Intro
+tags: warung, quest
+---
+Bu Siti: Oalah Alif! Akhirnya sampai juga le. Duduk dulu, wajahmu kelihatan letih sehabis perjalanan kereta.
+Alif: Iya Bu Siti, terima kasih. Saya datang untuk membantu mencocokkan pembukuan warung dan kas stasiun minggu ini.
+Bu Siti: Syukurlah kalau begitu. Banyak pengeluaran tak terduga kemarin—mulai dari kulakan beras sampai biaya perbaikan etalase.
+-> Tanyakan nota belanjaan warung
+    Bu Siti: Ini semua kuitansinya sudah Ibu kumpulkan di wadah kaleng dekat meja kasir. Tolong pilah mana yang pokok dan mana yang sekunder ya.
+    <<set $inspectedReceipts = true>>
+-> Tanyakan pesan dari Pak Ustad
+    Bu Siti: Pak Ustad tadi titip pesan, katanya kalau Alif sudah selesai bantu Ibu, mampir ke madrasah ya le. Ada yang ingin beliau diskusikan.
+    <<set $knowsUstadMessage = true>>
+===

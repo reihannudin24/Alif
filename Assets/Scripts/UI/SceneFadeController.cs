@@ -1,5 +1,7 @@
 using System;
 using System.Collections;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 using Alif.Core;
@@ -42,6 +44,61 @@ namespace Alif.UI
         {
             if (destination == null) throw new ArgumentNullException(nameof(destination));
             StartCoroutine(TransitionRoutine(player, playerRb, destination, cameraFollow, onComplete));
+        }
+
+        public async UniTask TransitionToAsync(PlayerController player, Rigidbody2D playerRb, Transform destination, CameraFollow cameraFollow, CancellationToken ct = default)
+        {
+            if (destination == null) throw new ArgumentNullException(nameof(destination));
+
+            if (player != null)
+            {
+                player.SetMovementLocked(this, true);
+            }
+
+            if (_fadeText != null)
+            {
+                _fadeText.text = DefaultFadeText;
+            }
+
+            await FadeAsync(0f, 1f, ct);
+
+            if (playerRb != null)
+            {
+                playerRb.position = destination.position;
+                playerRb.transform.position = destination.position;
+                playerRb.linearVelocity = Vector2.zero;
+            }
+
+            if (cameraFollow != null)
+            {
+                cameraFollow.SnapToTarget();
+            }
+
+            await UniTask.Delay(TimeSpan.FromSeconds(_holdDuration), cancellationToken: ct);
+            await FadeAsync(1f, 0f, ct);
+
+            if (player != null)
+            {
+                player.SetMovementLocked(this, false);
+            }
+        }
+
+        private async UniTask FadeAsync(float from, float to, CancellationToken ct = default)
+        {
+            if (_fadeCanvasGroup == null) return;
+
+            _fadeCanvasGroup.blocksRaycasts = to > 0.5f;
+
+            float t = 0f;
+            while (t < _fadeDuration)
+            {
+                ct.ThrowIfCancellationRequested();
+                t += Time.deltaTime;
+                _fadeCanvasGroup.alpha = Mathf.Lerp(from, to, t / _fadeDuration);
+                await UniTask.Yield(PlayerLoopTiming.Update, ct);
+            }
+
+            _fadeCanvasGroup.alpha = to;
         }
 
         /// <summary>
