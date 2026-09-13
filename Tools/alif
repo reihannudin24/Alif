@@ -61,6 +61,10 @@ case "$COMMAND" in
             --execute-method Alif.EditorTools.AlifAdventureBuilder.BuildMac \
             --output-path "$ROOT/Build/macOS/Alif.app" --allow-dirty-build --timeout 1800
         ;;
+    capture-screens)
+        unity run "$ROOT" --editor-version "$VERSION" --timeout 900 -- \
+            -executeMethod Alif.EditorTools.AlifScreenshotCapture.Capture -logFile -
+        ;;
     find-repo)
         python3 "$ROOT/Tools/find-repo/find_repo.py" "$@"
         ;;
@@ -74,7 +78,7 @@ case "$COMMAND" in
         python3 "$ROOT/Tools/find-assets/find_assets.py" "$@"
         ;;
     *)
-        echo "Usage: ./Tools/alif {status|validate|lint-level|apply-variant-c|generate-tile-rpg [spec]|test-edit|test-play|test-all|quick-check|build-web|build-mac|find-repo|find-assets|agent|asset-gen}"
+        echo "Usage: ./Tools/alif {status|validate|lint-level|apply-variant-c|generate-tile-rpg [spec]|test-edit|test-play|test-all|quick-check|build-web|build-mac|capture-screens|find-repo|find-assets|agent|asset-gen}"
         [ "$COMMAND" = "help" ] || exit 2
         ;;
 esac

@@ -6,12 +6,22 @@ coding style, and Yarn Spinner dialogue formatting.
 """
 
 import re
-from typing import Dict, Any, List, Tuple
+from pathlib import Path
+from typing import Dict, Any, List, Optional, Tuple
+
+from glm_client import GlmClient, GlmError
+from roles import Worker
+
+MAX_WORKER_FILES = 4
 
 
 class GameplayDevNode:
-    def __init__(self, memory_manager=None):
+    def __init__(self, memory_manager=None, alif_root: Optional[Path] = None,
+                 client: Optional[GlmClient] = None):
         self.memory = memory_manager
+        self.alif_root = alif_root or Path(__file__).parent.parent.parent
+        self.client = client
+        self.worker = Worker(client) if client else None
 
     def validate_csharp_script(self, filename: str, content: str) -> Tuple[bool, List[str]]:
         errors = []
@@ -64,7 +74,58 @@ class GameplayDevNode:
 
         return len(errors) == 0, errors
 
+    def _select_worker_files(self, instruction: str) -> List[str]:
+        """Finds up to MAX_WORKER_FILES project files explicitly named in the instruction."""
+        candidates = set(re.findall(r"Assets/[\w/.-]+\.(?:cs|yarn)", instruction))
+        candidates |= set(re.findall(r"\b([\w/.-]+\.(?:cs|yarn))\b", instruction))
+        resolved = []
+        for name in sorted(candidates):
+            for base in (self.alif_root, self.alif_root / "Assets" / "Scripts",
+                         self.alif_root / "Assets" / "Dialogue"):
+                path = base / name
+                if path.is_file() and str(path.resolve()).startswith(str(self.alif_root.resolve())):
+                    resolved.append(str(path.relative_to(self.alif_root)))
+                    break
+            if len(resolved) >= MAX_WORKER_FILES:
+                break
+        return resolved
+
+    def _apply_worker_edits(self, state: Dict[str, Any]) -> None:
+        """GLM-5.3-Flash worker applies the planner instruction to named files."""
+        instruction = (state.get("plan_instructions") or {}).get("gameplay_dev", "")
+        if not instruction or not (self.worker and self.client and self.client.available()):
+            return
+        targets = self._select_worker_files(instruction)
+        if not targets:
+            state.setdefault("history", []).append({
+                "node": "gameplay_dev",
+                "action": "Worker model available but instruction named no .cs/.yarn files; lint-only pass"
+            })
+            return
+        files = {}
+        for rel in targets:
+            try:
+                files[rel] = (self.alif_root / rel).read_text(encoding="utf-8")
+            except OSError:
+                continue
+        try:
+            changed = self.worker.edit(instruction, files)
+        except GlmError as e:
+            state.setdefault("history", []).append({
+                "node": "gameplay_dev",
+                "action": f"Worker model failed ({e}); no edits applied"
+            })
+            return
+        for rel, content in changed.items():
+            (self.alif_root / rel).write_text(content, encoding="utf-8")
+            state.setdefault("code_changes", {})[rel] = content
+        state.setdefault("history", []).append({
+            "node": "gameplay_dev",
+            "action": f"Worker {self.client.worker_model} edited {len(changed)} file(s): {', '.join(changed)}"
+        })
+
     def execute(self, state: Dict[str, Any]) -> Dict[str, Any]:
+        self._apply_worker_edits(state)
         task = state.get("task", "")
         code_changes = state.get("code_changes", {})
 
