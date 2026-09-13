@@ -137,7 +137,7 @@ namespace Alif.EditorTools
         }
 
         // ---------------------------------------------------------------
-        // AUDIO — BGM menu + SFX klik tombol, di-generate "Alif > 6) Generate Placeholder Audio".
+        // AUDIO — BGM menu + SFX klik tombol, di-generate "Alif > 6) Generate Game Audio".
         // ---------------------------------------------------------------
         private static AudioManager BuildAudio(Transform canvasTransform)
         {
@@ -161,7 +161,7 @@ namespace Alif.EditorTools
 
             if (AssetDatabase.LoadAssetAtPath<AudioClip>(BgmClipPath) == null)
             {
-                Debug.LogWarning($"[Alif] Audio belum digenerate — jalankan menu 'Alif > 6) Generate Placeholder Audio' dulu, lalu build ulang scene ini.");
+                Debug.LogWarning($"[Alif] Audio belum digenerate — jalankan menu 'Alif > 6) Generate Game Audio' dulu, lalu build ulang scene ini.");
             }
 
             return audioManager;
