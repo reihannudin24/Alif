@@ -37,7 +37,7 @@ class EvolutionEngine:
         if not scripts_dir.exists():
             return symbols
 
-        class_regex = re.compile(r"public\s+(?:abstract\s+|sealed\s+|partial\s+)?(?:class|struct|interface|enum)\s+(\w+)")
+        class_regex = re.compile(r"public\s+(?:abstract\s+|sealed\s+|static\s+|partial\s+)*(?:class|struct|interface|enum)\s+(\w+)")
         for cs_file in scripts_dir.rglob("*.cs"):
             try:
                 with open(cs_file, "r", encoding="utf-8", errors="ignore") as f:
