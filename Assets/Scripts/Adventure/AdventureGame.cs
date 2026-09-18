@@ -20,7 +20,7 @@ using UnityEngine.UI;
 
 namespace Alif.Adventure
 {
-    public enum CampaignActivity { World, Dialogue, Puzzle, Journal, Pause, Ending, Combat, Bag }
+    public enum CampaignActivity { World, Dialogue, Puzzle, Journal, Pause, Ending, Combat, Bag, Item }
     public sealed class AdventureGame : MonoBehaviour
     {
         public int Chapter;
@@ -65,6 +65,7 @@ namespace Alif.Adventure
         VirtualJoystick _joystick;
         Button _skipTutorial;
         RectTransform _hotbar;Rigidbody2D _playerBody;float _hotbarIdleFor;
+        readonly Queue<(string name,Sprite icon)> _receivedItems=new Queue<(string name,Sprite icon)>();
         const float HotbarShownY=14,HotbarShowDelay=.3f;
         Image[] _hotbarSlots, _hotbarIcons;
         TMP_Text[] _hotbarCounts;
@@ -335,7 +336,7 @@ namespace Alif.Adventure
                 rt.pivot=new Vector2(0,.5f);rt.anchoredPosition=new Vector2(pad+i*(slot+gap),0);rt.sizeDelta=Vector2.one*slot;
                 var slotImage=rt.gameObject.AddComponent<Image>();ApplySprite(slotImage,PixelSkin.Slot());
                 var button=rt.gameObject.AddComponent<Button>();button.targetGraphic=slotImage;button.navigation=new Navigation{mode=Navigation.Mode.None};
-                button.onClick.AddListener(()=>{if(Activity==CampaignActivity.World)InventorySystem.Instance?.Select(index);});
+                button.onClick.AddListener(()=>{if(Activity==CampaignActivity.World)ShowItemDetail(index,false);});
                 var icon=CampaignUI.Rect(rt,"Icon",Vector2.zero,Vector2.one).gameObject.AddComponent<Image>();
                 icon.rectTransform.offsetMin=Vector2.one*10;icon.rectTransform.offsetMax=-Vector2.one*10;icon.preserveAspect=true;icon.raycastTarget=false;
                 rt.gameObject.AddComponent<InventorySlotDrag>().Setup(index,icon);
@@ -344,6 +345,7 @@ namespace Alif.Adventure
             }
             inventory.OnInventoryChanged-=InventoryChanged;inventory.OnInventoryChanged+=InventoryChanged;
             inventory.OnSelectionChanged-=RefreshHotbarSelection;inventory.OnSelectionChanged+=RefreshHotbarSelection;
+            inventory.OnItemAdded-=QueueReceivedItem;inventory.OnItemAdded+=QueueReceivedItem;
             RefreshHotbar();
         }
         void RefreshHotbarSelection(int _)=>RefreshHotbar();
@@ -361,6 +363,8 @@ namespace Alif.Adventure
             _hotbar.anchoredPosition=position;
         }
         void InventoryChanged(){RefreshHotbar();if(Activity==CampaignActivity.Bag&&!_paused)Bag();}
+        // Popup ditunda sampai pemain kembali menjelajah (mis. setelah dialog pengambilan barang).
+        void QueueReceivedItem(string name,Sprite icon,int quantity)=>_receivedItems.Enqueue((name,icon));
         void RefreshHotbar()
         {
             var inventory=InventorySystem.Instance;
@@ -466,8 +470,9 @@ namespace Alif.Adventure
             if(Chapter==0 || State==null)return;
             AnimateHotbar();
             if(_toast && Time.unscaledTime>_toastUntil)_toast.text="";
-            if(k!=null && k.escapeKey.wasPressedThisFrame){if(_paused)Resume();else if(Activity==CampaignActivity.Journal||Activity==CampaignActivity.Bag)CloseModal();else Pause();return;}
+            if(k!=null && k.escapeKey.wasPressedThisFrame){if(_paused)Resume();else if(Activity==CampaignActivity.Journal||Activity==CampaignActivity.Bag||Activity==CampaignActivity.Item)CloseModal();else Pause();return;}
             if(Activity!=CampaignActivity.World)return;
+            if(_receivedItems.Count>0&&CanExplore){ShowItemReceived(_receivedItems.Dequeue());return;}
             State.PlaySeconds+=Time.unscaledDeltaTime;
             if(k!=null && k.jKey.wasPressedThisFrame){Journal(0);return;}
             if(k!=null && k.iKey.wasPressedThisFrame){Bag();return;}
@@ -756,6 +761,44 @@ namespace Alif.Adventure
             Button(p,"Berikutnya >",new Vector2(.29f,.03f),new Vector2(.51f,.12f),()=>Journal(_journalPage+1)).interactable=_journalPage<pages-1;
             Button(p,"Kembali",new Vector2(.74f,.03f),new Vector2(.96f,.12f),CloseModal);FocusFirst();
         }
+        /// <summary>Popup "Aku mendapatkan …" bergaya kartu hadiah: nama barang, ikon di kotak
+        /// slot, tombol OK.</summary>
+        void ShowItemReceived((string name,Sprite icon) item)
+        {
+            ClearModal(CampaignActivity.Item);
+            var panel=Panel(_modal,new Vector2(.3f,.2f),new Vector2(.7f,.8f),Color.white);ApplySprite(panel,PixelSkin.Panel());
+            var p=panel.rectTransform;
+            Text(p,"Aku mendapatkan "+item.name,new Vector2(.06f,.68f),new Vector2(.94f,.9f),24).alignment=TextAlignmentOptions.Center;
+            ItemTile(p,item.icon,new Vector2(.5f,.47f),112);
+            Button(p,"OK",new Vector2(.3f,.08f),new Vector2(.7f,.24f),CloseModal);FocusFirst();
+        }
+        RectTransform ItemTile(RectTransform parent,Sprite icon,Vector2 anchor,float size)
+        {
+            var tile=CampaignUI.Rect(parent,"Item tile",anchor,anchor);tile.sizeDelta=Vector2.one*size;
+            var tileImage=tile.gameObject.AddComponent<Image>();tileImage.raycastTarget=false;ApplySprite(tileImage,PixelSkin.Slot());
+            if(icon){var image=CampaignUI.Rect(tile,"Icon",Vector2.zero,Vector2.one).gameObject.AddComponent<Image>();image.sprite=icon;image.preserveAspect=true;image.raycastTarget=false;image.rectTransform.offsetMin=Vector2.one*size*.18f;image.rectTransform.offsetMax=-Vector2.one*size*.18f;}
+            return tile;
+        }
+        /// <summary>Kartu detail barang: ikon, jumlah, kegunaan & fun fact (ItemCatalog), serta
+        /// tombol Pakai/Lepas — barang yang dipakai disorot di hotbar.</summary>
+        void ShowItemDetail(int index,bool fromBag)
+        {
+            var inventory=InventorySystem.Instance;
+            if(!inventory||index>=inventory.Slots.Count||inventory.Slots[index].IsEmpty)return;
+            var item=inventory.Slots[index];var info=ItemCatalog.Get(item.ItemName);
+            bool equipped=inventory.SelectedIndex==index;
+            var p=Card(CampaignActivity.Item,"DETAIL BARANG",item.ItemName);
+            ItemTile(p,item.Icon,new Vector2(.17f,.5f),170);
+            Text(p,(item.Quantity>1?"Jumlah: "+item.Quantity+"   ":"")+(equipped?"Sedang dipakai":""),new Vector2(.03f,.2f),new Vector2(.31f,.3f),16,PixelSkin.Accent).alignment=TextAlignmentOptions.Center;
+            Text(p,"KEGUNAAN",new Vector2(.34f,.64f),new Vector2(.96f,.72f),17,PixelSkin.Accent);
+            Text(p,info.Usage,new Vector2(.34f,.46f),new Vector2(.96f,.64f),18).alignment=TextAlignmentOptions.TopLeft;
+            Text(p,"FUN FACT",new Vector2(.34f,.37f),new Vector2(.96f,.45f),17,PixelSkin.Accent);
+            Text(p,info.FunFact,new Vector2(.34f,.15f),new Vector2(.96f,.37f),17).alignment=TextAlignmentOptions.TopLeft;
+            Button(p,equipped?"Lepas":"Pakai",new Vector2(.04f,.035f),new Vector2(.28f,.13f),()=>{inventory.Select(index);ShowItemDetail(index,fromBag);});
+            Button(p,fromBag?"Kembali ke Tas":"Kembali",new Vector2(.7f,.035f),new Vector2(.96f,.13f),()=>{if(fromBag)Bag();else CloseModal();});
+            FocusFirst();
+        }
+
         /// <summary>Kartu Tas: semua slot InventorySystem dengan ikon, nama, dan jumlah.</summary>
         void Bag()
         {
@@ -771,10 +814,11 @@ namespace Alif.Adventure
                 any=true;
                 if(item.Icon){tileIcon=CampaignUI.Rect(tile.transform,"Icon",Vector2.zero,Vector2.one).gameObject.AddComponent<Image>();tileIcon.sprite=item.Icon;tileIcon.preserveAspect=true;tileIcon.raycastTarget=false;tileIcon.rectTransform.offsetMin=Vector2.one*22;tileIcon.rectTransform.offsetMax=-Vector2.one*22;}
                 tile.gameObject.AddComponent<InventorySlotDrag>().Setup(i,tileIcon);
+                int index=i;var tileButton=tile.gameObject.AddComponent<Button>();tileButton.targetGraphic=tile;tileButton.onClick.AddListener(()=>ShowItemDetail(index,true));
                 if(item.Quantity>1)Text(tile.transform,"x"+item.Quantity,Vector2.zero,Vector2.one,17).alignment=TextAlignmentOptions.BottomRight;
                 Text(p,item.ItemName,new Vector2(x,.16f),new Vector2(x+.17f,.29f),15).alignment=TextAlignmentOptions.Top;
             }
-            Text(p,any?"Seret barang ke kotak lain untuk menata isi tas.":"Tas masih kosong. Barang yang kamu ambil akan muncul di sini.",new Vector2(.04f,.67f),new Vector2(.96f,.75f),18,PixelSkin.Accent);
+            Text(p,any?"Klik barang untuk melihat detail • seret ke kotak lain untuk menata.":"Tas masih kosong. Barang yang kamu ambil akan muncul di sini.",new Vector2(.04f,.67f),new Vector2(.96f,.75f),18,PixelSkin.Accent);
             Button(p,"Kembali",new Vector2(.74f,.04f),new Vector2(.96f,.14f),CloseModal);FocusFirst();
         }
         public void Pause()
@@ -870,7 +914,7 @@ namespace Alif.Adventure
         {
             if (_encounter != null) { _encounter.Finished-=EncounterFinished; _encounter.Cancel(); }
             if (_player) _player.SetMovementLocked(this,false);
-            if(InventorySystem.Instance){InventorySystem.Instance.OnInventoryChanged-=InventoryChanged;InventorySystem.Instance.OnSelectionChanged-=RefreshHotbarSelection;}
+            if(InventorySystem.Instance){InventorySystem.Instance.OnInventoryChanged-=InventoryChanged;InventorySystem.Instance.OnSelectionChanged-=RefreshHotbarSelection;InventorySystem.Instance.OnItemAdded-=QueueReceivedItem;}
             if(TimeSystem.Instance){TimeSystem.Instance.OnMinuteChanged-=RefreshStatusBoard;TimeSystem.Instance.OnDayChanged-=RefreshStatusBoard;}
             if(EnergySystem.Instance)EnergySystem.Instance.OnEnergyChanged-=RefreshStatusEnergy;
             if(CurrencySystem.Instance)CurrencySystem.Instance.OnMoneyChanged-=RefreshStatusMoney;

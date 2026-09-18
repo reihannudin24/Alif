@@ -43,6 +43,9 @@ namespace Alif.Systems
         // Dipanggil setiap kali slot terpilih berubah (termasuk saat seleksi dibatalkan).
         public event Action<int> OnSelectionChanged;
 
+        /// <summary>Barang berhasil masuk tas (nama, ikon, jumlah yang ditambahkan) — untuk popup "Aku mendapatkan …".</summary>
+        public event Action<string, Sprite, int> OnItemAdded;
+
         public IReadOnlyList<InventorySlot> Slots => _slots;
 
         /// <summary>Index slot yang sedang dipilih pemain (-1 = tidak ada).</summary>
@@ -85,6 +88,7 @@ namespace Alif.Systems
             {
                 existingSlot.Quantity += quantity;
                 OnInventoryChanged?.Invoke();
+                OnItemAdded?.Invoke(itemName, icon, quantity);
                 return true;
             }
 
@@ -100,6 +104,7 @@ namespace Alif.Systems
             emptySlot.Icon = icon;
             emptySlot.Quantity = quantity;
             OnInventoryChanged?.Invoke();
+            OnItemAdded?.Invoke(itemName, icon, quantity);
             return true;
         }
 
