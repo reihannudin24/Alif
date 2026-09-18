@@ -35,8 +35,9 @@ public sealed class AdventureChapterOneSmokeTests
         // yang tidak fokus: state perangkat di-reset setiap frame, termasuk keyboard
         // software (dibuktikan lewat diagnostik QueueStateEvent). Gerakkan pemain lewat
         // API scripted-direction publik — jalur FixedUpdate → whitelist lantai →
-        // akumulasi jarak tutorial yang diuji tetap jalur produksi yang sama.
-        player.SetAdventureDirection(Vector2.right);
+        // akumulasi jarak tutorial yang diuji tetap jalur produksi yang sama. Arah kiri:
+        // Main Baru memulai adegan masuk dari sisi kanan ruangan (input ini membatalkannya).
+        player.SetAdventureDirection(Vector2.left);
         for(int i=0;i<120&&game.State.TutorialStep==1;i++)
         {
             yield return new WaitForFixedUpdate();
@@ -50,14 +51,15 @@ public sealed class AdventureChapterOneSmokeTests
         for(int i=0;i<120&&!game;i++){yield return null;game=Object.FindAnyObjectByType<AdventureGame>();}
         Assert.That(game.State.TutorialStep,Is.EqualTo(2));
         player=Object.FindAnyObjectByType<PlayerController>();
-        player.SetAdventureDirection(Vector2.right);
-        for(int i=0;i<120&&player.transform.position.x<2.1f;i++)
+        // Papan arah = layar info painted di kanan Loket Karcis (kaki tiang -1.06,-1.83), kiri spawn.
+        player.SetAdventureDirection(Vector2.left);
+        for(int i=0;i<120&&player.transform.position.x>-.6f;i++)
         {
             yield return new WaitForFixedUpdate();
             yield return null;
         }
         player.SetAdventureDirection(Vector2.zero);yield return null;
-        Assert.That(Vector2.Distance(player.transform.position,new Vector2(2.6f,-2.25f)),Is.LessThan(1.35f));
+        Assert.That(Vector2.Distance(player.transform.position,new Vector2(-1.06f,-1.83f)),Is.LessThan(1.35f));
 
         player.Interact();yield return null;
         Assert.That(DialogueManager.Instance.IsDialogueActive,Is.True);

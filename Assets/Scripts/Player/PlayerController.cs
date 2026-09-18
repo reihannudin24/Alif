@@ -95,6 +95,31 @@ namespace Alif.Player
         private Vector2 _adventureDirection;
         public void ConfigureAdventure() { _interactableLayer = 1 << 7; _interactRadius = 1.35f; _moveSpeed = 3f; }
         public void SetAdventureDirection(Vector2 direction) { _adventureDirection = direction; }
+
+        // Jalan otomatis (mis. adegan masuk di awal game): Player berjalan sendiri ke titik
+        // tujuan lalu berhenti. Input gerak dari pemain membatalkannya dan langsung memberi
+        // kontrol; batas waktu mencegah macet selamanya kalau jalurnya terhalang collider.
+        private Vector2? _autoWalkTarget;
+        private float _autoWalkDeadline;
+        private System.Action _autoWalkFinished;
+
+        public bool IsAutoWalking => _autoWalkTarget.HasValue;
+
+        public void AutoWalkTo(Vector2 target, System.Action finished)
+        {
+            _autoWalkTarget = target;
+            _autoWalkFinished = finished;
+            float distance = Vector2.Distance(transform.position, target);
+            _autoWalkDeadline = Time.time + distance / Mathf.Max(_moveSpeed, .1f) * 2f + 1f;
+        }
+
+        private void FinishAutoWalk()
+        {
+            _autoWalkTarget = null;
+            System.Action finished = _autoWalkFinished;
+            _autoWalkFinished = null;
+            finished?.Invoke();
+        }
         public bool MovementLocked => _movementLocked || _movementOwners.Count > 0;
         public bool CanStandAt(Vector2 bodyPosition)
         {
@@ -175,7 +200,7 @@ namespace Alif.Player
             }
 
             // Bayangan kaki mengikat karakter ke lantai background painted
-            BlobShadow.Ensure(transform, new Vector3(0f, _feetOffset.y - _feetHalfExtents.y + 0.04f, 0f));
+            BlobShadow.Ensure(transform);
 
             // Physics2D biasanya berjalan 50 Hz, sedangkan render umumnya 60 Hz atau lebih.
             // Tanpa interpolation, sprite terlihat melompat antar-tick saat berjalan dan
@@ -305,8 +330,22 @@ namespace Alif.Player
                 keyboardInput = _adventureDirection;
             }
             Vector2 joystickInput = _virtualJoystick != null ? _virtualJoystick.Direction : Vector2.zero;
+            Vector2 playerInput = keyboardInput.sqrMagnitude >= joystickInput.sqrMagnitude ? keyboardInput : joystickInput;
 
-            return keyboardInput.sqrMagnitude >= joystickInput.sqrMagnitude ? keyboardInput : joystickInput;
+            if (_autoWalkTarget.HasValue)
+            {
+                Vector2 toTarget = _autoWalkTarget.Value - (Vector2)transform.position;
+                bool arrived = toTarget.sqrMagnitude < .05f * .05f;
+                if (playerInput.sqrMagnitude >= 0.01f || arrived || Time.time > _autoWalkDeadline)
+                {
+                    FinishAutoWalk();
+                    return playerInput;
+                }
+                // Perlambat di ujung supaya berhenti tepat di tujuan tanpa lewat.
+                return toTarget.normalized * Mathf.Clamp01(toTarget.magnitude / .3f + .25f);
+            }
+
+            return playerInput;
         }
 
         private void FixedUpdate()
@@ -420,9 +459,8 @@ namespace Alif.Player
             _playerAnimation.SetMovementState(_currentFacing, isMoving, _isSprinting);
         }
 
-        // GameObject panah "InteractionArrow" yang lagi ditampilkan (child dari interactable
-        // terdekat saat ini), supaya bisa disembunyikan lagi begitu Player menjauh/pindah target.
-        private GameObject _activePromptArrow;
+        // Keycap "E" di atas kepala Player, dibuat saat pertama kali ada target interaksi.
+        private InteractionPromptFX _interactPrompt;
 
         /// <summary>
         /// Cari collider IInteractable terdekat dalam radius interact (NPC atau benda statis
@@ -475,45 +513,23 @@ namespace Alif.Player
         }
 
         /// <summary>
-        /// Tampilkan panah "InteractionArrow" (child object di NPC/benda interactable, dibuat
-        /// oleh scene builder) di atas target terdekat saat ini, sembunyikan yang lama kalau
-        /// targetnya berubah/hilang dari jangkauan.
+        /// Tampilkan keycap "E" di atas kepala Player selama ada target interaksi dalam jangkauan.
+        /// Panah "InteractionArrow" per-objek buatan builder tidak lagi ditampilkan: objek painted
+        /// cuma zona tak terlihat, sehingga panahnya menutupi gambar objek itu sendiri.
         /// </summary>
         private void UpdateInteractionPrompt()
         {
-            Collider2D nearest = InteractionTarget = FindNearestInteractableCollider();
-            GameObject newArrow = null;
-
-            if (nearest != null)
+            bool hasTarget = (InteractionTarget = FindNearestInteractableCollider()) != null;
+            if (hasTarget && _interactPrompt == null)
             {
-                Transform arrowTransform = nearest.transform.Find("InteractionArrow");
-                if (arrowTransform != null)
-                {
-                    newArrow = arrowTransform.gameObject;
-                }
+                var body = GetComponent<SpriteRenderer>();
+                float headTop = body != null && body.sprite != null ? body.sprite.bounds.max.y : 1f;
+                _interactPrompt = InteractionPromptFX.Create(transform, headTop + .12f);
             }
 
-            if (newArrow == _activePromptArrow)
+            if (_interactPrompt != null && _interactPrompt.gameObject.activeSelf != hasTarget)
             {
-                return;
-            }
-
-            if (_activePromptArrow != null)
-            {
-                _activePromptArrow.SetActive(false);
-            }
-
-            _activePromptArrow = newArrow;
-
-            if (_activePromptArrow != null)
-            {
-                _activePromptArrow.SetActive(true);
-                // Panah interaksi mendapat animasi pop + bob ringan saat muncul (sekali pasang,
-                // OnEnable komponen me-restart animasinya setiap kali panah ditampilkan ulang).
-                if (_activePromptArrow.GetComponent<InteractionPromptFX>() == null)
-                {
-                    _activePromptArrow.AddComponent<InteractionPromptFX>();
-                }
+                _interactPrompt.gameObject.SetActive(hasTarget);
             }
         }
 

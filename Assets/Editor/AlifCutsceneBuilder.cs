@@ -13,10 +13,9 @@ namespace Alif.EditorTools
 {
     /// <summary>
     /// Tool editor sekali-klik untuk membangun scene cutscene pembuka Chapter 1. Scene pertama
-    /// adalah "title card" teks prolog (layar hitam + teks tengah). Scene setelahnya masing-
-    /// masing komposisi 2-3 panel gambar (kayak halaman komik) yang muncul satu-satu dengan
-    /// animasi slide+fade — panel di paruh atas duluan, baru paruh bawah. Dibuka otomatis
-    /// begitu pemain klik "MAIN BARU" di Main Menu.
+    /// adalah "title card" teks prolog (layar hitam + teks tengah). Scene setelahnya berisi
+    /// 1-3 gambar yang tampil layar penuh satu per satu bergaya visual novel (tata letak
+    /// dipasang CutscenePlayerController). Dibuka otomatis begitu pemain klik "MAIN BARU".
     ///
     /// Cara pakai: menu "Alif > 5) Build Chapter 1 Cutscene Scene" — otomatis membuka/membuat
     /// Assets/Scenes/Chapter1Cutscene.unity. Aman dijalankan berulang kali.
@@ -32,16 +31,12 @@ namespace Alif.EditorTools
         private struct PartDef
         {
             public string File;
-            public Vector2 AnchorMin;
-            public Vector2 AnchorMax;
             public string SpeakerName;
             public string Line;
 
-            public PartDef(string file, Vector2 anchorMin, Vector2 anchorMax, string speakerName, string line)
+            public PartDef(string file, string speakerName, string line)
             {
                 File = file;
-                AnchorMin = anchorMin;
-                AnchorMax = anchorMax;
                 SpeakerName = speakerName;
                 Line = line;
             }
@@ -67,10 +62,9 @@ namespace Alif.EditorTools
             }
         }
 
-        // Komposisi ditentukan dari mockup yang dikasih user: Scene 1 = 2 panel (atas TibaSolo,
-        // bawah DalamKereta, tanpa dialog — cold-open wordless). Scene 2 = 3 panel (atas penuh
-        // Gambir, bawah kiri Peron + bawah kanan Badge), dua panel terakhir ini yang bawa baris
-        // pembuka SCENE 1 skrip storyline ("Akhirnya sampai juga..." / "Perut keroncongan...").
+        // Urutan dari mockup user: Scene 1 = TibaSolo lalu DalamKereta (tanpa dialog — cold-open
+        // wordless). Scene 2 = Gambir, Peron, Badge; dua gambar terakhir membawa baris pembuka
+        // SCENE 1 skrip storyline ("Akhirnya sampai juga..." / "Perut keroncongan...").
         //
         // PENTING: nama file di Assets/Sprites/Cutscenes/Chapter1/ TIDAK cocok sama isi
         // gambarnya (salah identifikasi isi file waktu pertama kali di-import, ketauan setelah
@@ -97,14 +91,14 @@ namespace Alif.EditorTools
             new SceneDef(PrologText),
             new SceneDef(new[]
             {
-                new PartDef("Chapter1_04_Peron.png", new Vector2(0, 0.5f), new Vector2(1, 1), "", ""), // isi: TibaSolo
-                new PartDef("Chapter1_05_Badge.png", new Vector2(0, 0), new Vector2(1, 0.5f), "", ""), // isi: DalamKereta
+                new PartDef("Chapter1_04_Peron.png", "", ""), // isi: TibaSolo
+                new PartDef("Chapter1_05_Badge.png", "", ""), // isi: DalamKereta
             }),
             new SceneDef(new[]
             {
-                new PartDef("Chapter1_02_DalamKereta.png", new Vector2(0, 0.5f), new Vector2(1, 1), "", ""), // isi: Gambir
-                new PartDef("Chapter1_01_Gambir.png", new Vector2(0, 0), new Vector2(0.5f, 0.5f), AlifBatin, "Akhirnya sampai juga..."), // isi: Peron
-                new PartDef("Chapter1_03_TibaSolo.png", new Vector2(0.5f, 0), new Vector2(1, 0.5f), AlifBatin, "Perut udah keroncongan nih. Makan ayam geprek di warung Bu Siti deket sini enak kali ya."), // isi: Badge
+                new PartDef("Chapter1_02_DalamKereta.png", "", ""), // isi: Gambir
+                new PartDef("Chapter1_01_Gambir.png", AlifBatin, "Akhirnya sampai juga..."), // isi: Peron
+                new PartDef("Chapter1_03_TibaSolo.png", AlifBatin, "Perut udah keroncongan nih. Makan ayam geprek di warung Bu Siti deket sini enak kali ya."), // isi: Badge
             }),
         };
 
@@ -115,10 +109,8 @@ namespace Alif.EditorTools
                 "Tekanan untuk menandatangani kontrak telah berlalu. Bu Siti memilih berhenti, memeriksa angka, dan mencari jalan yang transparan."),
             new SceneDef(new[]
             {
-                new PartDef("Assets/Sprites/Backgrounds/WarungBuSiti_Interior.png", new Vector2(0, 0.5f), new Vector2(1, 1),
-                    "Bu Siti", "Ibu tidak akan lagi mengambil keputusan karena panik. Mulai besok, semua pemasukan, kebutuhan, dan akad akan Ibu catat dengan jelas."),
-                new PartDef("Assets/Sprites/Backgrounds/WarungBuSiti_Depan.jpg", new Vector2(0, 0), new Vector2(1, 0.5f),
-                    "Alif (Batin)", "Masalah hari ini selesai, tetapi perjalananku memahami amanah dalam setiap keputusan baru saja dimulai."),
+                new PartDef("Assets/Sprites/Backgrounds/WarungBuSiti_Interior.png", "Bu Siti", "Ibu tidak akan lagi mengambil keputusan karena panik. Mulai besok, semua pemasukan, kebutuhan, dan akad akan Ibu catat dengan jelas."),
+                new PartDef("Assets/Sprites/Backgrounds/WarungBuSiti_Depan.jpg", "Alif (Batin)", "Masalah hari ini selesai, tetapi perjalananku memahami amanah dalam setiap keputusan baru saja dimulai."),
             }),
             new SceneDef(
                 "CHAPTER 1 SELESAI\n\n" +
@@ -134,24 +126,18 @@ namespace Alif.EditorTools
                 "Sebuah pertemuan tak sengaja akan membawanya pada persoalan baru: jalan keluar cepat yang menyimpan beban panjang."),
             new SceneDef(new[]
             {
-                new PartDef("Assets/Sprites/Backgrounds/KosKosan_Halaman.png", new Vector2(0, 0), new Vector2(1, 1),
-                    "Narator", "Menjelang sore, Alif melintasi sebuah jalan kecil di depan deretan kos mahasiswa."),
+                new PartDef("Assets/Sprites/Backgrounds/KosKosan_Halaman.png", "Narator", "Menjelang sore, Alif melintasi sebuah jalan kecil di depan deretan kos mahasiswa."),
             }),
             new SceneDef(new[]
             {
-                new PartDef("Assets/Sprites/Backgrounds/KosKosan_Halaman.png", new Vector2(0, 0.5f), new Vector2(1, 1),
-                    "Narator", "Di depan gerbang, Dimas berdiri mondar-mandir. Tatapannya terpaku pada ponsel dan wajahnya terlihat bingung."),
-                new PartDef("Assets/Sprites/Characters/alif/Idle/rotations/east.png", new Vector2(0, 0), new Vector2(0.5f, 0.5f),
-                    "Alif", "Dimas? Dari tadi kamu kelihatan gelisah. Ada masalah?"),
-                new PartDef("Assets/Sprites/Characters/dimas/Idle/rotations/south.png", new Vector2(0.5f, 0), new Vector2(1, 0.5f),
-                    "Dimas", "Lif... kebetulan banget kamu lewat. Aku perlu pendapatmu, tapi nggak enak ngomong di luar."),
+                new PartDef("Assets/Sprites/Backgrounds/KosKosan_Halaman.png", "Narator", "Di depan gerbang, Dimas berdiri mondar-mandir. Tatapannya terpaku pada ponsel dan wajahnya terlihat bingung."),
+                new PartDef("Assets/Sprites/Characters/alif/Idle/rotations/east.png", "Alif", "Dimas? Dari tadi kamu kelihatan gelisah. Ada masalah?"),
+                new PartDef("Assets/Sprites/Characters/dimas/Idle/rotations/south.png", "Dimas", "Lif... kebetulan banget kamu lewat. Aku perlu pendapatmu, tapi nggak enak ngomong di luar."),
             }),
             new SceneDef(new[]
             {
-                new PartDef("Assets/Sprites/Backgrounds/KosKosan_Lantai1.png", new Vector2(0, 0.5f), new Vector2(1, 1),
-                    "Dimas", "Masuk ke kamarku sebentar, ya. Aku sedang butuh Rp2.000.000 dan hampir mengajukan pinjaman online."),
-                new PartDef("Assets/Sprites/Backgrounds/KosKosan_Interior.png", new Vector2(0, 0), new Vector2(1, 0.5f),
-                    "Alif", "Baik. Jangan tekan tombol pengajuan dulu. Kita baca syaratnya dan cari jalan keluar yang aman bersama-sama."),
+                new PartDef("Assets/Sprites/Backgrounds/KosKosan_Lantai1.png", "Dimas", "Masuk ke kamarku sebentar, ya. Aku sedang butuh Rp2.000.000 dan hampir mengajukan pinjaman online."),
+                new PartDef("Assets/Sprites/Backgrounds/KosKosan_Interior.png", "Alif", "Baik. Jangan tekan tombol pengajuan dulu. Kita baca syaratnya dan cari jalan keluar yang aman bersama-sama."),
             }),
         };
 
@@ -436,14 +422,70 @@ namespace Alif.EditorTools
 
                     SerializedProperty partProp = partsProp.GetArrayElementAtIndex(p);
                     partProp.FindPropertyRelative("Image").objectReferenceValue = sprite;
-                    partProp.FindPropertyRelative("AnchorMin").vector2Value = def.AnchorMin;
-                    partProp.FindPropertyRelative("AnchorMax").vector2Value = def.AnchorMax;
+                    partProp.FindPropertyRelative("Crop").rectValue = OpaqueCrop(spritePath);
                     partProp.FindPropertyRelative("SpeakerName").stringValue = def.SpeakerName;
                     partProp.FindPropertyRelative("Line").stringValue = def.Line;
                 }
             }
 
             so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        /// <summary>
+        /// Panel komik Chapter 1 berbentuk miring dengan sudut transparan. Cutscene menampilkan
+        /// gambar layar penuh, jadi ambil persegi opaque terbesar (dinormalisasi 0-1, origin
+        /// kiri-bawah seperti Sprite.rect). Gambar tanpa transparansi = Rect kosong (utuh).
+        /// </summary>
+        private static Rect OpaqueCrop(string assetPath)
+        {
+            if (!File.Exists(assetPath)) return default;
+            var texture = new Texture2D(2, 2);
+            if (!texture.LoadImage(File.ReadAllBytes(assetPath)))
+            {
+                Object.DestroyImmediate(texture);
+                return default;
+            }
+
+            int width = texture.width, height = texture.height;
+            Color32[] pixels = texture.GetPixels32();
+            Object.DestroyImmediate(texture);
+
+            // Tepi opaque kiri/kanan per baris (panelnya cembung, jadi satu rentang per baris).
+            var left = new int[height];
+            var right = new int[height];
+            bool fullyOpaque = true;
+            for (int y = 0; y < height; y++)
+            {
+                int l = 0, r = width - 1;
+                while (l < width && pixels[y * width + l].a < 250) l++;
+                while (r >= 0 && pixels[y * width + r].a < 250) r--;
+                left[y] = l; right[y] = r;
+                fullyOpaque &= l == 0 && r == width - 1;
+            }
+            if (fullyOpaque) return default;
+
+            long bestArea = 0;
+            int bestX0 = 0, bestY0 = 0, bestX1 = 0, bestY1 = 0;
+            for (int y0 = 0; y0 < height; y0 += 2)
+            {
+                int maxLeft = left[y0], minRight = right[y0];
+                for (int y1 = y0; y1 < height; y1 += 2)
+                {
+                    maxLeft = Mathf.Max(maxLeft, left[y1]);
+                    minRight = Mathf.Min(minRight, right[y1]);
+                    if (minRight <= maxLeft) break;
+                    long area = (long)(minRight - maxLeft + 1) * (y1 - y0 + 1);
+                    if (area > bestArea)
+                    {
+                        bestArea = area;
+                        bestX0 = maxLeft; bestX1 = minRight; bestY0 = y0; bestY1 = y1;
+                    }
+                }
+            }
+            if (bestArea == 0) return default;
+
+            return new Rect(bestX0 / (float)width, bestY0 / (float)height,
+                (bestX1 - bestX0 + 1) / (float)width, (bestY1 - bestY0 + 1) / (float)height);
         }
 
         private static void RegisterInBuildSettings(string targetScenePath)

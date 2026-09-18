@@ -1303,7 +1303,7 @@ namespace Alif.EditorTools
         private static readonly Vector2[] NpcPositions =
         {
             new Vector2(2f, 1f),
-            new Vector2(-3.2f, 1.3f),   // naya — digeser menjauh dari pintu koridor Informasi
+            new Vector2(-1.75f, -2.03f), // naya — antre di jendela kanan Loket Karcis, kaki di ubin depan dasar meja (y -1.89)
             new Vector2(2f, -1.5f),
             new Vector2(-2f, -1.5f),
             new Vector2(0f, 2.5f),
@@ -1556,10 +1556,11 @@ namespace Alif.EditorTools
 
         // ---------------------------------------------------------------
         // LOKET KARCIS (ambil voucher promo kereta) & ATM (tarik tunai) — posisi hitbox
-        // dianalisis dari Stasiun_Interior.png (2222x1888px, PPU 200, pivot Center): meja loket
-        // karcis di ruang kiri-bawah, mesin ATM biru di ruang kanan-bawah (ruang Display).
+        // dianalisis dari Stasiun_Interior.png (2222x1888px, PPU 200, pivot Center): voucher
+        // diambil di mesin tiket bersegitiga kiri meja loket (kaki tiang x -4.54, y -1.78; dulu
+        // hitbox selebar meja loket), mesin ATM biru di ruang kanan-bawah (ruang Display).
         // ---------------------------------------------------------------
-        private static readonly (Vector2 center, Vector2 size) LoketKarcisPlacement = (new Vector2(-3.0f, -1.7f), new Vector2(2.4f, 0.7f));
+        private static readonly (Vector2 center, Vector2 size) LoketKarcisPlacement = (new Vector2(-4.54f, -1.9f), new Vector2(0.7f, 0.6f));
         private static readonly (Vector2 center, Vector2 size) AtmPlacement = (new Vector2(1.9f, -1.6f), new Vector2(0.6f, 0.7f));
 
         private static void BuildStationInteractables()

@@ -160,7 +160,8 @@ namespace Alif.EditorTools
             try
             {
                 var scene=EditorSceneManager.OpenScene("Assets/Scenes/Adventure/AdventureChapter1.unity");
-                foreach(string name in new[]{"Station_NoticeBoard","Gang_DirectionSign","PetugasStasiun","VariantC_StationLuggage","VariantC_StationTimetable","VariantC_GangPlanterCrates","VariantC_ReceiptTray","VariantC_Condiments","VariantC_ServingCounter"})
+                // Station_NoticeBoard kini jangkar tak terlihat (layar info painted) — tanpa Y-sort.
+                foreach(string name in new[]{"Gang_DirectionSign","PetugasStasiun","VariantC_GangPlanterCrates","VariantC_ReceiptTray","VariantC_Condiments","VariantC_ServingCounter"})
                 {var go=Named(name);if(go)ConfigureStaticYSort(go);}
                 EditorSceneManager.MarkSceneDirty(scene);EditorSceneManager.SaveScene(scene);
             }
@@ -325,15 +326,17 @@ namespace Alif.EditorTools
             var menu=Required("PapanMenu_Interact");
             var receipt=Required("MejaTungguPesanan");
             var cashier=Required("BuSiti_Kasir");
-            // Papan arah tutorial HARUS di RuangTunggu dekat (2.6,-2.25): alur tutorial
-            // membawa pemain jalan ke kanan dari spawn lalu interact, dan smoke test
-            // PlayMode mengunci geometri itu. Grounding visual ditangani contact shadow
-            // (dulu tampak melayang di atas bangku painted karena tanpa bayangan kaki).
-            station.transform.position=new Vector2(2.6f,-2.2f);
-            SetSprite(station,game.SignFamilySprites.ElementAtOrDefault(0),1.05f);
-            ConfigureStaticYSort(station);
-            AttachPropShadow(station,.75f);
-            BindPoint(game,station,"Papan arah",0,(Vector2)station.transform.position+new Vector2(0,-.7f));
+            // Papan arah tutorial = layar info bertiang yang sudah ada di background painted,
+            // kanan Loket Karcis (kaki tiang StationSignPosition). Dulu prop sprite terpisah
+            // (StationSign.png) yang menutupi ATM & bangku painted. Station_NoticeBoard kini
+            // hanya jangkar tak terlihat; trigger di lantai depan tiang, di jalur pemain yang
+            // berjalan ke kiri dari spawn (smoke test PlayMode mengunci geometri ini).
+            station.transform.position=StationSignPosition;
+            var stationSort=station.GetComponent<YSortOrder>();if(stationSort)Object.DestroyImmediate(stationSort);
+            var stationRenderer=station.GetComponent<SpriteRenderer>();if(stationRenderer)Object.DestroyImmediate(stationRenderer);
+            var stationShadow=station.transform.Find("ContactShadow");if(stationShadow)Object.DestroyImmediate(stationShadow.gameObject);
+            var stationPoint=BindPoint(game,station,"Papan arah",0,StationSignPosition+new Vector2(0,-.32f));
+            stationPoint.Label.transform.position=new Vector3(StationSignPosition.x,StationSignScreenTop+.2f,0);
 
             var buGang=CloneNpc(Required("BuSiti_Kasir"),"BuSiti_Gang",new Vector2(38.35f,-21.35f));
             ConfigureReaction(buGang,game.ReactionPoseSprites.ElementAtOrDefault(1),game.EmoteSprites.ElementAtOrDefault(2));
@@ -356,14 +359,16 @@ namespace Alif.EditorTools
             // Semua prop berdiri ditaruh di lantai terbuka (bukan menumpuk furnitur painted):
             // luggage/timetable dulu di y≈-1.6, tepat di muka kabinet & dinding painted,
             // sehingga terlihat melayang di atas furnitur (flag QA visual).
-            var petugas=AddAmbience("PetugasStasiun",game.ReactionPoseSprites.ElementAtOrDefault(0),new Vector2(-4.35f,-1.72f),1.25f,18);
+            // Petugas berjaga di depan meja Informasi; loket karcis diisi Naya yang sedang antre.
+            // Tinggi 1.0 = badan terlihat ~0.85 unit, setara Alif/Naya (1.25 dulu tampak raksasa).
+            var petugas=AddAmbience("PetugasStasiun",game.ReactionPoseSprites.ElementAtOrDefault(0),new Vector2(-3.2f,1.3f),PetugasHeight,18);
             ConfigureReaction(petugas,game.ReactionPoseSprites.ElementAtOrDefault(0),game.EmoteSprites.ElementAtOrDefault(1));
             AddPetugasFeet(petugas);
             AttachPropShadow(petugas,.55f);
-            var luggage=AddAmbience("VariantC_StationLuggage",game.LocationPropSprites.ElementAtOrDefault(0),new Vector2(4.45f,-2.35f),1.15f,16,.5f);
-            AttachPropShadow(luggage,.7f);
-            var timetable=AddAmbience("VariantC_StationTimetable",game.LocationPropSprites.ElementAtOrDefault(1),new Vector2(-3.15f,-2.35f),.9f,15,.35f);
-            AttachPropShadow(timetable,.55f);
+            // Troli koper (VariantC_StationLuggage) sengaja tidak dipasang: tampak seperti barang
+            // yang bisa diambil padahal tidak ada event ambil barang.
+            // Papan jadwal + tanaman (VariantC_StationTimetable) sengaja tidak dipasang lagi:
+            // voucher promo diambil di mesin tiket painted, jadi prop itu cuma menutupi lantai.
             // Crates dulu di x=35.25 — di luar batas gambar Warung Depan (x 35.6..44.4), mengambang
             // di void hitam. Ditampilkan di garis lantai gang, dekat dinding kiri.
             var crates=AddAmbience("VariantC_GangPlanterCrates",game.LocationPropSprites.ElementAtOrDefault(2),new Vector2(36.1f,-21.35f),1.15f,14,.6f);
@@ -393,6 +398,9 @@ namespace Alif.EditorTools
                 if(!reachable)throw new InvalidOperationException("Prop collider menutup jalur ke interact point: "+point.name);
             }
         }
+        internal const float PetugasHeight=1f;
+        internal static readonly Vector2 StationSignPosition=new Vector2(-1.06f,-1.83f);
+        internal const float StationSignScreenTop=-1.1f;
         static GameObject Named(string name)=>Find<Transform>().FirstOrDefault(t=>t.name==name)?.gameObject;
         static GameObject Required(string name)=>Named(name)??throw new InvalidOperationException("Missing Chapter 1 object: "+name);
         static GameObject CloneNpc(GameObject source,string name,Vector2 position)
@@ -439,9 +447,6 @@ namespace Alif.EditorTools
         }
         static void ApplyVariantCReferences(AdventureGame game)
         {
-            game.HudPanelSprite=Sprite(VariantC+"HudObjective.png");game.HudLocationSprite=Sprite(VariantC+"LocationTag.png");
-            game.JournalButtonSprite=Sprite(VariantC+"JournalButton.png");game.PauseButtonSprite=Sprite(VariantC+"PauseButton.png");game.BatikDividerSprite=Sprite(VariantC+"BatikDivider.png");
-            game.JoystickBaseSprite=Sprite(VariantC+"JoystickBase.png");game.JoystickKnobSprite=Sprite(VariantC+"JoystickKnob.png");game.InteractButtonSprite=Sprite(VariantC+"InteractButton.png");
             game.SignFamilySprites=new[]{Sprite(VariantC+"StationSign.png"),Sprite(VariantC+"GangSign.png")};
             game.LocationPropSprites=new[]{Sprite(VariantC+"StationLuggage.png"),Sprite(VariantC+"StationTimetable.png"),Sprite(VariantC+"GangPlanterCrates.png"),Sprite(VariantC+"ReceiptTray.png"),Sprite(VariantC+"Condiments.png"),Sprite(VariantC+"ServingCounter.png")};
             game.ReactionPoseSprites=new[]{Sprite(VariantC+"PetugasReaction.png"),Sprite(VariantC+"BuSitiReaction.png"),Sprite(VariantC+"RakaReaction.png")};

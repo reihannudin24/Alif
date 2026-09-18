@@ -1,4 +1,6 @@
+using Alif.Campaign;
 using Alif.Core;
+using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -21,6 +23,23 @@ namespace Alif.UI
         [SerializeField] private AudioClip _backgroundMusic;
 
         [SerializeField] private QuitConfirmationUI _quitConfirmation;
+
+        private void Awake()
+        {
+            // Tombolnya di-skin PixelSkin saat scene dimuat; kartu popup keluar ikut gaya
+            // panel oranye-krem dengan teks gelap.
+            if (_quitConfirmation != null && _quitConfirmation.transform.Find("Card") is Transform card && card.TryGetComponent(out Image cardImage))
+            {
+                PixelSkin.StylePanel(cardImage);
+                var message = card.Find("MessageText")?.GetComponent<TMP_Text>();
+                if (message != null)
+                {
+                    if (PixelSkin.Font != null) message.font = PixelSkin.Font;
+                    message.fontStyle = FontStyles.Normal;
+                    message.color = PixelSkin.TextDark;
+                }
+            }
+        }
 
         private void Start()
         {

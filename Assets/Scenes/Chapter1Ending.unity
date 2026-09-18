@@ -1319,14 +1319,22 @@ MonoBehaviour:
       jalan yang transparan.'
   - Parts:
     - Image: {fileID: 21300000, guid: 6927790b8a3fc4a66a1d1924664af17c, type: 3}
-      AnchorMin: {x: 0, y: 0.5}
-      AnchorMax: {x: 1, y: 1}
+      Crop:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 0
+        height: 0
       SpeakerName: Bu Siti
       Line: Ibu tidak akan lagi mengambil keputusan karena panik. Mulai besok, semua
         pemasukan, kebutuhan, dan akad akan Ibu catat dengan jelas.
     - Image: {fileID: 21300000, guid: 2294a436c521a43948389b4915be6ac6, type: 3}
-      AnchorMin: {x: 0, y: 0}
-      AnchorMax: {x: 1, y: 0.5}
+      Crop:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 0
+        height: 0
       SpeakerName: Alif (Batin)
       Line: Masalah hari ini selesai, tetapi perjalananku memahami amanah dalam setiap
         keputusan baru saja dimulai.

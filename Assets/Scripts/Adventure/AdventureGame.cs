@@ -20,7 +20,7 @@ using UnityEngine.UI;
 
 namespace Alif.Adventure
 {
-    public enum CampaignActivity { World, Dialogue, Puzzle, Journal, Pause, Ending, Combat }
+    public enum CampaignActivity { World, Dialogue, Puzzle, Journal, Pause, Ending, Combat, Bag }
     public sealed class AdventureGame : MonoBehaviour
     {
         public int Chapter;
@@ -28,14 +28,12 @@ namespace Alif.Adventure
         public CharacterData[] Cast;
         public Sprite InteractionArrow, DocumentIcon, PromotionIcon;
         [Header("Handcrafted Solo UI (optional approved assets)")]
-        public Sprite HudPanelSprite, HudLocationSprite, HudButtonSprite, JournalButtonSprite, PauseButtonSprite, BatikDividerSprite;
-        public Sprite JoystickBaseSprite, JoystickKnobSprite, InteractButtonSprite;
         [Header("Chapter 1 ambience (approved assets only)")]
         public Sprite[] SignFamilySprites, LocationPropSprites, ReactionPoseSprites, EmoteSprites;
         List<SceneDoor> _doors=new List<SceneDoor>();
         int _selectedCard=-1;
         public Action<string> ObjectiveCompleted;
-        public static readonly Color Ink=new Color(.07f,.10f,.14f,.94f), Paper=new Color(.96f,.93f,.85f), Gold=new Color(.85f,.74f,.48f), Teal=new Color(.18f,.30f,.32f);
+        public static readonly Color Ink=new Color(.07f,.10f,.14f,.94f), Paper=new Color(.96f,.93f,.85f), Teal=new Color(.18f,.30f,.32f);
         public static AdventureGame Instance { get; private set; }
         public AdventureState State { get; private set; }
         public AdventureChapter Content { get; private set; }
@@ -66,6 +64,14 @@ namespace Alif.Adventure
         GameObject _touchControls;
         VirtualJoystick _joystick;
         Button _skipTutorial;
+        RectTransform _hotbar;Rigidbody2D _playerBody;float _hotbarIdleFor;
+        const float HotbarShownY=14,HotbarShowDelay=.3f;
+        Image[] _hotbarSlots, _hotbarIcons;
+        TMP_Text[] _hotbarCounts;
+        TMP_Text _dayText, _clockText, _moneyText, _energyText;
+        RectTransform _dayTab, _energyFill, _logicFill, _shariaFill;
+        TMP_Text _logicText, _shariaText;
+        static readonly Dictionary<string,string> DayNamesId=new Dictionary<string,string>{{"Monday","Senin"},{"Tuesday","Selasa"},{"Wednesday","Rabu"},{"Thursday","Kamis"},{"Friday","Jumat"},{"Saturday","Sabtu"},{"Sunday","Minggu"}};
         Rect _lastSafeArea;
         int _lastScreenWidth, _lastScreenHeight;
         PlayerController _player;
@@ -112,9 +118,28 @@ namespace Alif.Adventure
             if(TutorialActive) BeginTutorial();
             else BeginChapterIntroduction(notice);
         }
+        // Adegan masuk Main Baru Bab 1: Alif muncul di sisi kanan ruang tunggu lalu berjalan
+        // sendiri ke titik spawn di tengah (tombol gerak pemain membatalkannya). 5.1: kaki
+        // Alif (lebar .32) masih bebas dari BoundaryWall_Right (x 5.55) — di 5.4 posisinya
+        // dianggap tidak aman dan adegan dilewati.
+        static readonly Vector2 OpeningWalkOffset=new Vector2(5.1f,0f);
         void BeginTutorial()
         {
             SetPlaying();
+            Vector2 walkFrom=Spawns[0]+OpeningWalkOffset;
+            if(Chapter==1&&State.TutorialStep==1&&!State.HasPosition)
+            {
+                if(!SafePosition(walkFrom)){Debug.LogWarning($"[Alif] Adegan masuk dilewati: titik awal {walkFrom} tertutup collider.");StartTutorialCounting();return;}
+                _player.transform.position=walkFrom;_player.GetComponent<Rigidbody2D>().position=walkFrom;
+                Camera.main.GetComponent<CameraFollow>()?.SnapToTarget();
+                // Jarak jalan otomatis tidak dihitung sebagai langkah tutorial pertama pemain.
+                _player.AutoWalkTo(Spawns[0],StartTutorialCounting);
+                return;
+            }
+            StartTutorialCounting();
+        }
+        void StartTutorialCounting()
+        {
             _tutorialLastPosition=_player.transform.position;_tutorialDistance=0;
             Toast(State.TutorialStep==1?"Tutorial dimulai • bergerak sejauh satu langkah":"Tutorial dilanjutkan dari checkpoint",6);
         }
@@ -158,29 +183,196 @@ namespace Alif.Adventure
             ApplySafeArea(true);
             _hud=CampaignUI.Rect(_safeRoot,"Adventure HUD",Vector2.zero,Vector2.one);
 
-            var location=Panel(_hud,new Vector2(.02f,.895f),new Vector2(.175f,.965f));
-            location.raycastTarget=false;ApplySprite(location,HudLocationSprite);
-            if(HudLocationSprite)location.color=Color.white;
-            _location=Text(location.transform,"",new Vector2(.03f,.08f),new Vector2(.97f,.92f),12,HudLocationSprite?Ink:Gold);
-            _location.alignment=TextAlignmentOptions.Center;
+            BuildStatusBoard();
 
-            var top=Panel(_hud,new Vector2(.18f,.875f),new Vector2(.77f,.98f));
-            top.raycastTarget=false;ApplySprite(top,HudPanelSprite);
-            if(HudPanelSprite)top.color=Color.white;
-            var pin=Panel(top.transform,new Vector2(0,0),new Vector2(.012f,1),Gold);pin.raycastTarget=false;
-            _objective=Text(top.transform,"",new Vector2(.025f,.16f),new Vector2(.975f,.92f),19,HudPanelSprite?Ink:Paper);
-            if(BatikDividerSprite)Icon(top.transform,BatikDividerSprite,new Vector2(.08f,.02f),new Vector2(.92f,.16f));
-            Button(_hud,"Jurnal",new Vector2(.79f,.895f),new Vector2(.885f,.965f),()=>Journal(0),JournalButtonSprite);
-            Button(_hud,"Jeda",new Vector2(.895f,.895f),new Vector2(.99f,.965f),Pause,PauseButtonSprite);
-            _skipTutorial=Button(_hud,"Lewati tutorial",new Vector2(.79f,.81f),new Vector2(.99f,.88f),SkipTutorial);
+            var top=Panel(_hud,new Vector2(.228f,.88f),new Vector2(.826f,.975f),Color.white);
+            top.raycastTarget=false;ApplySprite(top,PixelSkin.Panel());
+            _objective=Text(top.transform,"",Vector2.zero,Vector2.one,18,PixelSkin.TextDark);
+            _objective.margin=new Vector4(26,0,26,0);_objective.textWrappingMode=TextWrappingModes.NoWrap;_objective.overflowMode=TextOverflowModes.Ellipsis;
+            IconButton("Tas",PixelSkin.BagIcon(),2,Bag);
+            IconButton("Jurnal",PixelSkin.NotebookIcon(),1,()=>Journal(0));
+            IconButton("Jeda",PixelSkin.MenuIcon(),0,Pause);
+            _skipTutorial=Button(_hud,"Lewati tutorial",Vector2.one,Vector2.one,SkipTutorial);
+            var skipRect=(RectTransform)_skipTutorial.transform;skipRect.pivot=Vector2.one;skipRect.anchoredPosition=new Vector2(-14,-84);skipRect.sizeDelta=new Vector2(196,40);
+            _skipTutorial.GetComponentInChildren<TMP_Text>().fontSize=Mathf.RoundToInt(16*_textScale);
 
             _guideArrow=CampaignUI.Rect(_hud,"Route arrow",new Vector2(.31f,.82f),new Vector2(.345f,.87f)).gameObject.AddComponent<Image>();
             _guideArrow.sprite=InteractionArrow;_guideArrow.preserveAspect=true;_guideArrow.raycastTarget=false;_guideArrow.gameObject.SetActive(false);
-            _guide=Text(_hud,"",new Vector2(.345f,.82f),new Vector2(.69f,.87f),16,Gold);_guide.alignment=TextAlignmentOptions.Center;
-            _prompt=Text(_hud,"",new Vector2(.27f,.19f),new Vector2(.73f,.245f),18);_prompt.alignment=TextAlignmentOptions.Center;
-            _toast=Text(_hud,"",new Vector2(.22f,.255f),new Vector2(.78f,.31f),17);_toast.alignment=TextAlignmentOptions.Center;
+            _guide=WorldText(new Vector2(.345f,.82f),new Vector2(.69f,.87f),16);
+            _prompt=WorldText(new Vector2(.27f,.19f),new Vector2(.73f,.245f),18);
+            _toast=WorldText(new Vector2(.22f,.255f),new Vector2(.78f,.31f),17);
             BuildTouchControls();
+            BuildHotbar();
             RefreshHud();SetTouchControlsVisible();
+        }
+
+        /// <summary>Tombol ikon persegi di kanan-atas (Tas / Jurnal / Jeda). Nama GameObject
+        /// tetap nama tombolnya (dipakai smoke test & navigasi keyboard); label teks disembunyikan.</summary>
+        Button IconButton(string name,Sprite icon,int slotFromRight,Action click)
+        {
+            const float size=60,gap=8;
+            var b=Button(_hud,name,Vector2.one,Vector2.one,click);
+            var rect=(RectTransform)b.transform;rect.pivot=Vector2.one;rect.anchoredPosition=new Vector2(-14-slotFromRight*(size+gap),-16);rect.sizeDelta=Vector2.one*size;
+            b.GetComponentInChildren<TMP_Text>().gameObject.SetActive(false);
+            var image=CampaignUI.Rect(rect,"Icon",Vector2.one*.5f,Vector2.one*.5f).gameObject.AddComponent<Image>();
+            image.sprite=icon;image.raycastTarget=false;image.rectTransform.sizeDelta=icon.rect.size*PixelSkin.PixelScale;
+            return b;
+        }
+
+        /// <summary>Papan status kiri-atas bergaya game manajemen retro: tab hari (krem) di tepi
+        /// atas papan oranye, baris lokasi / jam / uang dalam kotak krem berikon, dan bar energi
+        /// hijau di bawah papan. Ukuran dalam unit kanvas (referensi 1280x720) supaya piksel
+        /// bingkai tetap tajam.</summary>
+        void BuildStatusBoard()
+        {
+            const float width=262,rowHeight=28,iconSize=26;
+            var board=CampaignUI.Rect(_hud,"Status board",new Vector2(0,1),new Vector2(0,1));
+            board.pivot=new Vector2(0,1);board.anchoredPosition=new Vector2(14,-22);board.sizeDelta=new Vector2(width,130);
+            var boardImage=board.gameObject.AddComponent<Image>();boardImage.raycastTarget=false;ApplySprite(boardImage,PixelSkin.Button());
+
+            _dayTab=CampaignUI.Rect(board,"Day tab",new Vector2(0,1),new Vector2(0,1));
+            _dayTab.pivot=new Vector2(0,.5f);_dayTab.anchoredPosition=new Vector2(14,2);_dayTab.sizeDelta=new Vector2(110,30);
+            var tabImage=_dayTab.gameObject.AddComponent<Image>();tabImage.raycastTarget=false;ApplySprite(tabImage,PixelSkin.Tab());
+            _dayText=StatusText(_dayTab,15,TextAlignmentOptions.Center);
+
+            // Baris 1 selebar papan (lokasi), baris 2-3 dengan ikon di kiri kotak.
+            _location=StatusText(StatusRow(board,"Location row",-22,14,rowHeight),13,TextAlignmentOptions.Center);
+            _clockText=StatusText(StatusRow(board,"Clock row",-56,14+iconSize+8,rowHeight),15,TextAlignmentOptions.Left);
+            StatusIcon(board,PixelSkin.ClockIcon(),-56-rowHeight*.5f,iconSize);
+            _moneyText=StatusText(StatusRow(board,"Money row",-90,14+iconSize+8,rowHeight),15,TextAlignmentOptions.Left);
+            StatusIcon(board,PixelSkin.CoinIcon(),-90-rowHeight*.5f,iconSize);
+
+            // Bar di bawah papan: kotak ikon oranye + bar krem berisi warna, teks di tengah.
+            (_energyFill,_energyText)=StatusBar("Energy",PixelSkin.BoltIcon(),-158,width,new Color(.55f,.88f,.36f));
+            (_logicFill,_logicText)=StatusBar("Financial logic",PixelSkin.ChartIcon(),-194,width,new Color(.45f,.7f,1f));
+            (_shariaFill,_shariaText)=StatusBar("Sharia compliance",PixelSkin.CrescentIcon(),-230,width,new Color(1f,.8f,.3f));
+
+            var time=TimeSystem.Instance;var energy=EnergySystem.Instance;var currency=CurrencySystem.Instance;
+            if(time){time.OnMinuteChanged-=RefreshStatusBoard;time.OnMinuteChanged+=RefreshStatusBoard;time.OnDayChanged-=RefreshStatusBoard;time.OnDayChanged+=RefreshStatusBoard;}
+            if(energy){energy.OnEnergyChanged-=RefreshStatusEnergy;energy.OnEnergyChanged+=RefreshStatusEnergy;}
+            if(currency){currency.OnMoneyChanged-=RefreshStatusMoney;currency.OnMoneyChanged+=RefreshStatusMoney;}
+            var score=ScoreSystem.Instance;
+            if(score){score.OnFinancialLogicChanged-=RefreshStatusLogic;score.OnFinancialLogicChanged+=RefreshStatusLogic;score.OnShariaComplianceChanged-=RefreshStatusSharia;score.OnShariaComplianceChanged+=RefreshStatusSharia;}
+            RefreshStatusBoard();
+        }
+        (RectTransform fill,TMP_Text text) StatusBar(string name,Sprite icon,float top,float width,Color color)
+        {
+            var iconBox=CampaignUI.Rect(_hud,name+" icon",new Vector2(0,1),new Vector2(0,1));
+            iconBox.pivot=new Vector2(0,1);iconBox.anchoredPosition=new Vector2(14,top);iconBox.sizeDelta=new Vector2(34,30);
+            var iconBoxImage=iconBox.gameObject.AddComponent<Image>();iconBoxImage.raycastTarget=false;ApplySprite(iconBoxImage,PixelSkin.Button());
+            var iconImage=CampaignUI.Rect(iconBox,"Icon",Vector2.one*.5f,Vector2.one*.5f).gameObject.AddComponent<Image>();
+            iconImage.sprite=icon;iconImage.rectTransform.sizeDelta=icon.rect.size*2;iconImage.raycastTarget=false;
+            var bar=CampaignUI.Rect(_hud,name+" bar",new Vector2(0,1),new Vector2(0,1));
+            bar.pivot=new Vector2(0,1);bar.anchoredPosition=new Vector2(52,top);bar.sizeDelta=new Vector2(width-38,30);
+            var barImage=bar.gameObject.AddComponent<Image>();barImage.raycastTarget=false;ApplySprite(barImage,PixelSkin.Slot());
+            var fillArea=CampaignUI.Rect(bar,"Fill area",Vector2.zero,Vector2.one);fillArea.offsetMin=Vector2.one*4;fillArea.offsetMax=-Vector2.one*4;
+            var fill=CampaignUI.Rect(fillArea,"Fill",Vector2.zero,Vector2.one);
+            var fillImage=fill.gameObject.AddComponent<Image>();fillImage.raycastTarget=false;ApplySprite(fillImage,PixelSkin.BarFill());fillImage.color=color;
+            return (fill,StatusText(bar,13,TextAlignmentOptions.Center));
+        }
+        static void SetBar(RectTransform fill,TMP_Text text,string label,float percent01)
+        {
+            if(!fill)return;
+            percent01=Mathf.Clamp01(percent01);
+            fill.anchorMax=new Vector2(percent01,1);fill.offsetMax=Vector2.zero;
+            text.text=(label.Length>0?label+"  ":"")+Mathf.RoundToInt(percent01*100)+"%";
+        }
+        RectTransform StatusRow(RectTransform board,string name,float top,float left,float height)
+        {
+            var row=CampaignUI.Rect(board,name,new Vector2(0,1),new Vector2(1,1));
+            row.pivot=new Vector2(.5f,1);row.offsetMin=new Vector2(left,top-height);row.offsetMax=new Vector2(-14,top);
+            var image=row.gameObject.AddComponent<Image>();image.raycastTarget=false;ApplySprite(image,PixelSkin.Slot());
+            return row;
+        }
+        void StatusIcon(RectTransform board,Sprite sprite,float centerY,float size)
+        {
+            var icon=CampaignUI.Rect(board,"Icon",new Vector2(0,1),new Vector2(0,1)).gameObject.AddComponent<Image>();
+            icon.rectTransform.pivot=new Vector2(0,.5f);icon.rectTransform.anchoredPosition=new Vector2(14,centerY);icon.rectTransform.sizeDelta=Vector2.one*size;
+            icon.sprite=sprite;icon.raycastTarget=false;
+        }
+        TMP_Text StatusText(RectTransform parent,int size,TextAlignmentOptions alignment)
+        {
+            var text=Text(parent,"",Vector2.zero,Vector2.one,size,PixelSkin.TextDark);
+            text.alignment=alignment;text.margin=new Vector4(10,0,10,0);text.textWrappingMode=TextWrappingModes.NoWrap;text.overflowMode=TextOverflowModes.Ellipsis;
+            return text;
+        }
+        void RefreshStatusBoard()
+        {
+            if(!_dayText)return; // HUD lama sudah dihancurkan (BuildHud ulang)
+            var time=TimeSystem.Instance;
+            string day=time?(DayNamesId.TryGetValue(time.CurrentDayName,out var id)?id:time.CurrentDayName):"—";
+            _dayText.text=day;
+            _dayTab.sizeDelta=new Vector2(_dayText.GetPreferredValues(day).x+44,_dayTab.sizeDelta.y);
+            _clockText.text=time?$"{time.GetFormattedTime()}   Minggu ke-{time.CurrentWeek}":"--:--";
+            RefreshStatusMoney(CurrencySystem.Instance?CurrencySystem.Instance.CurrentMoney:State?.Money??0);
+            RefreshStatusEnergy(EnergySystem.Instance?EnergySystem.Instance.EnergyPercent01:1f);
+            var score=ScoreSystem.Instance;
+            RefreshStatusLogic(score?score.FinancialLogicPercent01:.5f);
+            RefreshStatusSharia(score?score.ShariaCompliancePercent01:.5f);
+        }
+        void RefreshStatusMoney(int amount){if(_moneyText)_moneyText.text=CurrencySystem.FormatRupiah(amount);}
+        void RefreshStatusEnergy(float percent01)=>SetBar(_energyFill,_energyText,"",percent01);
+        void RefreshStatusLogic(float percent01)=>SetBar(_logicFill,_logicText,"Logika Finansial",percent01);
+        void RefreshStatusSharia(float percent01)=>SetBar(_shariaFill,_shariaText,"Kepatuhan Syariah",percent01);
+
+        /// <summary>Hotbar 5 slot di bawah-tengah: ikon & jumlah barang dari InventorySystem;
+        /// klik slot memilih barang (klik lagi membatalkan). Panel inventory lama dari scene
+        /// dihapus di BuildTouchControls, jadi ini satu-satunya tampilan tas di HUD.</summary>
+        void BuildHotbar()
+        {
+            var inventory=InventorySystem.Instance;
+            if(!inventory){_hotbarSlots=null;return;}
+            int count=inventory.Slots.Count;const float slot=64,gap=8,pad=14;
+            var bar=_hotbar=CampaignUI.Rect(_hud,"Hotbar",new Vector2(.5f,0),new Vector2(.5f,0));
+            bar.pivot=new Vector2(.5f,0);bar.anchoredPosition=new Vector2(0,HotbarShownY);
+            bar.sizeDelta=new Vector2(count*slot+(count-1)*gap+pad*2,slot+pad*2);
+            var barImage=bar.gameObject.AddComponent<Image>();barImage.raycastTarget=false;ApplySprite(barImage,PixelSkin.Tab());
+            _hotbarSlots=new Image[count];_hotbarIcons=new Image[count];_hotbarCounts=new TMP_Text[count];
+            for(int i=0;i<count;i++)
+            {
+                int index=i;
+                var rt=CampaignUI.Rect(bar,"Slot "+(i+1),new Vector2(0,.5f),new Vector2(0,.5f));
+                rt.pivot=new Vector2(0,.5f);rt.anchoredPosition=new Vector2(pad+i*(slot+gap),0);rt.sizeDelta=Vector2.one*slot;
+                var slotImage=rt.gameObject.AddComponent<Image>();ApplySprite(slotImage,PixelSkin.Slot());
+                var button=rt.gameObject.AddComponent<Button>();button.targetGraphic=slotImage;button.navigation=new Navigation{mode=Navigation.Mode.None};
+                button.onClick.AddListener(()=>{if(Activity==CampaignActivity.World)InventorySystem.Instance?.Select(index);});
+                var icon=CampaignUI.Rect(rt,"Icon",Vector2.zero,Vector2.one).gameObject.AddComponent<Image>();
+                icon.rectTransform.offsetMin=Vector2.one*10;icon.rectTransform.offsetMax=-Vector2.one*10;icon.preserveAspect=true;icon.raycastTarget=false;
+                rt.gameObject.AddComponent<InventorySlotDrag>().Setup(index,icon);
+                var quantity=CampaignUI.Text(rt,"",Vector2.zero,Vector2.one,14);quantity.alignment=TextAlignmentOptions.BottomRight;quantity.margin=new Vector4(0,0,6,3);quantity.color=PixelSkin.TextDark;
+                _hotbarSlots[i]=slotImage;_hotbarIcons[i]=icon;_hotbarCounts[i]=quantity;
+            }
+            inventory.OnInventoryChanged-=InventoryChanged;inventory.OnInventoryChanged+=InventoryChanged;
+            inventory.OnSelectionChanged-=RefreshHotbarSelection;inventory.OnSelectionChanged+=RefreshHotbarSelection;
+            RefreshHotbar();
+        }
+        void RefreshHotbarSelection(int _)=>RefreshHotbar();
+        /// <summary>Hotbar turun keluar layar selama pemain berjalan dan naik lagi setelah
+        /// berhenti sebentar, supaya tidak menutupi lantai saat menjelajah.</summary>
+        void AnimateHotbar()
+        {
+            if(!_hotbar)return;
+            if(!_playerBody&&_player)_playerBody=_player.GetComponent<Rigidbody2D>();
+            bool moving=Activity==CampaignActivity.World&&_playerBody&&_playerBody.linearVelocity.sqrMagnitude>.01f;
+            _hotbarIdleFor=moving?0:_hotbarIdleFor+Time.unscaledDeltaTime;
+            float target=_hotbarIdleFor>=HotbarShowDelay?HotbarShownY:-_hotbar.sizeDelta.y-12;
+            var position=_hotbar.anchoredPosition;
+            position.y=CampaignUI.ReducedMotion?target:Mathf.Lerp(position.y,target,1-Mathf.Exp(-14*Time.unscaledDeltaTime));
+            _hotbar.anchoredPosition=position;
+        }
+        void InventoryChanged(){RefreshHotbar();if(Activity==CampaignActivity.Bag&&!_paused)Bag();}
+        void RefreshHotbar()
+        {
+            var inventory=InventorySystem.Instance;
+            if(!inventory||_hotbarSlots==null)return;
+            for(int i=0;i<_hotbarSlots.Length&&i<inventory.Slots.Count;i++)
+            {
+                if(!_hotbarSlots[i])return; // HUD lama sudah dihancurkan (BuildHud ulang)
+                var item=inventory.Slots[i];
+                _hotbarIcons[i].sprite=item.Icon;_hotbarIcons[i].enabled=!item.IsEmpty&&item.Icon;
+                _hotbarCounts[i].text=!item.IsEmpty&&item.Quantity>1?"x"+item.Quantity:"";
+                _hotbarSlots[i].color=i==inventory.SelectedIndex?PixelSkin.OrangeLight:Color.white;
+            }
         }
 
         void ApplySafeArea(bool force=false)
@@ -201,13 +393,9 @@ namespace Alif.Adventure
                 var legacyCanvas=legacy.GetComponentInParent<Canvas>();
                 if(legacyCanvas)
                 {
-                    if(!JoystickBaseSprite)JoystickBaseSprite=legacy.GetComponent<Image>()?.sprite;
-                    if(!JoystickKnobSprite)JoystickKnobSprite=legacy.GetComponentsInChildren<Image>(true).Select(i=>i.sprite).FirstOrDefault(s=>s&&s!=JoystickBaseSprite);
                     foreach(var name in new[]{"HUD_Panel","Inventory_Panel","VirtualJoystick","InteractButton","PauseButton","PauseMenuPanel","QuitConfirmPopup"})
                     {
-                        var old=legacyCanvas.transform.Find(name);if(!old)continue;
-                        if(name=="InteractButton"&&!InteractButtonSprite)InteractButtonSprite=old.GetComponent<Image>()?.sprite;
-                        Destroy(old.gameObject);
+                        var old=legacyCanvas.transform.Find(name);if(old)Destroy(old.gameObject);
                     }
                 }
                 else legacy.gameObject.SetActive(false);
@@ -218,19 +406,19 @@ namespace Alif.Adventure
             var background=CampaignUI.Rect(touchArea,"Joystick base",Vector2.zero,Vector2.zero);
             background.anchorMin=background.anchorMax=Vector2.zero;background.pivot=new Vector2(.5f,.5f);
             background.anchoredPosition=new Vector2(92,92);background.sizeDelta=new Vector2(144,144);
-            var baseImage=background.gameObject.AddComponent<Image>();baseImage.sprite=JoystickBaseSprite;baseImage.color=JoystickBaseSprite?new Color(1,1,1,.72f):new Color(.20f,.16f,.13f,.72f);baseImage.preserveAspect=true;baseImage.raycastTarget=false;
+            var baseImage=background.gameObject.AddComponent<Image>();baseImage.sprite=PixelSkin.JoystickBase();baseImage.color=new Color(1,1,1,.8f);baseImage.preserveAspect=true;baseImage.raycastTarget=false;
             var knob=CampaignUI.Rect(background,"Knob",new Vector2(.5f,.5f),new Vector2(.5f,.5f));
             knob.pivot=new Vector2(.5f,.5f);knob.sizeDelta=new Vector2(64,64);
-            var knobImage=knob.gameObject.AddComponent<Image>();knobImage.sprite=JoystickKnobSprite;knobImage.color=JoystickKnobSprite?Color.white:Paper;knobImage.preserveAspect=true;knobImage.raycastTarget=false;
+            var knobImage=knob.gameObject.AddComponent<Image>();knobImage.sprite=PixelSkin.JoystickKnob();knobImage.preserveAspect=true;knobImage.raycastTarget=false;
             _joystick=touchArea.gameObject.AddComponent<VirtualJoystick>();
             _joystick.Configure(touchArea,background,knob,VirtualJoystick.SavedMode);_player.BindJoystick(_joystick);
 
             var interact=CampaignUI.Rect(_touchControls.transform,"Interact",Vector2.one,Vector2.one);
             interact.anchorMin=interact.anchorMax=interact.pivot=new Vector2(1,0);
             interact.anchoredPosition=new Vector2(-26,28);interact.sizeDelta=new Vector2(104,104);
-            var image=interact.gameObject.AddComponent<Image>();image.sprite=InteractButtonSprite;image.color=InteractButtonSprite?Color.white:new Color(.42f,.25f,.13f,.92f);image.preserveAspect=true;
+            var image=interact.gameObject.AddComponent<Image>();image.sprite=PixelSkin.Disc();image.preserveAspect=true;
             var button=interact.gameObject.AddComponent<Button>();button.targetGraphic=image;button.onClick.AddListener(_player.Interact);button.navigation=new Navigation{mode=Navigation.Mode.None};
-            var label=CampaignUI.Text(interact,"E",Vector2.zero,Vector2.one,25);label.alignment=TextAlignmentOptions.Center;label.fontStyle=FontStyles.Bold;
+            var label=CampaignUI.Text(interact,"E",Vector2.zero,Vector2.one,34);label.alignment=TextAlignmentOptions.Center;label.color=PixelSkin.TextLight;label.margin=Vector4.zero;
         }
 
         void SetTouchControlsVisible()
@@ -255,7 +443,7 @@ namespace Alif.Adventure
             if(TutorialActive)
             {
                 _location.text=$"BAB {Chapter}  •  {Content.Areas[State.Area]}";
-                _objective.text=State.TutorialStep==1?"TUTORIAL 1/3   Bergerak satu langkah":State.TutorialStep==2?"TUTORIAL 2/3   Baca papan arah":"TUTORIAL 3/3   Buka lalu tutup Jurnal";
+                _objective.text=State.TutorialStep==1?Objective("TUTORIAL 1/3","Bergerak satu langkah"):State.TutorialStep==2?Objective("TUTORIAL 2/3","Baca papan arah"):Objective("TUTORIAL 3/3","Buka lalu tutup Jurnal");
                 foreach(var p in _points)if(p.Label)p.Label.gameObject.SetActive(State.TutorialStep==2&&p.Target==TutorialTarget&&p.Area==0);
                 return;
             }
@@ -263,7 +451,7 @@ namespace Alif.Adventure
             var tasks=Content.Tasks;
             for(int i=0;i<tasks.Length;i++)if(State.Progress(tasks[i].Id)?.Complete==true)done++;
             _location.text=$"BAB {Chapter}  •  {Content.Areas[State.Area]}";
-            _objective.text=t==null?"Perjalanan bab selesai":$"{done+1}/{Content.Tasks.Length}   {t.Title}";
+            _objective.text=t==null?"Perjalanan bab selesai":Objective($"TUGAS {done+1}/{Content.Tasks.Length}",t.Title);
             foreach(var p in _points)
             {
                 bool active=t!=null && t.Target==p.Target && t.Area==p.Area;
@@ -276,11 +464,13 @@ namespace Alif.Adventure
             var k=Keyboard.current;
             if(k!=null && k.tabKey.wasPressedThisFrame) CycleFocus((k.leftShiftKey.isPressed || k.rightShiftKey.isPressed)?-1:1);
             if(Chapter==0 || State==null)return;
+            AnimateHotbar();
             if(_toast && Time.unscaledTime>_toastUntil)_toast.text="";
-            if(k!=null && k.escapeKey.wasPressedThisFrame){if(_paused)Resume();else if(Activity==CampaignActivity.Journal)CloseModal();else Pause();return;}
+            if(k!=null && k.escapeKey.wasPressedThisFrame){if(_paused)Resume();else if(Activity==CampaignActivity.Journal||Activity==CampaignActivity.Bag)CloseModal();else Pause();return;}
             if(Activity!=CampaignActivity.World)return;
             State.PlaySeconds+=Time.unscaledDeltaTime;
             if(k!=null && k.jKey.wasPressedThisFrame){Journal(0);return;}
+            if(k!=null && k.iKey.wasPressedThisFrame){Bag();return;}
             var pos=(Vector2)_player.transform.position;
             State.Area=AreaOf(pos);
             var collider=_player.InteractionTarget;
@@ -310,6 +500,7 @@ namespace Alif.Adventure
         void UpdateTutorial(Vector2 position)
         {
             if(State.TutorialStep!=1)return;
+            if(_player.IsAutoWalking){_tutorialLastPosition=position;return;}
             _tutorialDistance+=Vector2.Distance(position,_tutorialLastPosition);_tutorialLastPosition=position;
             if(_tutorialDistance<1f)return;
             State.TutorialStep=2;Save(false);RefreshHud();Toast("Bagus • dekati Papan arah dan tekan E atau tombol interaksi",6);
@@ -418,7 +609,7 @@ namespace Alif.Adventure
             SetTouchControlsVisible();
             _player?.SetMovementLocked(this, true);_player?.SetAdventureDirection(Vector2.zero);_walkTarget=null;
             GameManager.Instance?.SetState(GameManager.GameState.Dialogue);
-            var shade=Panel(_modal,Vector2.zero,Vector2.one);shade.color=new Color(.08f,.13f,.16f,.73f);
+            Panel(_modal,Vector2.zero,Vector2.one,new Color(.10f,.06f,.04f,.62f));
         }
         void CloseModal()
         {
@@ -438,25 +629,33 @@ namespace Alif.Adventure
         RectTransform Card(CampaignActivity screen,string eyebrow,string title)
         {
             ClearModal(screen);
-            var p=Panel(_modal,new Vector2(.075f,.12f),new Vector2(.925f,.88f)).rectTransform;
-            Panel(p,new Vector2(0,.99f),Vector2.one,Gold);
-            Text(p,eyebrow,new Vector2(.03f,.88f),new Vector2(.97f,.97f),17,Gold);
-            Text(p,title,new Vector2(.03f,.76f),new Vector2(.97f,.89f),31);
+            var card=Panel(_modal,new Vector2(.075f,.1f),new Vector2(.925f,.86f),Color.white);ApplySprite(card,PixelSkin.Panel());
+            var p=card.rectTransform;
+            var tab=CampaignUI.Rect(p,"Eyebrow tab",new Vector2(.025f,1),new Vector2(.025f,1));tab.pivot=new Vector2(0,.5f);
+            var tabImage=tab.gameObject.AddComponent<Image>();tabImage.raycastTarget=false;ApplySprite(tabImage,PixelSkin.Tab());
+            var tabText=Text(tab,eyebrow,Vector2.zero,Vector2.one,16);tabText.alignment=TextAlignmentOptions.Center;tabText.margin=Vector4.zero;tabText.textWrappingMode=TextWrappingModes.NoWrap;
+            tab.sizeDelta=new Vector2(tabText.GetPreferredValues(eyebrow).x+40,Mathf.Round(40*_textScale));
+            Text(p,title,new Vector2(.03f,.76f),new Vector2(.97f,.9f),31);
             return p;
         }
         Image Panel(Transform parent,Vector2 min,Vector2 max,Color? color=null) => CampaignUI.Panel(parent,"Panel",min,max,color??Ink,true);
+        /// <summary>Default warna mengikuti latar: gelap di dalam kartu krem, terang di HUD.</summary>
         TMP_Text Text(Transform parent,string content,Vector2 min,Vector2 max,int size=22,Color? color=null)
         {
-            var label=CampaignUI.Text(parent,content,min,max,Mathf.RoundToInt(size*_textScale));label.color=color??Paper;return label;
+            bool onCard=_modal&&parent.IsChildOf(_modal);
+            var label=CampaignUI.Text(parent,content,min,max,Mathf.RoundToInt(size*_textScale));label.color=color??(onCard?PixelSkin.TextDark:Paper);return label;
         }
-        Button Button(Transform parent,string label,Vector2 min,Vector2 max,Action click,Sprite sprite=null)
+        /// <summary>Teks HUD yang melayang di atas lantai: terang bergaris coklat tua.</summary>
+        TMP_Text WorldText(Vector2 min,Vector2 max,int size)
+        {
+            var label=Text(_hud,"",min,max,size,PixelSkin.TextLight);label.alignment=TextAlignmentOptions.Center;
+            label.outlineColor=PixelSkin.Outline;label.outlineWidth=.28f;return label;
+        }
+        static string Objective(string tag,string title) => $"<color=#{ColorUtility.ToHtmlStringRGB(PixelSkin.Accent)}>{tag}</color>   {title}";
+        Button Button(Transform parent,string label,Vector2 min,Vector2 max,Action click)
         {
             var b=CampaignUI.Button(parent,label,min,max,()=>{if(Time.unscaledTime-_openedAt<.13f)return;click();});
-            // Default: frame pixel 9-slice (dulu warna flat) — sprite eksplisit tetap menang.
-            sprite=sprite?sprite:(HudButtonSprite?HudButtonSprite:Campaign.CampaignUI.PixelButtonSprite());
-            b.image.color=Color.white;ApplySprite(b.image,sprite);
-            var colors=b.colors;colors.selectedColor=Gold;colors.highlightedColor=Gold;colors.pressedColor=new Color(.74f,.62f,.42f);b.colors=colors;
-            var text=b.GetComponentInChildren<TMP_Text>();text.fontSize=Mathf.RoundToInt(19*_textScale);text.color=Paper;
+            b.GetComponentInChildren<TMP_Text>().fontSize=Mathf.RoundToInt(19*_textScale);
             _buttons.Add(b);return b;
         }
         void FocusFirst(){if(_buttons.Count>0)CampaignUI.Focus(_buttons[0]);}
@@ -494,14 +693,14 @@ namespace Alif.Adventure
                 for(int i=0;i<board.Cards.Length;i++){int card=i;float y=.58f-i*.076f;bool chosen=progress.Placements[i]==1;
                     Button(p,(chosen?"✓  ":"+  ")+board.Cards[i]+" • Rp"+board.Costs[i].ToString("N0"),new Vector2(.04f,y),new Vector2(.58f,y+.068f),()=>Place(card,chosen?0:1));}
                 int total=board.Total(progress.Placements);
-                Text(p,"Dana tersedia\nRp"+board.Limit.ToString("N0")+"\n\nDialokasikan\nRp"+total.ToString("N0")+"\nSisa Rp"+(board.Limit-total).ToString("N0"),new Vector2(.63f,.23f),new Vector2(.95f,.66f),22,total>board.Limit?new Color(1,.6f,.5f):Gold);
+                Text(p,"Dana tersedia\nRp"+board.Limit.ToString("N0")+"\n\nDialokasikan\nRp"+total.ToString("N0")+"\nSisa Rp"+(board.Limit-total).ToString("N0"),new Vector2(.63f,.23f),new Vector2(.95f,.66f),22,total>board.Limit?PixelSkin.Warning:PixelSkin.Accent);
             }
             else if(board.Kind=="inspect")
             {
                 // The world artwork is unchanged. This diagram is a labelled inspection work surface.
                 var face=Panel(p,new Vector2(.05f,.29f),new Vector2(.52f,.64f),new Color(.3f,.32f,.3f));
                 if(_task.Id=="c3.rules")Icon(face.transform,PromotionIcon,Vector2.zero,Vector2.one);
-                else {Text(face.transform,"RADIO  /  S-014",new Vector2(.02f,.62f),new Vector2(.98f,.96f),24);Text(face.transform,"▥   ───   ◉",new Vector2(.05f,.2f),new Vector2(.95f,.6f),40);}
+                else {Text(face.transform,"RADIO  /  S-014",new Vector2(.02f,.62f),new Vector2(.98f,.96f),24,Paper);Text(face.transform,"▥   ───   ◉",new Vector2(.05f,.2f),new Vector2(.95f,.6f),40,Paper);}
                 for(int i=0;i<board.Cards.Length;i++){int card=i;float y=.55f-i*.09f;
                     Button(p,(progress.Placements[i]==0?"✓ ":"Periksa: ")+board.Cards[i],new Vector2(.56f,y),new Vector2(.96f,y+.078f),()=>Place(card,0));}
             }
@@ -513,7 +712,7 @@ namespace Alif.Adventure
                 for(int i=0;i<board.Slots.Length;i++){int slot=i;float h=.4f/board.Slots.Length,y=.63f-(i+1)*h;
                     Button(p,(board.Kind=="flow"?"Urutan: ":"")+board.Slots[i],new Vector2(.57f,y),new Vector2(.96f,y+h-.008f),()=>{if(_selectedCard>=0)Place(_selectedCard,slot);else ShowPuzzle("Pilih kartu di kiri terlebih dahulu.");});}
             }
-            Text(p,feedback??"Kemajuan disimpan setiap kali satu bukti ditempatkan dengan benar.",new Vector2(.035f,.13f),new Vector2(.96f,.23f),18,Gold);
+            Text(p,feedback??"Kemajuan disimpan setiap kali satu bukti ditempatkan dengan benar.",new Vector2(.035f,.13f),new Vector2(.96f,.23f),18,PixelSkin.Accent);
             Button(p,_hint>=2?"Terapkan satu panduan":"Petunjuk",new Vector2(.04f,.035f),new Vector2(.28f,.11f),Hint);
             Button(p,"Kembali",new Vector2(.34f,.035f),new Vector2(.54f,.11f),()=>{Save();CloseModal();});
             Button(p,"Selesaikan aktivitas",new Vector2(.61f,.035f),new Vector2(.96f,.11f),Commit).interactable=board.Solved(progress.Placements);FocusFirst();
@@ -557,6 +756,27 @@ namespace Alif.Adventure
             Button(p,"Berikutnya >",new Vector2(.29f,.03f),new Vector2(.51f,.12f),()=>Journal(_journalPage+1)).interactable=_journalPage<pages-1;
             Button(p,"Kembali",new Vector2(.74f,.03f),new Vector2(.96f,.12f),CloseModal);FocusFirst();
         }
+        /// <summary>Kartu Tas: semua slot InventorySystem dengan ikon, nama, dan jumlah.</summary>
+        void Bag()
+        {
+            var p=Card(CampaignActivity.Bag,"TAS  /  BARANG BAWAAN","Isi tas Alif");
+            var slots=InventorySystem.Instance?InventorySystem.Instance.Slots:null;
+            bool any=false;
+            for(int i=0;slots!=null&&i<slots.Count;i++)
+            {
+                var item=slots[i];float x=.04f+i*.184f;
+                var tile=Panel(p,new Vector2(x,.3f),new Vector2(x+.17f,.66f),Color.white);ApplySprite(tile,PixelSkin.Slot());
+                Image tileIcon=null;
+                if(item.IsEmpty){tile.gameObject.AddComponent<InventorySlotDrag>().Setup(i,null);Text(p,"Kosong",new Vector2(x,.19f),new Vector2(x+.17f,.29f),15,PixelSkin.CreamShade*.8f).alignment=TextAlignmentOptions.Center;continue;}
+                any=true;
+                if(item.Icon){tileIcon=CampaignUI.Rect(tile.transform,"Icon",Vector2.zero,Vector2.one).gameObject.AddComponent<Image>();tileIcon.sprite=item.Icon;tileIcon.preserveAspect=true;tileIcon.raycastTarget=false;tileIcon.rectTransform.offsetMin=Vector2.one*22;tileIcon.rectTransform.offsetMax=-Vector2.one*22;}
+                tile.gameObject.AddComponent<InventorySlotDrag>().Setup(i,tileIcon);
+                if(item.Quantity>1)Text(tile.transform,"x"+item.Quantity,Vector2.zero,Vector2.one,17).alignment=TextAlignmentOptions.BottomRight;
+                Text(p,item.ItemName,new Vector2(x,.16f),new Vector2(x+.17f,.29f),15).alignment=TextAlignmentOptions.Top;
+            }
+            Text(p,any?"Seret barang ke kotak lain untuk menata isi tas.":"Tas masih kosong. Barang yang kamu ambil akan muncul di sini.",new Vector2(.04f,.67f),new Vector2(.96f,.75f),18,PixelSkin.Accent);
+            Button(p,"Kembali",new Vector2(.74f,.04f),new Vector2(.96f,.14f),CloseModal);FocusFirst();
+        }
         public void Pause()
         {
             if(_paused||_transition)return;
@@ -587,7 +807,7 @@ namespace Alif.Adventure
             PlayerPrefs.SetInt(key,1-PlayerPrefs.GetInt(key,0));PlayerPrefs.Save();
             Resume();BuildHud();
             if(Activity==CampaignActivity.Dialogue)ShowDialogueLine(DialogueManager.Instance.CurrentLine);
-            else if(Activity==CampaignActivity.Puzzle)ShowPuzzle();else if(Activity==CampaignActivity.Journal)Journal(_journalPage);
+            else if(Activity==CampaignActivity.Puzzle)ShowPuzzle();else if(Activity==CampaignActivity.Journal)Journal(_journalPage);else if(Activity==CampaignActivity.Bag)Bag();
             Pause();
         }
         static string JoystickModeLabel(JoystickMode mode) => mode==JoystickMode.Fixed?"tetap":mode==JoystickMode.Floating?"mengambang":"tersembunyi";
@@ -650,6 +870,11 @@ namespace Alif.Adventure
         {
             if (_encounter != null) { _encounter.Finished-=EncounterFinished; _encounter.Cancel(); }
             if (_player) _player.SetMovementLocked(this,false);
+            if(InventorySystem.Instance){InventorySystem.Instance.OnInventoryChanged-=InventoryChanged;InventorySystem.Instance.OnSelectionChanged-=RefreshHotbarSelection;}
+            if(TimeSystem.Instance){TimeSystem.Instance.OnMinuteChanged-=RefreshStatusBoard;TimeSystem.Instance.OnDayChanged-=RefreshStatusBoard;}
+            if(EnergySystem.Instance)EnergySystem.Instance.OnEnergyChanged-=RefreshStatusEnergy;
+            if(CurrencySystem.Instance)CurrencySystem.Instance.OnMoneyChanged-=RefreshStatusMoney;
+            if(ScoreSystem.Instance){ScoreSystem.Instance.OnFinancialLogicChanged-=RefreshStatusLogic;ScoreSystem.Instance.OnShariaComplianceChanged-=RefreshStatusSharia;}
             if(DialogueManager.Instance){DialogueManager.Instance.OnLineDisplayed-=ShowDialogueLine;DialogueManager.Instance.OnDialogueCompleted-=DialogueCompleted;DialogueManager.Instance.OnDialogueEnded-=ExternalDialogueEnded;}
             if(_canvas)Destroy(_canvas.gameObject);if(_dialogue)Destroy(_dialogue);if(Instance==this)Instance=null;
         }

@@ -1314,37 +1314,61 @@ MonoBehaviour:
     IntroText: "Chapter 2 \u2014 Jebakan Riba\n\nBeberapa hari setelah persoalan Bu Siti selesai, Alif kembali menjalani harinya di Solo.\n\nSebuah pertemuan tak sengaja akan membawanya pada persoalan baru: jalan keluar cepat yang menyimpan beban panjang."
   - Parts:
     - Image: {fileID: 21300000, guid: bbe7f8514221e4030b05d80e5341355c, type: 3}
-      AnchorMin: {x: 0, y: 0}
-      AnchorMax: {x: 1, y: 1}
+      Crop:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 0
+        height: 0
       SpeakerName: Narator
       Line: Menjelang sore, Alif melintasi sebuah jalan kecil di depan deretan kos mahasiswa.
     IntroText: 
   - Parts:
     - Image: {fileID: 21300000, guid: bbe7f8514221e4030b05d80e5341355c, type: 3}
-      AnchorMin: {x: 0, y: 0.5}
-      AnchorMax: {x: 1, y: 1}
+      Crop:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 0
+        height: 0
       SpeakerName: Narator
       Line: Di depan gerbang, Dimas berdiri mondar-mandir. Tatapannya terpaku pada ponsel dan wajahnya terlihat bingung.
     - Image: {fileID: 21300000, guid: e61ef88cac2724e05928ea51d76553ec, type: 3}
-      AnchorMin: {x: 0, y: 0}
-      AnchorMax: {x: 0.5, y: 0.5}
+      Crop:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 0
+        height: 0
       SpeakerName: Alif
       Line: Dimas? Dari tadi kamu kelihatan gelisah. Ada masalah?
     - Image: {fileID: 21300000, guid: 472f1cb66352a4789a198beef3d0e43a, type: 3}
-      AnchorMin: {x: 0.5, y: 0}
-      AnchorMax: {x: 1, y: 0.5}
+      Crop:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 0
+        height: 0
       SpeakerName: Dimas
       Line: Lif... kebetulan banget kamu lewat. Aku perlu pendapatmu, tapi nggak enak ngomong di luar.
     IntroText: 
   - Parts:
     - Image: {fileID: 21300000, guid: ac7ca8f635ef14c8b8be665660067854, type: 3}
-      AnchorMin: {x: 0, y: 0.5}
-      AnchorMax: {x: 1, y: 1}
+      Crop:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 0
+        height: 0
       SpeakerName: Dimas
       Line: Masuk ke kamarku sebentar, ya. Aku sedang butuh Rp2.000.000 dan hampir mengajukan pinjaman online.
     - Image: {fileID: 21300000, guid: 3170e6e1e101f4a69836fe9c5d82b4f3, type: 3}
-      AnchorMin: {x: 0, y: 0}
-      AnchorMax: {x: 1, y: 0.5}
+      Crop:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 0
+        height: 0
       SpeakerName: Alif
       Line: Baik. Jangan tekan tombol pengajuan dulu. Kita baca syaratnya dan cari jalan keluar yang aman bersama-sama.
     IntroText: 

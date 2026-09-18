@@ -93,9 +93,14 @@ namespace Alif.Adventure.Tests
                 Is.InRange(warungDepan.min.x, warungDepan.max.x),
                 "Crates harus di dalam gambar Warung Depan (dulu mengambang di void x=35.25).");
 
-            foreach (string name in new[] { "VariantC_StationLuggage", "VariantC_StationTimetable", "VariantC_GangPlanterCrates", "PetugasStasiun" })
+            foreach (string name in new[] { "VariantC_GangPlanterCrates", "PetugasStasiun" })
                 Assert.That(Required(name).GetComponents<Collider2D>().Any(c => !c.isTrigger), Is.True,
                     name + " butuh collider kaki solid supaya tidak ditembus player.");
+
+            // Troli koper & papan jadwal dihapus: menutupi furnitur painted dan troli tampak
+            // seperti barang yang bisa diambil padahal tidak ada event ambil barang.
+            foreach (string removed in new[] { "VariantC_StationLuggage", "VariantC_StationTimetable" })
+                Assert.That(FindByName(removed), Is.Null, removed + " tidak boleh ada lagi di stasiun.");
 
             foreach (string legacy in new[] { "Cat_SiBelang", "Secret_LuckyCoin" })
             {

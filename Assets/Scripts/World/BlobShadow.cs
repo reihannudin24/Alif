@@ -19,21 +19,34 @@ namespace Alif.World
         private SpriteRenderer _ownerRenderer;
         private int _lastOwnerOrder = int.MinValue;
 
+        // Sprite karakter Alif ber-pivot bawah-tengah dengan ~16–24px padding transparan
+        // di bawah telapak (256 PPU) — pusat bayangan diletakkan tepat di garis telapak itu.
+        private const float SoleInsetFromSpriteBottom = 0.07f;
+
         /// <summary>
-        /// Pasang bayangan di bawah karakter (idempotent). localFeetOffset adalah posisi
-        /// titik kaki relatif terhadap pivot karakter.
+        /// Pasang bayangan tepat di telapak kaki karakter (idempotent). Posisi diturunkan dari
+        /// bounds sprite pemilik, bukan collider — collider kaki (offset -0.34) berada di bawah
+        /// telapak sprite, dan bayangan yang ikut collider jatuh jauh di bawah kaki sehingga karakter
+        /// tampak melayang.
         /// </summary>
-        public static BlobShadow Ensure(Transform owner, Vector3 localFeetOffset, float width = 0.55f)
+        public static BlobShadow Ensure(Transform owner, float width = 0.42f)
         {
             BlobShadow existing = owner.GetComponentInChildren<BlobShadow>(true);
             if (existing != null) return existing;
 
             var go = new GameObject("BlobShadow");
             go.transform.SetParent(owner, false);
-            go.transform.localPosition = localFeetOffset;
+            go.transform.localPosition = new Vector3(0f, SoleLocalY(owner), 0f);
             var shadow = go.AddComponent<BlobShadow>();
             shadow.Initialize(width);
             return shadow;
+        }
+
+        private static float SoleLocalY(Transform owner)
+        {
+            var ownerRenderer = owner.GetComponent<SpriteRenderer>();
+            if (ownerRenderer == null || ownerRenderer.sprite == null) return 0f;
+            return ownerRenderer.sprite.bounds.min.y + SoleInsetFromSpriteBottom;
         }
 
         private void Initialize(float width)
@@ -51,7 +64,7 @@ namespace Alif.World
             // width = lebar dunia yang diinginkan; skala dihitung dari ukuran sprite asli,
             // bukan angka lokal mentah (dulu 0.55 dianggap skala → bayangan jadi mikro).
             Vector2 spriteSize = _renderer.sprite.bounds.size;
-            _renderer.transform.localScale = new Vector3(width / spriteSize.x, width * 0.5f / spriteSize.y, 1f);
+            _renderer.transform.localScale = new Vector3(width / spriteSize.x, width * 0.38f / spriteSize.y, 1f);
         }
 
         private void LateUpdate()

@@ -72,6 +72,7 @@ namespace Alif.UI
         [SerializeField] private float _portraitEnterOffsetX = 120f;
 
         private readonly List<GameObject> _spawnedChoiceButtons = new List<GameObject>();
+        private RectTransform _speakerTab;
         private DialogueLine _currentLine;
         private int _keyboardBlockedUntilFrame = -1;
 
@@ -84,35 +85,7 @@ namespace Alif.UI
 
         private void Awake()
         {
-            // Styling runtime: dialogue box, tombol Lanjut, dan tombol pilihan mendapat frame
-            // pixel 9-slice yang sama dengan HUD adventure — dulu persegi semi-transparan
-            // polos. Sprite builder (kalau ada) tetap menang; patch hanya mengisi yang kosong.
-            if (_dialogueBoxRoot != null)
-            {
-                var panelImage = _dialogueBoxRoot.GetComponent<Image>();
-                if (panelImage != null && panelImage.sprite == null)
-                {
-                    panelImage.sprite = CampaignUI.PixelPanelSprite();
-                    panelImage.type = Image.Type.Sliced;
-                    panelImage.color = Color.white;
-                }
-            }
-            if (_nextButton != null && _nextButton.image != null && _nextButton.image.sprite == null)
-            {
-                _nextButton.image.sprite = CampaignUI.PixelButtonSprite();
-                _nextButton.image.type = Image.Type.Sliced;
-                _nextButton.image.color = Color.white;
-            }
-            if (_choiceButtonPrefab != null)
-            {
-                var prefabImage = _choiceButtonPrefab.GetComponent<Image>();
-                if (prefabImage != null && prefabImage.sprite == null)
-                {
-                    prefabImage.sprite = CampaignUI.PixelPanelSprite();
-                    prefabImage.type = Image.Type.Sliced;
-                    prefabImage.color = Color.white;
-                }
-            }
+            ApplyPixelSkin();
 
             if (_nextButton != null)
             {
@@ -279,6 +252,79 @@ namespace Alif.UI
         }
 
         /// <summary>
+        /// Gaya kotak dialog sama dengan cutscene (PixelSkin): bingkai oranye berisi krem, teks
+        /// gelap berfont pixel, nama pembicara di tab krem yang menempel di tepi atas-kiri kotak.
+        /// Scene dibangun builder dengan panel hitam transparan; skin dipasang runtime. Tombol
+        /// Lanjut di-skin PixelSkin saat scene dimuat, tombol pilihan saat di-spawn.
+        /// </summary>
+        private void ApplyPixelSkin()
+        {
+            if (_dialogueBoxRoot != null && _dialogueBoxRoot.TryGetComponent(out Image panelImage))
+            {
+                PixelSkin.StylePanel(panelImage);
+            }
+
+            if (_speakerNameText != null)
+            {
+                // Tab menempel di tepi atas panel (anchor atas-kiri), jadi ikut bergeser saat
+                // tinggi panel berubah untuk tombol pilihan.
+                _speakerTab = new GameObject("SpeakerTab", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+                _speakerTab.SetParent(_speakerNameText.transform.parent, false);
+                _speakerTab.anchorMin = _speakerTab.anchorMax = new Vector2(0f, 1f);
+                _speakerTab.pivot = new Vector2(0f, .5f);
+                _speakerTab.anchoredPosition = new Vector2(24f, 0f);
+                _speakerTab.sizeDelta = new Vector2(160f, 38f);
+                var tabImage = _speakerTab.GetComponent<Image>();
+                tabImage.sprite = PixelSkin.Tab();
+                tabImage.type = Image.Type.Sliced;
+                tabImage.raycastTarget = false;
+
+                RectTransform nameRect = _speakerNameText.rectTransform;
+                nameRect.SetParent(_speakerTab, false);
+                nameRect.anchorMin = Vector2.zero;
+                nameRect.anchorMax = Vector2.one;
+                nameRect.pivot = new Vector2(.5f, .5f);
+                nameRect.offsetMin = nameRect.offsetMax = Vector2.zero;
+                StyleText(_speakerNameText, 17f, PixelSkin.TextDark);
+                _speakerNameText.alignment = TextAlignmentOptions.Center;
+                _speakerNameText.textWrappingMode = TextWrappingModes.NoWrap;
+            }
+
+            if (_dialogueText != null)
+            {
+                StyleText(_dialogueText, 19f, PixelSkin.TextDark);
+                // Turun sedikit dari tepi atas supaya tidak tertimpa tab nama & bingkai.
+                RectTransform textRect = _dialogueText.rectTransform;
+                textRect.offsetMin = new Vector2(30f, textRect.offsetMin.y);
+                textRect.offsetMax = new Vector2(textRect.offsetMax.x, -32f);
+            }
+
+            if (_choiceStatusText != null)
+            {
+                StyleText(_choiceStatusText, _choiceStatusText.fontSize, PixelSkin.Accent);
+            }
+        }
+
+        private static void StyleText(TMP_Text text, float size, Color color)
+        {
+            if (PixelSkin.Font != null) text.font = PixelSkin.Font;
+            text.fontStyle = FontStyles.Normal;
+            text.fontSize = size;
+            text.color = color;
+        }
+
+        private void FitSpeakerTab()
+        {
+            if (_speakerTab == null) return;
+            bool hasSpeaker = !string.IsNullOrEmpty(_speakerNameText.text);
+            _speakerTab.gameObject.SetActive(hasSpeaker);
+            if (hasSpeaker)
+            {
+                _speakerTab.sizeDelta = new Vector2(_speakerNameText.GetPreferredValues(_speakerNameText.text).x + 44f, _speakerTab.sizeDelta.y);
+            }
+        }
+
+        /// <summary>
         /// Render baris dialog baru: update nama + teks, lalu tampilkan tombol "next"
         /// atau tombol-tombol pilihan tergantung apakah baris ini punya Choices.
         /// </summary>
@@ -290,6 +336,7 @@ namespace Alif.UI
             if (_speakerNameText != null)
             {
                 _speakerNameText.text = line.SpeakerName;
+                FitSpeakerTab();
             }
 
             if (_dialogueText != null)
@@ -355,6 +402,7 @@ namespace Alif.UI
             {
                 Button choiceButton = Instantiate(_choiceButtonPrefab, _choiceButtonContainer);
                 choiceButton.gameObject.SetActive(true);
+                PixelSkin.StyleButton(choiceButton); // sebelum mengukur: font pixel mengubah tinggi teks
 
                 TMP_Text label = choiceButton.GetComponentInChildren<TMP_Text>();
                 float buttonHeight = _minChoiceButtonHeight;

@@ -1,56 +1,57 @@
+using Alif.Campaign;
 using TMPro;
 using UnityEngine;
 
 namespace Alif.UI
 {
     /// <summary>
-    /// Animasi ringan untuk panah interaksi: pop masuk dengan overshoot lalu mengambung
-    /// pelan (bob) selama panah tampil. Dipasang otomatis oleh PlayerController saat panah
-    /// pertama kali ditampilkan — tidak perlu perubahan pada scene builder. Menambahkan
-    /// keycap "E" kecil di samping panah supaya pemain keyboard tahu tombolnya.
+    /// Prompt interaksi: keycap "E" krem berbingkai oranye (PixelSkin) yang melayang di atas
+    /// kepala pemain selama ada objek yang bisa diinteraksi. Dulu berupa panah di atas tiap
+    /// objek — objek painted (ATM, bangku, loket) hanya zona tak terlihat, jadi panahnya jatuh
+    /// menutupi gambar objek itu sendiri. Pop masuk dengan overshoot lalu mengambang pelan.
     /// </summary>
     public sealed class InteractionPromptFX : MonoBehaviour
     {
+        private const float KeycapSize = .3f;
+
         private Vector3 _basePosition;
-        private bool _initialized;
         private float _age;
+
+        public static InteractionPromptFX Create(Transform owner, float localY)
+        {
+            var root = new GameObject("InteractPrompt");
+            root.transform.SetParent(owner, false);
+            root.transform.localPosition = new Vector3(0f, localY, 0f);
+
+            var keycap = new GameObject("Keycap").AddComponent<SpriteRenderer>();
+            keycap.transform.SetParent(root.transform, false);
+            keycap.sprite = PixelSkin.Tab();
+            keycap.transform.localScale = Vector3.one * (KeycapSize / keycap.sprite.bounds.size.y);
+            keycap.sortingOrder = Alif.World.YSortOrder.PromptOrderBase + 30;
+
+            var label = new GameObject("KeyLabel").AddComponent<TextMeshPro>();
+            label.transform.SetParent(root.transform, false);
+            if (PixelSkin.Font != null) label.font = PixelSkin.Font;
+            label.text = "E";
+            label.fontSize = 2.2f;
+            label.alignment = TextAlignmentOptions.Center;
+            label.color = PixelSkin.TextDark;
+            label.rectTransform.sizeDelta = Vector2.one * KeycapSize;
+            label.GetComponent<MeshRenderer>().sortingOrder = Alif.World.YSortOrder.PromptOrderBase + 31;
+
+            return root.AddComponent<InteractionPromptFX>();
+        }
 
         private void Awake()
         {
             _basePosition = transform.localPosition;
-            _initialized = true;
-            EnsureKeycap();
         }
 
         private void OnEnable()
         {
-            if (!_initialized)
-            {
-                _basePosition = transform.localPosition;
-                _initialized = true;
-                EnsureKeycap();
-            }
             _age = 0f;
             transform.localScale = Vector3.one;
             transform.localPosition = _basePosition;
-        }
-
-        // Label "E" dunia (bukan bagian canvas HUD) — dibuat sekali, ikut parent panah.
-        private void EnsureKeycap()
-        {
-            if (transform.Find("KeycapE") != null) return;
-            var keycap = new GameObject("KeycapE");
-            keycap.transform.SetParent(transform, false);
-            keycap.transform.localPosition = new Vector3(0.42f, -0.02f, 0f);
-            var text = keycap.AddComponent<TextMeshPro>();
-            text.text = "E";
-            text.fontSize = 1.6f;
-            text.alignment = TextAlignmentOptions.Center;
-            text.color = new Color(1f, 1f, 1f, .95f);
-            text.rectTransform.sizeDelta = new Vector2(.6f, .6f);
-            var mesh = text.GetComponent<MeshRenderer>();
-            mesh.sortingLayerName = "Default";
-            mesh.sortingOrder = Alif.World.YSortOrder.PromptOrderBase + 2;
         }
 
         private void LateUpdate()
@@ -67,7 +68,7 @@ namespace Alif.UI
             float t = Mathf.Clamp01(_age / .25f);
             float eased = 1f + (c + 1f) * Mathf.Pow(t - 1f, 3f) + c * Mathf.Pow(t - 1f, 2f);
             transform.localScale = Vector3.one * Mathf.Lerp(.4f, 1f, eased);
-            transform.localPosition = _basePosition + Vector3.up * (Mathf.Sin(_age * 3.2f) * .06f);
+            transform.localPosition = _basePosition + Vector3.up * (Mathf.Sin(_age * 3.2f) * .04f);
         }
     }
 }

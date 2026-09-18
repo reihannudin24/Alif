@@ -50,8 +50,8 @@ public sealed class HudCaptureTests
         game = null;
         for (int i = 0; i < 120 && !game; i++) { yield return null; game = Object.FindAnyObjectByType<AdventureGame>(); }
         player = Object.FindAnyObjectByType<Alif.Player.PlayerController>();
-        player.SetAdventureDirection(Vector2.right);
-        for (int i = 0; i < 120 && player.transform.position.x < 2.1f; i++)
+        player.SetAdventureDirection(Vector2.left);
+        for (int i = 0; i < 120 && player.transform.position.x > -.6f; i++)
         {
             yield return new WaitForFixedUpdate();
             yield return null;

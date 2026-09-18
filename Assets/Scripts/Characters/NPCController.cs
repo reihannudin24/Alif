@@ -63,7 +63,7 @@ namespace Alif.Characters
             }
 
             // Bayangan kaki mengikat NPC ke lantai background painted
-            BlobShadow.Ensure(transform, new Vector3(0f, -0.34f, 0f));
+            BlobShadow.Ensure(transform);
 
             // Pastikan EmoteBubble terpasang
             if (GetComponent<EmoteBubble>() == null)
