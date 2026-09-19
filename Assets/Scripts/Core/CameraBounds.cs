@@ -26,6 +26,13 @@ namespace Alif.Core
         public Vector2 Center => _center;
         public Vector2 HalfExtents => _halfExtents;
 
+        /// <summary>Untuk area yang dirakit runtime (Kota Cempaka).</summary>
+        public void Configure(Vector2 center, Vector2 halfExtents)
+        {
+            _center = center;
+            _halfExtents = halfExtents;
+        }
+
         private void OnEnable()
         {
             if (!ActiveBounds.Contains(this))

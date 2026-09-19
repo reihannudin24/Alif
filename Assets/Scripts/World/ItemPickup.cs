@@ -25,6 +25,14 @@ namespace Alif.World
         // Cuma bisa diambil sekali — begitu berhasil, interact berikutnya nggak ngapa-ngapain.
         private bool _collected;
 
+        /// <summary>Dipanggil setelah barang berhasil diambil (nama barang) — AdventureGame
+        /// mencatatnya di save supaya pickup tidak bisa diambil ulang setelah dimuat.</summary>
+        public static event System.Action<string> Collected;
+
+        public string ItemName => _itemName;
+
+        public void MarkCollected() => _collected = true;
+
         public void Interact()
         {
             if (_collected)
@@ -38,7 +46,8 @@ namespace Alif.World
                 return;
             }
 
-            bool added = InventorySystem.Instance.AddItem(_itemName, _itemIcon, _quantity);
+            // Ikon katalog dipakai bila ada, supaya sama dengan ikon setelah tas dipulihkan dari save.
+            bool added = InventorySystem.Instance.AddItem(_itemName, ItemCatalog.Icon(_itemName) ?? _itemIcon, _quantity);
             if (!added)
             {
                 // Inventory penuh — jangan tandai collected, biar bisa dicoba lagi kalau
@@ -47,6 +56,7 @@ namespace Alif.World
             }
 
             _collected = true;
+            Collected?.Invoke(_itemName);
 
             if (_pickupDialogue != null && DialogueManager.Instance != null)
             {

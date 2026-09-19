@@ -20,8 +20,8 @@ using UnityEngine.UI;
 
 namespace Alif.Adventure
 {
-    public enum CampaignActivity { World, Dialogue, Puzzle, Journal, Pause, Ending, Combat, Bag, Item }
-    public sealed class AdventureGame : MonoBehaviour
+    public enum CampaignActivity { World, Dialogue, Puzzle, Journal, Pause, Ending, Combat, Bag, Item, Phone }
+    public sealed partial class AdventureGame : MonoBehaviour
     {
         public int Chapter;
         public Vector2[] Centers, Spawns;
@@ -110,7 +110,7 @@ namespace Alif.Adventure
             if(Chapter > State.HighestUnlocked) {SceneTransition.Load(MenuScene);return;}
             if(State.Chapter!=Chapter) State=State.StartChapter(Chapter);
             Content=AdventureContent.Get(Chapter);
-            BindOriginalScene(); BuildHud();
+            BuildCity(); BindOriginalScene(); BuildHud(); StartSideQuests();
             DialogueManager.Instance.OnLineDisplayed+=ShowDialogueLine;
             DialogueManager.Instance.OnDialogueEnded+=ExternalDialogueEnded;
             DialogueManager.Instance.OnDialogueCompleted+=DialogueCompleted;
@@ -186,10 +186,11 @@ namespace Alif.Adventure
 
             BuildStatusBoard();
 
-            var top=Panel(_hud,new Vector2(.228f,.88f),new Vector2(.826f,.975f),Color.white);
+            var top=Panel(_hud,new Vector2(.228f,.88f),new Vector2(.772f,.975f),Color.white);
             top.raycastTarget=false;ApplySprite(top,PixelSkin.Panel());
             _objective=Text(top.transform,"",Vector2.zero,Vector2.one,18,PixelSkin.TextDark);
             _objective.margin=new Vector4(26,0,26,0);_objective.textWrappingMode=TextWrappingModes.NoWrap;_objective.overflowMode=TextOverflowModes.Ellipsis;
+            IconButton("HP",PixelSkin.PhoneIcon(),3,OpenPhone);
             IconButton("Tas",PixelSkin.BagIcon(),2,Bag);
             IconButton("Jurnal",PixelSkin.NotebookIcon(),1,()=>Journal(0));
             IconButton("Jeda",PixelSkin.MenuIcon(),0,Pause);
@@ -362,9 +363,9 @@ namespace Alif.Adventure
             position.y=CampaignUI.ReducedMotion?target:Mathf.Lerp(position.y,target,1-Mathf.Exp(-14*Time.unscaledDeltaTime));
             _hotbar.anchoredPosition=position;
         }
-        void InventoryChanged(){RefreshHotbar();if(Activity==CampaignActivity.Bag&&!_paused)Bag();}
+        void InventoryChanged(){RefreshHotbar();RefreshQuestMarkers();if(Activity==CampaignActivity.Bag&&!_paused)Bag();}
         // Popup ditunda sampai pemain kembali menjelajah (mis. setelah dialog pengambilan barang).
-        void QueueReceivedItem(string name,Sprite icon,int quantity)=>_receivedItems.Enqueue((name,icon));
+        void QueueReceivedItem(string name,Sprite icon,int quantity){if(!_restoringInventory)_receivedItems.Enqueue((name,icon));}
         void RefreshHotbar()
         {
             var inventory=InventorySystem.Instance;
@@ -443,6 +444,7 @@ namespace Alif.Adventure
         void RefreshHud()
         {
             if(!_objective)return;
+            RefreshQuestMarkers();
             if(_skipTutorial)_skipTutorial.gameObject.SetActive(TutorialActive);
             if(TutorialActive)
             {
@@ -470,12 +472,13 @@ namespace Alif.Adventure
             if(Chapter==0 || State==null)return;
             AnimateHotbar();
             if(_toast && Time.unscaledTime>_toastUntil)_toast.text="";
-            if(k!=null && k.escapeKey.wasPressedThisFrame){if(_paused)Resume();else if(Activity==CampaignActivity.Journal||Activity==CampaignActivity.Bag||Activity==CampaignActivity.Item)CloseModal();else Pause();return;}
+            if(k!=null && k.escapeKey.wasPressedThisFrame){if(_paused)Resume();else if(Activity==CampaignActivity.Journal||Activity==CampaignActivity.Bag||Activity==CampaignActivity.Item||Activity==CampaignActivity.Phone)CloseModal();else Pause();return;}
             if(Activity!=CampaignActivity.World)return;
             if(_receivedItems.Count>0&&CanExplore){ShowItemReceived(_receivedItems.Dequeue());return;}
             State.PlaySeconds+=Time.unscaledDeltaTime;
             if(k!=null && k.jKey.wasPressedThisFrame){Journal(0);return;}
             if(k!=null && k.iKey.wasPressedThisFrame){Bag();return;}
+            if(k!=null && k.pKey.wasPressedThisFrame){OpenPhone();return;}
             var pos=(Vector2)_player.transform.position;
             State.Area=AreaOf(pos);
             var collider=_player.InteractionTarget;
@@ -553,6 +556,7 @@ namespace Alif.Adventure
         public void Interact(string target)
         {
             if(!CanExplore)return;
+            if(target.StartsWith("npc:")){InteractQuestNpc(target);return;}
             if(TutorialActive)
             {
                 if(State.TutorialStep!=2||target!=TutorialTarget||State.Area!=0){Toast("Ikuti langkah tutorial yang tampil di atas",4);return;}
@@ -565,7 +569,7 @@ namespace Alif.Adventure
             if(t.Target!=target||t.Area!=State.Area){Toast("Tugas berikutnya: "+t.Title,5);return;}
             _task=t;
             if (t.Kind == "encounter") { Say(t.Speaker,t.Introduction,BeginEncounter); return; }
-            Say(t.Speaker,t.Introduction,()=>{if(t.Board!=null){_hint=0;_selectedCard=-1;State.PrepareBoard(t);Save();ShowPuzzle();}else CompleteTalk(t);});
+            Say(t.Speaker,t.Introduction,()=>{if(t.Board!=null){State.PrepareBoard(t);Save();OpenBoard(MainBoard(t));}else CompleteTalk(t);});
         }
         void CompleteTalk(AdventureTask task)
         {
@@ -597,6 +601,7 @@ namespace Alif.Adventure
         public bool Save(bool show=true)
         {
             if(_player){State.X=_player.transform.position.x;State.Y=_player.transform.position.y;State.Area=AreaOf(_player.transform.position);State.HasPosition=true;}
+            SnapshotInventory();
             if(CurrencySystem.Instance){State.Money=CurrencySystem.Instance.CurrentMoney;State.Bank=CurrencySystem.Instance.BankBalance;}
             bool ok=ChapterProgress.SaveAdventure(State);_savedAt=Time.unscaledTime;
             if(show)Toast(ok?"Checkpoint tersimpan":"Checkpoint belum tersimpan. Coba lagi lewat menu jeda.",ok?3:10);
@@ -686,33 +691,57 @@ namespace Alif.Adventure
             if(data!=_dialogue)return;
             var after=_afterDialogue;_afterDialogue=null;CloseModal();after?.Invoke();
         }
+        /// <summary>Papan puzzle yang sedang dibuka — tugas bab utama maupun langkah side quest
+        /// memakai UI yang sama; sesi menentukan penyimpanan penempatan dan akibat saat selesai.</summary>
+        sealed class BoardSession
+        {
+            public string Id,Title;
+            public ActivityBoard Board;
+            public Func<List<int>> Placements;
+            public Func<int,int,(bool ok,string feedback)> Place;
+            public Func<(bool ok,string feedback)> Commit;
+        }
+        BoardSession _board;
+        void OpenBoard(BoardSession session){_board=session;_hint=0;_selectedCard=-1;ShowPuzzle();}
+        BoardSession MainBoard(AdventureTask t)=>new BoardSession
+        {
+            Id=t.Id,Title=t.Title,Board=t.Board,
+            Placements=()=>State.PrepareBoard(t).Placements,
+            Place=(card,slot)=>(State.Place(t,card,slot,out string feedback),feedback),
+            Commit=()=>
+            {
+                if(!State.CommitBoard(t,out string feedback))return (false,feedback);
+                CurrencySystem.Instance?.RestoreBalances(State.Money,State.Bank);ObjectiveCompleted?.Invoke(t.Id);RefreshHud();
+                Say(t.Speaker,t.Outcome,()=>{State.Finish(Content);Save();if(State.Completed)ShowEnding();});
+                return (true,feedback);
+            },
+        };
         void ShowPuzzle(string feedback=null)
         {
-            var board=_task.Board;var progress=State.PrepareBoard(_task);
-            if(progress.Complete){Say(_task.Speaker,_task.Outcome,()=>{State.Finish(Content);Save();if(State.Completed)ShowEnding();});return;}
+            var board=_board.Board;var placements=_board.Placements();
             string kind=board.Kind=="budget"?"ANGGARAN":board.Kind=="inspect"?"PERIKSA DETAIL":board.Kind=="flow"?"ARUS PEMBAYARAN":board.Kind=="match"?"COCOKKAN DOKUMEN":"KELOMPOKKAN BUKTI";
-            var p=Card(CampaignActivity.Puzzle,kind,_task.Title.Split('—')[0]);
+            var p=Card(CampaignActivity.Puzzle,kind,_board.Title.Split('—')[0]);
             Text(p,board.Instruction,new Vector2(.04f,.67f),new Vector2(.96f,.77f),18);
             if(board.Kind=="budget")
             {
-                for(int i=0;i<board.Cards.Length;i++){int card=i;float y=.58f-i*.076f;bool chosen=progress.Placements[i]==1;
+                for(int i=0;i<board.Cards.Length;i++){int card=i;float y=.58f-i*.076f;bool chosen=placements[i]==1;
                     Button(p,(chosen?"✓  ":"+  ")+board.Cards[i]+" • Rp"+board.Costs[i].ToString("N0"),new Vector2(.04f,y),new Vector2(.58f,y+.068f),()=>Place(card,chosen?0:1));}
-                int total=board.Total(progress.Placements);
+                int total=board.Total(placements);
                 Text(p,"Dana tersedia\nRp"+board.Limit.ToString("N0")+"\n\nDialokasikan\nRp"+total.ToString("N0")+"\nSisa Rp"+(board.Limit-total).ToString("N0"),new Vector2(.63f,.23f),new Vector2(.95f,.66f),22,total>board.Limit?PixelSkin.Warning:PixelSkin.Accent);
             }
             else if(board.Kind=="inspect")
             {
                 // The world artwork is unchanged. This diagram is a labelled inspection work surface.
                 var face=Panel(p,new Vector2(.05f,.29f),new Vector2(.52f,.64f),new Color(.3f,.32f,.3f));
-                if(_task.Id=="c3.rules")Icon(face.transform,PromotionIcon,Vector2.zero,Vector2.one);
+                if(_board.Id=="c3.rules")Icon(face.transform,PromotionIcon,Vector2.zero,Vector2.one);
                 else {Text(face.transform,"RADIO  /  S-014",new Vector2(.02f,.62f),new Vector2(.98f,.96f),24,Paper);Text(face.transform,"▥   ───   ◉",new Vector2(.05f,.2f),new Vector2(.95f,.6f),40,Paper);}
                 for(int i=0;i<board.Cards.Length;i++){int card=i;float y=.55f-i*.09f;
-                    Button(p,(progress.Placements[i]==0?"✓ ":"Periksa: ")+board.Cards[i],new Vector2(.56f,y),new Vector2(.96f,y+.078f),()=>Place(card,0));}
+                    Button(p,(placements[i]==0?"✓ ":"Periksa: ")+board.Cards[i],new Vector2(.56f,y),new Vector2(.96f,y+.078f),()=>Place(card,0));}
             }
             else
             {
                 for(int i=0;i<board.Cards.Length;i++){int card=i;float h=.4f/board.Cards.Length,y=.63f-(i+1)*h;
-                    bool done=progress.Placements[i]==board.Answers[i];
+                    bool done=placements[i]==board.Answers[i];
                     var b=Button(p,(done?"✓ ":_selectedCard==i?"> ":"")+board.Cards[i],new Vector2(.04f,y),new Vector2(.51f,y+h-.008f),()=>{_selectedCard=card;ShowPuzzle();});b.interactable=!done;}
                 for(int i=0;i<board.Slots.Length;i++){int slot=i;float h=.4f/board.Slots.Length,y=.63f-(i+1)*h;
                     Button(p,(board.Kind=="flow"?"Urutan: ":"")+board.Slots[i],new Vector2(.57f,y),new Vector2(.96f,y+h-.008f),()=>{if(_selectedCard>=0)Place(_selectedCard,slot);else ShowPuzzle("Pilih kartu di kiri terlebih dahulu.");});}
@@ -720,24 +749,22 @@ namespace Alif.Adventure
             Text(p,feedback??"Kemajuan disimpan setiap kali satu bukti ditempatkan dengan benar.",new Vector2(.035f,.13f),new Vector2(.96f,.23f),18,PixelSkin.Accent);
             Button(p,_hint>=2?"Terapkan satu panduan":"Petunjuk",new Vector2(.04f,.035f),new Vector2(.28f,.11f),Hint);
             Button(p,"Kembali",new Vector2(.34f,.035f),new Vector2(.54f,.11f),()=>{Save();CloseModal();});
-            Button(p,"Selesaikan aktivitas",new Vector2(.61f,.035f),new Vector2(.96f,.11f),Commit).interactable=board.Solved(progress.Placements);FocusFirst();
+            Button(p,"Selesaikan aktivitas",new Vector2(.61f,.035f),new Vector2(.96f,.11f),Commit).interactable=board.Solved(placements);FocusFirst();
         }
         public void Place(int card,int slot)
         {
             if(Activity!=CampaignActivity.Puzzle)return;
-            bool accepted=State.Place(_task,card,slot,out string feedback);
+            var (accepted,feedback)=_board.Place(card,slot);
             if(accepted){Save();_selectedCard=-1;}ShowPuzzle(feedback);
         }
         void Commit()
         {
-            if(State.CommitBoard(_task,out string feedback))
-            {
-                CurrencySystem.Instance?.RestoreBalances(State.Money,State.Bank);Save();ObjectiveCompleted?.Invoke(_task.Id);RefreshHud();ShowPuzzle();
-            }else ShowPuzzle(feedback);
+            var (ok,feedback)=_board.Commit();
+            Save();if(!ok)ShowPuzzle(feedback);
         }
         void Hint()
         {
-            var b=_task.Board;var p=State.PrepareBoard(_task);
+            var b=_board.Board;var placements=_board.Placements();
             if(_hint++<2){ShowPuzzle(_hint==1?b.Instruction:b.Notes[0]);return;}
             if(b.Kind=="budget")
             {
@@ -745,15 +772,15 @@ namespace Alif.Adventure
                 for(int mask=0;mask<(1<<b.Cards.Length);mask++)
                 {
                     var values=Enumerable.Range(0,b.Cards.Length).Select(i=>(mask>>i)&1).ToList();if(!b.Solved(values))continue;
-                    int next=Enumerable.Range(0,values.Count).FirstOrDefault(i=>p.Placements[i]!=values[i]);Place(next,values[next]);return;
+                    int next=Enumerable.Range(0,values.Count).FirstOrDefault(i=>placements[i]!=values[i]);Place(next,values[next]);return;
                 }
             }
-            else for(int i=0;i<b.Cards.Length;i++)if(p.Placements[i]!=b.Answers[i]){Place(i,b.Answers[i]);return;}
+            else for(int i=0;i<b.Cards.Length;i++)if(placements[i]!=b.Answers[i]){Place(i,b.Answers[i]);return;}
         }
         void Journal(int page)
         {
             _journalPage=page;
-            var entries=Content.Tasks.Select(t=>(State.Progress(t.Id)?.Complete==true?"✓  ":t==CurrentTask?">  ":"•  ")+t.Title).Concat(State.Evidence.Select(e=>"CATATAN  /  "+e)).Concat(State.Discoveries.Select(id=>"CERITA WARGA  /  "+Content.Optional[Mathf.Clamp(int.Parse(id.Substring(id.Length-1)),0,Content.Optional.Length-1)].Replace('|',':'))).ToArray();
+            var entries=Content.Tasks.Select(t=>(State.Progress(t.Id)?.Complete==true?"✓  ":t==CurrentTask?">  ":"•  ")+t.Title).Concat(State.Evidence.Select(e=>"CATATAN  /  "+e)).Concat(State.Discoveries.Select(id=>"CERITA WARGA  /  "+Content.Optional[Mathf.Clamp(int.Parse(id.Substring(id.Length-1)),0,Content.Optional.Length-1)].Replace('|',':'))).Concat(SideQuestJournalEntries()).ToArray();
             int pages=Mathf.Max(1,(entries.Length+3)/4);_journalPage=Mathf.Clamp(page,0,pages-1);
             var p=Card(CampaignActivity.Journal,$"BUKU PERJALANAN  /  HALAMAN {_journalPage+1} DARI {pages}",Content.Title);
             for(int i=0;i<4;i++){int n=_journalPage*4+i;if(n>=entries.Length)break;Text(p,entries[n],new Vector2(.04f,.61f-i*.14f),new Vector2(.96f,.75f-i*.14f),20);}
@@ -913,6 +940,7 @@ namespace Alif.Adventure
         void OnDestroy()
         {
             if (_encounter != null) { _encounter.Finished-=EncounterFinished; _encounter.Cancel(); }
+            StopSideQuests();
             if (_player) _player.SetMovementLocked(this,false);
             if(InventorySystem.Instance){InventorySystem.Instance.OnInventoryChanged-=InventoryChanged;InventorySystem.Instance.OnSelectionChanged-=RefreshHotbarSelection;InventorySystem.Instance.OnItemAdded-=QueueReceivedItem;}
             if(TimeSystem.Instance){TimeSystem.Instance.OnMinuteChanged-=RefreshStatusBoard;TimeSystem.Instance.OnDayChanged-=RefreshStatusBoard;}

@@ -6,6 +6,10 @@ namespace Alif.Adventure
         public const string MuiUrl = "https://mui.or.id/public/baca/berita/hindari-7-hal-dalam-transaksi-dengan-uang-elektronik";
         public const string CreditUrl = "https://mui.or.id/public/baca/bimbingan/praktik-kredit-dalam-sudut-pandang-islam";
         public const string OjkUrl = "https://www.ojk.go.id/waspada-investasi/id/FAQ.aspx";
+        /// <summary>Map Kota Cempaka yang ada di setiap bab, ditambahkan setelah area bab
+        /// (dirakit runtime oleh CityWorld dari Resources/Kota/city.json; urutan harus sama).</summary>
+        public static readonly string[] CityAreas = { "Jalan Pasar", "Jalan Kafe", "Pusat Kota", "Kampus Cempaka", "Taman Cempaka", "Gang Permukiman" };
+        public static int SceneAreaCount(AdventureChapter chapter) => chapter.Areas.Length - CityAreas.Length;
         static PuzzleStep S(string p, string e, string why, int answer, params string[] options) => new PuzzleStep(p,e,why,answer,options);
         static AdventureTask T(string id, int area, string target, string speaker, string title, string intro, string outcome, string kind = "talk", params PuzzleStep[] steps)
             => new AdventureTask { Id=id, Area=area, Target=target, Speaker=speaker, Title=title, Introduction=intro, Outcome=outcome, Kind=kind, Steps=steps };

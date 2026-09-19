@@ -553,7 +553,7 @@ namespace Alif.EditorTools
                     if(!path.Contains("AdventureChapter"))continue;
                     var game=Find<AdventureGame>().Single();var content=AdventureContent.Get(game.Chapter);
                     int players=Find<PlayerController>().Length,dialogues=Find<DialogueUI>().Length,fades=Find<SceneFadeController>().Length;
-                    if(players!=1||dialogues!=1||fades!=1||game.Centers.Length!=content.Areas.Length||game.Spawns.Length!=game.Centers.Length)
+                    if(players!=1||dialogues!=1||fades!=1||game.Centers.Length!=AdventureContent.SceneAreaCount(content)||game.Spawns.Length!=game.Centers.Length)
                         throw new Exception($"Incomplete Adventure world: {path} (players={players}, dialogueUI={dialogues}, fades={fades}, centers={game.Centers.Length}, areas={content.Areas.Length}, spawns={game.Spawns.Length}). Run Repair Missing Adventure Worlds explicitly.");
                     if(game.Chapter==2&&(game.DanaKilat==null||game.DanaKilat.ValidationError()!=null))throw new Exception("Invalid Dana Kilat");
                     if(game.Chapter>=3&&(game.ActionEncounter==null||game.ActionEncounter.ValidationError()!=null))throw new Exception("Invalid action encounter");

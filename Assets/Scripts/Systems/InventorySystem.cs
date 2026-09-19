@@ -130,6 +130,9 @@ namespace Alif.Systems
             return true;
         }
 
+        /// <summary>Index slot yang berisi barang ini, atau -1.</summary>
+        public int IndexOf(string itemName) => _slots.FindIndex(slot => !slot.IsEmpty && slot.ItemName == itemName);
+
         /// <summary>
         /// Kurangi/hapus item dari slot tertentu berdasarkan index.
         /// </summary>

@@ -86,7 +86,7 @@ namespace Alif.Adventure.Tests
         {
             for(int c=1;c<=5;c++)
             {
-                var chapter=AdventureContent.Get(c);Assert.That(chapter.Areas.Length,Is.InRange(3,4));Assert.That(chapter.Optional.Length,Is.EqualTo(3));
+                var chapter=AdventureContent.Get(c);Assert.That(AdventureContent.SceneAreaCount(chapter),Is.InRange(3,4));Assert.That(chapter.Optional.Length,Is.EqualTo(3));
                 Assert.That(chapter.Tasks.Count(t=>t.Steps.Length>0),Is.EqualTo(3));
                 Assert.That(chapter.Tasks.Select(t=>t.Id).Distinct().Count(),Is.EqualTo(chapter.Tasks.Length));
                 foreach(var t in chapter.Tasks){Assert.That(t.Area,Is.InRange(0,chapter.Areas.Length-1));Assert.That(t.Target,Is.Not.Empty);

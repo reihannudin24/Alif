@@ -29,6 +29,7 @@ namespace Alif.Adventure
             bool kos=c.Number==2||c.Number==3;
             c.Areas=kos?new[]{"Kamar Dimas", "Lantai 1 kos", "Halaman kos"}:new[]{"Dalam stasiun", "Depan stasiun", "Depan warung", "Dalam Warung Bu Siti"};
             c.StartArea=c.Number==3||c.Number==4?2:c.Number==5?1:0;
+            c.Areas=c.Areas.Concat(AdventureContent.CityAreas).ToArray();
             foreach(var t in c.Tasks)
             {
                 t.Area=c.Number==1?(t.Area==0?0:t.Area==1?2:3):c.Number==2?(t.Area==1?1:0):c.Number==3?(t.Area==2?1:2):c.Number==4?(t.Area==2?3:2):(t.Area==0?1:0);

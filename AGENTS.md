@@ -10,6 +10,7 @@ Alif is a Unity 6000.6.0f1 2D educational adventure game using URP, the Input Sy
 - `Assets/ScriptableObjects/`, `Assets/Sprites/`, `Assets/Audio/`, and `Assets/Animations/` — authored game data and media.
 - `Assets/Tests/Adventure/` and `Assets/Tests/Editor/` — NUnit EditMode tests.
 - `ProjectSettings/` and `Packages/` — Unity configuration and locked dependencies. Keep matching `.meta` files with assets.
+- `Docs/GAME_REFERENCE.md` — story, player actions, systems, PixelSkin UI style, and "where to change what". Read it before gameplay or UI work.
 
 ## Build, Test, and Development
 

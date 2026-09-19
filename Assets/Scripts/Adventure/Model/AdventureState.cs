@@ -48,6 +48,11 @@ namespace Alif.Adventure
         public List<TaskProgress> Tasks = new List<TaskProgress>();
         public List<string> Evidence = new List<string>();
         public List<string> Discoveries = new List<string>();
+        // Lintas bab: side quest, isi tas, hubungan NPC, dan pickup dunia yang sudah diambil.
+        public List<SideQuestProgress> SideQuests = new List<SideQuestProgress>();
+        public List<ItemStack> Items = new List<ItemStack>();
+        public List<NpcBond> Bonds = new List<NpcBond>();
+        public List<string> PickedUp = new List<string>();
         public float PlaySeconds;
         public TaskProgress Progress(string id) => Tasks.Find(t => t.Id == id);
         public bool CanStart(AdventureTask task) => !Completed && task.Prerequisites.All(id => Progress(id)?.Complete == true);
@@ -123,14 +128,18 @@ namespace Alif.Adventure
         {
             if (chapter < 1 || chapter > HighestUnlocked) throw new ArgumentOutOfRangeException(nameof(chapter));
             return new AdventureState { Chapter = chapter, Area = AdventureContent.Get(chapter).StartArea, HighestUnlocked = HighestUnlocked,
-                CompletedChapters = new List<int>(CompletedChapters), ReadOnlySave = ReadOnlySave };
+                CompletedChapters = new List<int>(CompletedChapters), ReadOnlySave = ReadOnlySave,
+                SideQuests = SideQuests.ConvertAll(q => new SideQuestProgress { Id = q.Id, Step = q.Step, Complete = q.Complete, Placements = new List<int>(q.Placements) }),
+                Items = Items.ConvertAll(i => new ItemStack { Name = i.Name, Quantity = i.Quantity }),
+                Bonds = Bonds.ConvertAll(b => new NpcBond { Npc = b.Npc, Hearts = b.Hearts }),
+                PickedUp = new List<string>(PickedUp) };
         }
         public bool Valid()
         {
             if (Version != 3 || Chapter < 1 || Chapter > 5 || HighestUnlocked < Chapter || HighestUnlocked > 5 || TutorialStep < 0 || TutorialStep > 3 ||
                 Area < 0 || Area >= AdventureContent.Get(Chapter).Areas.Length || Money < 0 || Money > 2000000 || Bank < 0 || Bank > 2000000 || !float.IsFinite(X) || !float.IsFinite(Y) ||
                 Math.Abs(X) > 500 || Math.Abs(Y) > 500 || !float.IsFinite(PlaySeconds) || PlaySeconds < 0 ||
-                Tasks == null || Evidence == null || Discoveries == null || CompletedChapters == null) return false;
+                Tasks == null || Evidence == null || Discoveries == null || CompletedChapters == null || !SideQuestRules.Valid(this)) return false;
             var chapter = AdventureContent.Get(Chapter);
             if (TutorialStep > 0 && (Chapter != 1 || Area != chapter.StartArea || IntroductionSeen || Completed || Tasks.Count > 0)) return false;
             if (Tasks.Any(t => t == null || t.Id == null) || Tasks.Select(t => t.Id).Distinct().Count() != Tasks.Count) return false;

@@ -36,7 +36,7 @@ namespace Alif.Campaign
 
         private static TMP_FontAsset _font;
         private static bool _fontLoaded;
-        private static Sprite _button, _panel, _tab, _slot, _barFill, _clockIcon, _coinIcon, _boltIcon, _menuIcon, _notebookIcon, _bagIcon, _chartIcon, _crescentIcon, _disc, _knob, _joystickBase;
+        private static Sprite _button, _panel, _tab, _slot, _barFill, _clockIcon, _coinIcon, _boltIcon, _menuIcon, _notebookIcon, _bagIcon, _chartIcon, _crescentIcon, _phoneIcon, _pinIcon, _heartIcon, _calendarIcon, _gearIcon, _phoneFrame, _appTile, _disc, _knob, _joystickBase;
 
         /// <summary>Font pixel (Pixelify Sans, OFL) sebagai TMP font asset dinamis. Glyph yang
         /// tidak ada (✓, ↗, …) jatuh ke font default TMP Settings. Null bila TTF hilang.</summary>
@@ -84,7 +84,7 @@ namespace Alif.Campaign
             : x == 6 && y >= 4 && y <= 8 ? GoldDark : Gold);
 
         /// <summary>Ikon petir kuning (energi).</summary>
-        public static Sprite BoltIcon() => _boltIcon ??= Pattern("PixelSkinBolt", new[]
+        public static Sprite BoltIcon() => _boltIcon ??= PatternSprite("PixelSkinBolt", new[]
         {
             "....oooo",
             "...oYYo.",
@@ -99,7 +99,7 @@ namespace Alif.Campaign
         });
 
         /// <summary>Ikon menu (tiga garis) untuk tombol Jeda.</summary>
-        public static Sprite MenuIcon() => _menuIcon ??= Pattern("PixelSkinMenu", new[]
+        public static Sprite MenuIcon() => _menuIcon ??= PatternSprite("PixelSkinMenu", new[]
         {
             "oooooooooooo",
             "occcccccccco",
@@ -115,7 +115,7 @@ namespace Alif.Campaign
         });
 
         /// <summary>Ikon buku catatan bersampul dengan garis halaman (Jurnal).</summary>
-        public static Sprite NotebookIcon() => _notebookIcon ??= Pattern("PixelSkinNotebook", new[]
+        public static Sprite NotebookIcon() => _notebookIcon ??= PatternSprite("PixelSkinNotebook", new[]
         {
             "ooooooooooo",
             "oSSccccccco",
@@ -132,7 +132,7 @@ namespace Alif.Campaign
         });
 
         /// <summary>Ikon tas berpegangan dengan gesper emas (Tas).</summary>
-        public static Sprite BagIcon() => _bagIcon ??= Pattern("PixelSkinBag", new[]
+        public static Sprite BagIcon() => _bagIcon ??= PatternSprite("PixelSkinBag", new[]
         {
             "....oooo....",
             "...o....o...",
@@ -148,7 +148,7 @@ namespace Alif.Campaign
         });
 
         /// <summary>Ikon grafik batang naik (Logika Finansial).</summary>
-        public static Sprite ChartIcon() => _chartIcon ??= Pattern("PixelSkinChart", new[]
+        public static Sprite ChartIcon() => _chartIcon ??= PatternSprite("PixelSkinChart", new[]
         {
             ".......ooo",
             ".......oYo",
@@ -161,7 +161,7 @@ namespace Alif.Campaign
         });
 
         /// <summary>Ikon bulan sabit (Kepatuhan Syariah).</summary>
-        public static Sprite CrescentIcon() => _crescentIcon ??= Pattern("PixelSkinCrescent", new[]
+        public static Sprite CrescentIcon() => _crescentIcon ??= PatternSprite("PixelSkinCrescent", new[]
         {
             "..oooo...",
             ".oYYo....",
@@ -172,6 +172,83 @@ namespace Alif.Campaign
             ".oYYo....",
             "..oooo...",
         });
+
+        /// <summary>Ikon HP (tombol HUD).</summary>
+        public static Sprite PhoneIcon() => _phoneIcon ??= PatternSprite("PixelSkinPhone", new[]
+        {
+            "oooooooo",
+            "okkkkkko",
+            "okbbbbko",
+            "okbbbbko",
+            "okbbbbko",
+            "okbbbbko",
+            "okbbbbko",
+            "okbbbbko",
+            "okkkkkko",
+            "okkcckko",
+            "okkkkkko",
+            "oooooooo",
+        });
+
+        /// <summary>Pin lokasi (aplikasi Peta).</summary>
+        public static Sprite PinIcon() => _pinIcon ??= PatternSprite("PixelSkinPin", new[]
+        {
+            "..ooooo..",
+            ".occccco.",
+            "occcoccco",
+            "occo.occo",
+            "occcoccco",
+            ".occccco.",
+            "..occco..",
+            "...oco...",
+            "....o....",
+        });
+
+        /// <summary>Hati (aplikasi Kontak / hubungan).</summary>
+        public static Sprite HeartIcon() => _heartIcon ??= PatternSprite("PixelSkinHeart", new[]
+        {
+            ".oo...oo.",
+            "occo.occo",
+            "occcoccco",
+            "occccccco",
+            ".occccco.",
+            "..occco..",
+            "...oco...",
+            "....o....",
+        });
+
+        /// <summary>Kalender (aplikasi Kalender).</summary>
+        public static Sprite CalendarIcon() => _calendarIcon ??= PatternSprite("PixelSkinCalendar", new[]
+        {
+            ".o......o.",
+            "oooooooooo",
+            "oSSSSSSSSo",
+            "oooooooooo",
+            "occcccccco",
+            "oclclclcco",
+            "occcccccco",
+            "oclclclcco",
+            "occcccccco",
+            "oooooooooo",
+        });
+
+        /// <summary>Roda gigi (aplikasi Pengaturan).</summary>
+        public static Sprite GearIcon() => _gearIcon ??= Round("PixelSkinGear", 13, (x, y, d, r) =>
+        {
+            float angle = Mathf.Atan2(y - 6f, x - 6f);
+            float edge = Mathf.Cos(angle * 8f) > .25f ? r - .4f : r - 2.4f;
+            if (d > edge) return Color.clear;
+            if (d > edge - 1.1f || (d < 2.7f && d >= 1.5f)) return Outline;
+            return d < 1.5f ? Color.clear : Cream;
+        });
+
+        /// <summary>Bingkai HP: badan abu tua bergaris luar, layar hitam di dalam.</summary>
+        public static Sprite PhoneFrame() => _phoneFrame ??= Sliced("PixelSkinPhoneFrame", 16, 3, 6, (y, ring, size) =>
+            ring switch { 0 => Outline, 1 => Rgb(96, 96, 108), 2 or 3 => Rgb(62, 62, 72), 4 => Rgb(36, 36, 42), _ => Rgb(16, 16, 20) });
+
+        /// <summary>Ubin aplikasi putih (diwarnai lewat Image.color): kilau atas, bayang bawah.</summary>
+        public static Sprite AppTile() => _appTile ??= Sliced("PixelSkinAppTile", 12, 2, 4, (y, ring, size) =>
+            ring == 0 ? Outline : y == size - 2 ? Color.white : y <= 2 ? new Color(.7f, .7f, .7f) : new Color(.88f, .88f, .88f));
 
         /// <summary>Tombol bulat oranye (tombol interaksi).</summary>
         public static Sprite Disc() => _disc ??= Circle("PixelSkinDisc", 26, 0);
@@ -301,8 +378,8 @@ namespace Alif.Campaign
         }
 
         /// <summary>Sprite dari pola ASCII (baris atas dulu): o = garis, Y = kuning, c = krem,
-        /// S = sampul oranye tua, l = garis halaman, . = kosong.</summary>
-        private static Sprite Pattern(string name, string[] rows)
+        /// S = oranye tua, l = garis halaman, g = hijau, p = merah muda, b = biru, . = kosong.</summary>
+        public static Sprite PatternSprite(string name, string[] rows)
         {
             int width = rows[0].Length, height = rows.Length;
             var texture = new Texture2D(width, height, TextureFormat.RGBA32, false) { name = name, filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
@@ -314,6 +391,7 @@ namespace Alif.Campaign
                     pixels[(height - 1 - r) * width + x] = c switch
                     {
                         'o' => Outline, 'Y' => GoldLight, 'c' => Cream, 'S' => OrangeShade, 'l' => SlotEdge,
+                        'g' => Rgb(92, 158, 96), 'p' => Rgb(240, 150, 176), 'b' => Rgb(120, 160, 214), 'k' => Rgb(58, 58, 68),
                         _ => Color.clear,
                     };
                 }
