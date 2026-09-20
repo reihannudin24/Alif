@@ -1,7 +1,7 @@
 # Alif Agent Evolving Memory Ledger
 
 > Auto-updated by the Alif Recursive Evolution Engine (`./Tools/alif agent evolve`).
-> Last updated: 2026-09-20 11:40:00
+> Last updated: 2026-09-20 12:35:32
 
 ## 📐 Architectural Rules & Invariants
 
@@ -24,7 +24,7 @@ TileRPG world specs must adhere to Tools/ai-tile-rpg/world.schema.json with vali
 Four-space indentation, braces on the same line, PascalCase public types/methods, camelCase locals.
 
 ## 🔍 Discovered Project Symbols
-- **Total Core C# Classes**: 133
+- **Total Core C# Classes**: 136
 - **Yarn Dialogue Nodes**: AgentGeneratedStory, BuSiti_Intro, BuSiti_MarketIntro, Station_NoticeBoard
 - **Authored Tile Specs**: AgentGardenWorld, AgentMarketWorld, MarketBazaar, sample-world
 
@@ -42,8 +42,8 @@ Four-space indentation, braces on the same line, PascalCase public types/methods
   - *Solution*: Use pure C# representations or domain coordinates in Alif.Adventure.Model
 
 ## 🔄 Evolution Cycles History
-- `[2026-09-13T15:31:11.914090]` Evolved knowledge base: 94 C# symbols, 4 Yarn nodes, 4 tile specs. Discovered 0 new symbols.
-- `[2026-09-13T15:31:54.626618]` Evolved knowledge base: 94 C# symbols, 4 Yarn nodes, 4 tile specs. Discovered 0 new symbols.
-- `[2026-09-13T15:32:13.721793]` Evolved knowledge base: 103 C# symbols, 4 Yarn nodes, 4 tile specs. Discovered 9 new symbols.
 - `[2026-09-13T16:35:40.696184]` Evolved knowledge base: 104 C# symbols, 4 Yarn nodes, 4 tile specs. Discovered 1 new symbols.
 - `[2026-09-20T11:40:00.385567]` Evolved knowledge base: 133 C# symbols, 4 Yarn nodes, 4 tile specs. Discovered 29 new symbols.
+- `[2026-09-20T12:22:06.127145]` Evolved knowledge base: 133 C# symbols, 4 Yarn nodes, 4 tile specs. Discovered 0 new symbols.
+- `[2026-09-20T12:30:14.329352]` Evolved knowledge base: 135 C# symbols, 4 Yarn nodes, 4 tile specs. Discovered 2 new symbols.
+- `[2026-09-20T12:35:32.800289]` Evolved knowledge base: 136 C# symbols, 4 Yarn nodes, 4 tile specs. Discovered 1 new symbols.

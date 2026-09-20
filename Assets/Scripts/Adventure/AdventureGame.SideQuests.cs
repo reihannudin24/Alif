@@ -104,9 +104,36 @@ namespace Alif.Adventure
             // kalau sisi itu sudah punya pintu gambaran tangan (Halaman kos yang cuma punya pintu
             // balik ke kiri, misalnya, dilewati saja).
             var door = SideDoor(index, east);
-            if (!door) return false;
+            if (!door)
+            {
+                // Tidak ada pintu di sisi itu (mis. barat Depan stasiun → Pusat Kota): tepinya dibuat dari
+                // lantai scene, sama seperti tepi map kota.
+                if (!TrySceneEdge(index, east, out Vector2 edgeFoot, out Vector2 edgeLanding, out Vector2 edgeSize)) return false;
+                side = new RoadSide { Area = index, Foot = edgeFoot, Landing = edgeLanding, Size = edgeSize };
+                return true;
+            }
             Vector2 foot = door.transform.position;
             side = new RoadSide { Area = index, Foot = foot, Landing = foot + new Vector2(east ? -1.5f : 1.5f, 0f), Door = door };
+            return true;
+        }
+
+        /// <summary>Tepi kiri/kanan lantai sebuah area scene: pita pemicu selebar .5 unit yang
+        /// merentang semua WalkableArea yang ujungnya (hampir) sejajar dengan ujung terluar.</summary>
+        bool TrySceneEdge(int area, bool east, out Vector2 foot, out Vector2 landing, out Vector2 size)
+        {
+            foot = landing = size = default;
+            var floors = FindObjectsByType<WalkableArea>(FindObjectsSortMode.None)
+                .Select(w => w.GetComponent<Collider2D>()).Where(c => c && AreaOf(c.bounds.center) == area)
+                .Select(c => c.bounds).ToList();
+            if (floors.Count == 0) return false;
+            float outer = east ? floors.Max(b => b.max.x) : floors.Min(b => b.min.x);
+            var reach = floors.Where(b => Mathf.Abs((east ? b.max.x : b.min.x) - outer) < 1f).ToList();
+            float bottom = reach.Min(b => b.min.y), top = reach.Max(b => b.max.y);
+            foot = new Vector2(outer + (east ? -.35f : .35f), (bottom + top) / 2f);
+            size = new Vector2(.5f, top - bottom);
+            // Mendarat di tengah lantai terluas: titik tengah gabungan bisa jatuh di celah antar lantai.
+            var widest = reach.OrderByDescending(b => b.size.x * b.size.y).First();
+            landing = new Vector2(foot.x + (east ? -1.5f : 1.5f), widest.center.y);
             return true;
         }
 
@@ -155,6 +182,7 @@ namespace Alif.Adventure
             ItemPickup.Collected -= RecordPickup;
             ItemPickup.Collected += RecordPickup;
             SyncStoryDay(false);
+            WatchClock();
             BuildQuestNpcs();
         }
 
@@ -270,9 +298,11 @@ namespace Alif.Adventure
         {
             if (_questMarkers.Count == 0 || State == null) return;
             var inventory = InventorySystem.Instance;
-            // NPC rangkaian investasi hadir satu per satu, saat quest-nya terbuka.
+            // Siapa yang hadir: gerbang cerita dulu (quest/hari kemunculan), lalu jadwal acak harian
+            // per waktu (NpcSchedule) yang dijamin menyisakan minimal satu tokoh di tiap map.
+            var present = ScheduledNpcs();
             foreach (var pair in _questNpcRoots)
-                if (pair.Value) pair.Value.SetActive(SideQuestRules.NpcVisible(State, SideQuestContent.Npc(pair.Key), SideQuestContent.All));
+                if (pair.Value) pair.Value.SetActive(present.Contains(pair.Key));
             foreach (var pair in _questMarkers)
             {
                 if (!pair.Value) continue;

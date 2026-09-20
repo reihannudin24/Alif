@@ -867,7 +867,13 @@
    ],
    "spawnX": 328,
    "spawnY": 168,
-   "npcs": []
+   "npcs": [
+    {
+     "id": "npc:wulan",
+     "x": 296,
+     "y": 110
+    }
+   ]
   },
   {
    "id": "K1K",
@@ -958,7 +964,13 @@
    ],
    "spawnX": 232,
    "spawnY": 152,
-   "npcs": []
+   "npcs": [
+    {
+     "id": "npc:reza",
+     "x": 328,
+     "y": 78
+    }
+   ]
   },
   {
    "id": "K1D",
@@ -1013,7 +1025,13 @@
    ],
    "spawnX": 200,
    "spawnY": 152,
-   "npcs": []
+   "npcs": [
+    {
+     "id": "npc:hana",
+     "x": 200,
+     "y": 78
+    }
+   ]
   },
   {
    "id": "K1T",
@@ -1074,7 +1092,13 @@
    ],
    "spawnX": 168,
    "spawnY": 136,
-   "npcs": []
+   "npcs": [
+    {
+     "id": "npc:karjo",
+     "x": 232,
+     "y": 126
+    }
+   ]
   },
   {
    "id": "J4I",
@@ -1262,7 +1286,13 @@
    ],
    "spawnX": 280,
    "spawnY": 184,
-   "npcs": []
+   "npcs": [
+    {
+     "id": "npc:satrio",
+     "x": 248,
+     "y": 158
+    }
+   ]
   },
   {
    "id": "J2M",
@@ -1347,7 +1377,13 @@
    ],
    "spawnX": 248,
    "spawnY": 184,
-   "npcs": []
+   "npcs": [
+    {
+     "id": "npc:doni",
+     "x": 88,
+     "y": 62
+    }
+   ]
   },
   {
    "id": "J2L",
@@ -1420,7 +1456,13 @@
    ],
    "spawnX": 280,
    "spawnY": 200,
-   "npcs": []
+   "npcs": [
+    {
+     "id": "npc:vina",
+     "x": 264,
+     "y": 68
+    }
+   ]
   },
   {
    "id": "J2G",
@@ -1505,7 +1547,13 @@
    ],
    "spawnX": 248,
    "spawnY": 184,
-   "npcs": []
+   "npcs": [
+    {
+     "id": "npc:markus",
+     "x": 376,
+     "y": 94
+    }
+   ]
   },
   {
    "id": "J3P",
@@ -1808,7 +1856,13 @@
    ],
    "spawnX": 248,
    "spawnY": 184,
-   "npcs": []
+   "npcs": [
+    {
+     "id": "npc:sasa",
+     "x": 424,
+     "y": 94
+    }
+   ]
   },
   {
    "id": "J4F",
@@ -2104,63 +2158,68 @@
      "id": "npc:kasur",
      "x": 210,
      "y": 110
+    },
+    {
+     "id": "npc:tini",
+     "x": 72,
+     "y": 142
     }
    ]
   }
  ],
  "pins": [
   {
-   "area": "Dalam stasiun",
-   "x": 40,
-   "y": 108,
-   "up": true
-  },
-  {
-   "area": "Depan stasiun",
-   "x": 40,
-   "y": 150,
-   "up": false
-  },
-  {
-   "area": "Jalan Pasar",
-   "x": 100,
+   "area": "Kampus Cempaka",
+   "x": 44,
    "y": 150,
    "up": true
   },
   {
-   "area": "Jalan Kafe",
-   "x": 160,
+   "area": "Taman Cempaka",
+   "x": 90,
    "y": 150,
    "up": false
   },
   {
    "area": "Pusat Kota",
-   "x": 220,
+   "x": 136,
    "y": 150,
    "up": true
+  },
+  {
+   "area": "Dalam stasiun",
+   "x": 184,
+   "y": 108,
+   "up": true
+  },
+  {
+   "area": "Depan stasiun",
+   "x": 184,
+   "y": 150,
+   "up": false
+  },
+  {
+   "area": "Jalan Pasar",
+   "x": 232,
+   "y": 150,
+   "up": true
+  },
+  {
+   "area": "Jalan Kafe",
+   "x": 280,
+   "y": 150,
+   "up": false
   },
   {
    "area": "Depan warung",
-   "x": 290,
+   "x": 326,
    "y": 150,
-   "up": false
-  },
-  {
-   "area": "Dalam Warung Bu Siti",
-   "x": 330,
-   "y": 122,
    "up": true
   },
   {
-   "area": "Kampus Cempaka",
-   "x": 220,
-   "y": 42,
-   "up": false
-  },
-  {
-   "area": "Taman Cempaka",
-   "x": 150,
-   "y": 70,
+   "area": "Dalam Warung Bu Siti",
+   "x": 326,
+   "y": 110,
    "up": true
   },
   {
@@ -2184,6 +2243,18 @@
  ],
  "roads": [
   {
+   "west": "Kampus Cempaka",
+   "east": "Taman Cempaka"
+  },
+  {
+   "west": "Taman Cempaka",
+   "east": "Pusat Kota"
+  },
+  {
+   "west": "Pusat Kota",
+   "east": "Depan stasiun"
+  },
+  {
    "west": "Depan stasiun",
    "east": "Jalan Pasar"
   },
@@ -2193,15 +2264,7 @@
   },
   {
    "west": "Jalan Kafe",
-   "east": "Pusat Kota"
-  },
-  {
-   "west": "Pusat Kota",
    "east": "Depan warung"
-  },
-  {
-   "west": "Taman Cempaka",
-   "east": "Kampus Cempaka"
   }
  ]
 }

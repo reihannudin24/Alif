@@ -306,7 +306,7 @@ namespace Alif.Adventure
             if(State!=null)day=$"Hari {State.Day}  •  {day}";
             _dayText.text=day;
             _dayTab.sizeDelta=new Vector2(_dayText.GetPreferredValues(day).x+44,_dayTab.sizeDelta.y);
-            _clockText.text=time?$"{time.GetFormattedTime()}   Minggu ke-{time.CurrentWeek}":"--:--";
+            _clockText.text=time?$"{time.GetFormattedTime()}   •   {NpcSchedule.Label(NpcSchedule.PartOf(time.CurrentHour))}":"--:--";
             RefreshStatusMoney(CurrencySystem.Instance?CurrencySystem.Instance.CurrentMoney:State?.Money??0);
             RefreshStatusEnergy(EnergySystem.Instance?EnergySystem.Instance.EnergyPercent01:1f);
             var score=ScoreSystem.Instance;
@@ -970,6 +970,7 @@ namespace Alif.Adventure
             StopSideQuests();
             if (_player) _player.SetMovementLocked(this,false);
             if(InventorySystem.Instance){InventorySystem.Instance.OnInventoryChanged-=InventoryChanged;InventorySystem.Instance.OnSelectionChanged-=RefreshHotbarSelection;InventorySystem.Instance.OnItemAdded-=QueueReceivedItem;}
+            UnwatchClock();
             if(TimeSystem.Instance){TimeSystem.Instance.OnMinuteChanged-=RefreshStatusBoard;TimeSystem.Instance.OnDayChanged-=RefreshStatusBoard;}
             if(EnergySystem.Instance)EnergySystem.Instance.OnEnergyChanged-=RefreshStatusEnergy;
             if(CurrencySystem.Instance)CurrencySystem.Instance.OnMoneyChanged-=RefreshStatusMoney;

@@ -141,6 +141,21 @@ namespace Alif.Adventure.Tests
         }
 
         [Test]
+        public void EveryCityMapHasAtLeastOneResidentFromDayOne()
+        {
+            // Aturan desain: tidak ada map kota yang kosong. Yang dihitung hanya tokoh yang sudah hadir
+            // di Hari 1 — bukan benda, bukan tokoh yang baru muncul bersama quest/harinya.
+            var spec = JsonUtility.FromJson<CityWorld.Spec>(Resources.Load<TextAsset>("Kota/city").text);
+            var dayOne = new AdventureState();
+            foreach (var map in spec.maps)
+            {
+                int residents = map.npcs.Select(n => SideQuestContent.Npc(n.id))
+                    .Count(n => n != null && !n.IsObject && SideQuestRules.NpcVisible(dayOne, n, SideQuestContent.All));
+                Assert.That(residents, Is.GreaterThan(0), map.area + " belum punya tokoh tetap (tambahkan di SideQuestContent.Npcs + generate_city.py).");
+            }
+        }
+
+        [Test]
         public void EveryCaseCharacterItemAndPlacementExists()
         {
             var spec = JsonUtility.FromJson<CityWorld.Spec>(Resources.Load<TextAsset>("Kota/city").text);

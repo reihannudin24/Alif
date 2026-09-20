@@ -4,6 +4,7 @@ using Alif.Systems;
 using Alif.UI;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 
 namespace Alif.Adventure
 {
@@ -52,6 +53,115 @@ namespace Alif.Adventure
             return (target, _questNpcAreas.TryGetValue(target, out int area) ? area : -1);
         }
 
+        // ───────────────────────── Jadwal harian warga ─────────────────────────
+
+        DayPart _shownPart;
+        bool _partShown;
+
+        static DayPart CurrentPart => NpcSchedule.PartOf(TimeSystem.Instance ? TimeSystem.Instance.CurrentHour : 12);
+
+        /// <summary>Tokoh & benda kota yang tampil saat ini. Benda selalu ada; tokoh harus lolos gerbang
+        /// cerita (SideQuestRules.NpcVisible) lalu jadwal acak hari ini. Tokoh yang sedang punya
+        /// langkah quest untuk pemain tidak pernah dihilangkan — pemain tidak boleh dibuat menunggu.</summary>
+        System.Collections.Generic.HashSet<string> ScheduledNpcs()
+        {
+            var part = CurrentPart;
+            var shown = new System.Collections.Generic.HashSet<string>();
+            foreach (var map in _questNpcAreas.GroupBy(pair => pair.Value, pair => pair.Key))
+            {
+                var residents = new System.Collections.Generic.List<string>();
+                foreach (string id in map)
+                {
+                    var info = SideQuestContent.Npc(id);
+                    if (info == null || !SideQuestRules.NpcVisible(State, info, SideQuestContent.All)) continue;
+                    if (info.IsObject || SideQuestRules.StepAt(State, SideQuestContent.All, id).step != null) shown.Add(id);
+                    else residents.Add(id);
+                }
+                // Map yang sudah berisi tokoh quest tidak perlu penjaga paksa; selain itu minimal satu.
+                bool occupied = map.Any(id => shown.Contains(id) && SideQuestContent.Npc(id)?.IsObject == false);
+                foreach (string id in occupied ? residents.Where(r => NpcSchedule.Present(r, State.Day, part)) : NpcSchedule.PresentIn(residents, State.Day, part))
+                    shown.Add(id);
+            }
+            return shown;
+        }
+
+        void WatchClock()
+        {
+            var time = TimeSystem.Instance;
+            if (!time) return;
+            UnwatchClock();
+            time.OnMinuteChanged += ClockTicked;
+            time.OnStoryDawn += DawnWithoutSleep;
+        }
+
+        void UnwatchClock()
+        {
+            var time = TimeSystem.Instance;
+            if (!time) return;
+            time.OnMinuteChanged -= ClockTicked;
+            time.OnStoryDawn -= DawnWithoutSleep;
+        }
+
+        /// <summary>Pergantian waktu (pagi → siang → malam → larut malam) mengacak ulang siapa yang hadir.
+        /// Ditunda selama pemain sedang berdialog/membuka papan supaya lawan bicaranya tidak lenyap.</summary>
+        void ClockTicked()
+        {
+            if (State == null || !CanExplore) return;
+            var part = CurrentPart;
+            if (_partShown && part == _shownPart) return;
+            bool announce = _partShown;
+            _shownPart = part; _partShown = true;
+            RefreshQuestMarkers();
+            if (announce && !TutorialActive) Toast($"{NpcSchedule.Label(part)} tiba • warga berganti kesibukan", 4);
+        }
+
+        /// <summary>Fajar tanpa tidur: hari cerita tetap maju (kasus & jadwal bergulir), energi tidak pulih.</summary>
+        void DawnWithoutSleep()
+        {
+            if (State == null || !State.PassNight()) return;
+            SyncStoryDay(false);
+            _partShown = false;
+            RefreshQuestMarkers();
+            Save(false);
+            RefreshHud();
+            string news = CaseContent.MorningNews(State.Day);
+            Toast(news != null ? $"Hari ke-{State.Day} • {news.Substring(news.IndexOf('|') + 1)}" : $"Hari ke-{State.Day} • Alif begadang semalaman, energi tidak pulih", 8);
+        }
+
+        // ───────────────────────── Siang & malam ─────────────────────────
+
+        /// <summary>Area luar ruang ikut gelap-terang langit; sisanya (interior) diterangi lampu.</summary>
+        static readonly System.Collections.Generic.HashSet<string> OutdoorAreas = new System.Collections.Generic.HashSet<string>
+        { "Depan stasiun", "Depan warung", "Halaman kos", "Jalan Pasar", "Jalan Kafe", "Pusat Kota", "Kampus Cempaka", "Taman Cempaka" };
+
+        Light2D _sun;
+        bool _sunSearched;
+
+        /// <summary>Warnai Global Light 2D menurut jam & tempat. Bergeser halus tiap frame, jadi masuk
+        /// gedung di malam hari atau bangun tidur tidak membuat layar berkedip.</summary>
+        void LateUpdate()
+        {
+            if (State == null || Content == null) return;
+            if (!_sunSearched)
+            {
+                _sunSearched = true;
+                _sun = FindObjectsByType<Light2D>(FindObjectsSortMode.None).FirstOrDefault(l => l.lightType == Light2D.LightType.Global);
+                if (!_sun)
+                {
+                    _sun = new GameObject("Global Light 2D (siang-malam)").AddComponent<Light2D>();
+                    _sun.lightType = Light2D.LightType.Global;
+                }
+            }
+            if (!_sun) return;
+            var time = TimeSystem.Instance;
+            float hour = time ? time.CurrentHour + time.CurrentMinute / 60f : 12f;
+            bool outdoor = State.Area >= 0 && State.Area < Content.Areas.Length && OutdoorAreas.Contains(Content.Areas[State.Area]);
+            Color target = outdoor ? DayLight.Outdoor(hour) : DayLight.Indoor(hour);
+            var now = _sun.color;
+            float step = Time.unscaledDeltaTime * 1.5f;
+            _sun.color = new Color(Mathf.MoveTowards(now.r, target.r, step), Mathf.MoveTowards(now.g, target.g, step), Mathf.MoveTowards(now.b, target.b, step), 1f);
+        }
+
         // ───────────────────────── Tidur ─────────────────────────
 
         void InteractBed()
@@ -83,6 +193,7 @@ namespace Alif.Adventure
                 State.Sleep(Content);
                 EnergySystem.Instance?.RestoreFull();
                 SyncStoryDay(true);
+                _partShown = false;          // pagi baru: jadwal warga diacak ulang tanpa pengumuman
                 RefreshQuestMarkers();
                 Save(false);
                 RefreshHud();

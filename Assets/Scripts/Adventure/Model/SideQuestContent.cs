@@ -14,6 +14,9 @@ namespace Alif.Adventure
         public const string Arga = "npc:arga", Ratna = "npc:ratna", Dewi = "npc:dewi", Harun = "npc:harun", Nadia = "npc:nadia",
             Laras = "npc:laras", Darto = "npc:darto", Sinta = "npc:sinta", Hendra = "npc:hendra", Yusuf = "npc:yusuf";
         public const string Ningsih = "npc:ningsih", Fira = "npc:fira", Bayu = "npc:bayu";
+        // Penghuni tetap tiap interior — tanpa quest; aturan: setiap map punya minimal satu tokoh sejak Hari 1.
+        public const string Wulan = "npc:wulan", Reza = "npc:reza", Hana = "npc:hana", Karjo = "npc:karjo", Satrio = "npc:satrio",
+            Doni = "npc:doni", Vina = "npc:vina", Markus = "npc:markus", Sasa = "npc:sasa", Tini = "npc:tini";
 
         public const string SkincareSet = "Set Skincare Cadangan", SavingsBrochure = "Brosur Tabungan Syariah",
             PriceReceipt = "Struk Perbandingan Harga", SparePhotocard = "Photocard Duplikat",
@@ -42,6 +45,17 @@ namespace Alif.Adventure
             // Kasir FFC — tanpa quest, menyentil pengeluaran gaya hidup yang gampang bocor.
             new QuestNpc { Id = Fira, Name = "Mbak Fira", Placeholder = "naya", Tint = "ffd6cf", Idle = "Mbak Fira|Paket hemat memang murah satuan. Yang mahal itu kalau tiap hari, hehe." },
             // Pemilik Kafe Senja — tanpa quest, soal memisahkan uang usaha dari uang pribadi.
+            // Penghuni tetap interior lain — satu map, minimal satu tokoh. Tanpa quest; tiap baris menyentil satu kebiasaan uang.
+            new QuestNpc { Id = Wulan, Name = "Mbak Wulan", Placeholder = "naya", Tint = "e6f0ff", Idle = "Mbak Wulan|Info beasiswa dan cicilan UKT ada di papan lobi. Yang sering terlambat itu bukan yang tidak mampu, tapi yang tidak bertanya." },
+            new QuestNpc { Id = Reza, Name = "Reza", Placeholder = "dimas", Tint = "fff0c8", Idle = "Reza|Uang sakuku kubagi per minggu, bukan per bulan. Kalau per bulan, tanggal sepuluh sudah habis, hehe." },
+            new QuestNpc { Id = Hana, Name = "Bu Hana", Placeholder = "bu_siti", Tint = "ffe4f0", Idle = "Bu Hana|Saya mengajar ekonomi syariah. Intinya sederhana: jelas akadnya, rela kedua pihaknya, tercatat hasilnya." },
+            new QuestNpc { Id = Karjo, Name = "Pak Karjo", Placeholder = "pak_ustad", Tint = "d8e8d8", Idle = "Pak Karjo|Gaji saya harian, Mas. Makanya tiap sore saya catat: masuk berapa, keluar berapa. Yang kecil-kecil itu yang bikin bocor." },
+            new QuestNpc { Id = Satrio, Name = "Pak Satrio", Placeholder = "raka", Tint = "c8d4e8", Idle = "Pak Satrio|Silakan ambil nomor antrean. Pesan saya satu: jangan pernah titip transaksi ke orang yang baru dikenal di parkiran." },
+            new QuestNpc { Id = Doni, Name = "Mas Doni", Placeholder = "raka", Tint = "ffd8d0", Idle = "Mas Doni|Yang bawa daftar belanja biasanya keluar bawa satu kantong. Yang nggak bawa… keluar bawa tiga, hehe." },
+            new QuestNpc { Id = Vina, Name = "Kak Vina", Placeholder = "naya", Tint = "fff4b8", Idle = "Kak Vina|Les itu investasi juga. Hitung manfaatnya, bukan cuma biayanya—tapi jangan sampai orang tua berutang demi bimbel." },
+            new QuestNpc { Id = Markus, Name = "Pak Markus", Placeholder = "dimas", Tint = "e8dcc8", Idle = "Pak Markus|Saya koster di sini. Kas jemaat kami tempel tiap bulan di papan. Soal amanah, semua rumah ibadah sepakat." },
+            new QuestNpc { Id = Sasa, Name = "Kak Sasa", Placeholder = "naya", Tint = "ffd0e4", Idle = "Kak Sasa|Promo beli dua gratis satu itu untung kalau memang terpakai. Kalau kedaluwarsa di laci, namanya rugi tiga." },
+            new QuestNpc { Id = Tini, Name = "Bu Tini", Placeholder = "bu_siti", Tint = "f0e0c8", Idle = "Bu Tini|Sewa kamar dibayar tiap awal bulan, ya, Nak. Kuitansinya selalu Ibu tulis—biar kita sama-sama tenang." },
             new QuestNpc { Id = Bayu, Name = "Mas Bayu", Placeholder = "raka", Tint = "f6d9b8", Idle = "Mas Bayu|Kas kafe dan dompet pribadi itu dua dompet berbeda. Baru kutahu setelah setahun rugi." },
         }.Concat(CaseContent.Npcs).ToArray();   // + tokoh & benda Kasus Warga
 

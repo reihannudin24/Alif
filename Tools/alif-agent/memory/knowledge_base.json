@@ -103,6 +103,8 @@
       "CutscenePanelPart",
       "CutscenePlayerController",
       "CutsceneScene",
+      "DayLight",
+      "DayPart",
       "DialogueChoice",
       "DialogueData",
       "DialogueLine",
@@ -142,6 +144,7 @@
       "MapSpec",
       "NPCController",
       "NpcBond",
+      "NpcSchedule",
       "NpcSpot",
       "ObjectiveUI",
       "OpeningMonologueTrigger",
@@ -395,6 +398,29 @@
         "StoryContent",
         "NpcBond",
         "Spec"
+      ]
+    },
+    {
+      "timestamp": "2026-09-20T12:22:06.127145",
+      "summary": "Evolved knowledge base: 133 C# symbols, 4 Yarn nodes, 4 tile specs. Discovered 0 new symbols.",
+      "changes_analyzed": 270,
+      "new_symbols": []
+    },
+    {
+      "timestamp": "2026-09-20T12:30:14.329352",
+      "summary": "Evolved knowledge base: 135 C# symbols, 4 Yarn nodes, 4 tile specs. Discovered 2 new symbols.",
+      "changes_analyzed": 270,
+      "new_symbols": [
+        "DayPart",
+        "NpcSchedule"
+      ]
+    },
+    {
+      "timestamp": "2026-09-20T12:35:32.800289",
+      "summary": "Evolved knowledge base: 136 C# symbols, 4 Yarn nodes, 4 tile specs. Discovered 1 new symbols.",
+      "changes_analyzed": 270,
+      "new_symbols": [
+        "DayLight"
       ]
     }
   ]

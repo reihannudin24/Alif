@@ -1957,7 +1957,7 @@ MAPS = [
                 dict(id='lobi.kelas', x=6.9, y=3.4, land=(6.9, 5.2), h=2.9, label='IN'),
                 dict(id='lobi.dosen', x=18.9, y=3.4, land=(18.9, 5.2), h=2.9, label='IN'),
                 dict(id='lobi.toilet', x=30.9, y=3.4, land=(30.9, 5.2), h=2.9, label='IN')],
-         spawn=(20, 10), npcs=[]),
+         spawn=(20, 10), npcs=[('npc:wulan', 18, 6)]),
     dict(id='K1K', area='Kelas Ekonomi', file='K1K_Kelas', template='indoor', seed=12,
          size=(28, 13), front=14, floor=('wall2', 'walk2'),
          buildings=[], back=[],
@@ -1965,20 +1965,20 @@ MAPS = [
                 ('desk', 4, 6), ('desk', 9, 6), ('desk', 14, 6), ('desk', 19, 6),
                 ('desk', 4, 8), ('desk', 9, 8), ('desk', 14, 8), ('desk', 19, 8)],
          doors=[dict(id='kelas.pintu', x=14, y=10.4, land=(14, 8.6), h=1.4, label='OUT')],
-         spawn=(14, 9), npcs=[]),
+         spawn=(14, 9), npcs=[('npc:reza', 20, 4)]),
     dict(id='K1D', area='Ruang Dosen', file='K1D_RuangDosen', template='indoor', seed=13,
          size=(24, 13), front=12, floor=('walk', 'wall2'),
          buildings=[], back=[],
          props=[('shelf', 2, 0), ('shelf', 19, 0), ('board', 9, 1), ('plant', 21, 4),
                 ('officedesk', 2, 6), ('officedesk', 9, 6), ('officedesk', 16, 6)],
          doors=[dict(id='dosen.pintu', x=12, y=10.4, land=(12, 8.6), h=1.4, label='OUT')],
-         spawn=(12, 9), npcs=[]),
+         spawn=(12, 9), npcs=[('npc:hana', 12, 4)]),
     dict(id='K1T', area='Toilet Kampus', file='K1T_Toilet', template='indoor', seed=14,
          size=(20, 12), front=10, floor=('stone', 'stone2'), wall='wall2',
          buildings=[], back=[],
          props=[('stall', 10, 1), ('stall', 15, 1), ('sink', 2, 3), ('sink', 6, 3), ('bin', 17, 5)],
          doors=[dict(id='toilet.pintu', x=10, y=9.4, land=(10, 7.6), h=1.4, label='OUT')],
-         spawn=(10, 8), npcs=[]),
+         spawn=(10, 8), npcs=[('npc:karjo', 14, 7)]),
     # ── Interior Idmaret (minimarket kedua) ─────────────────────────────────────
     # Template 'mart' yang sama dengan Minimarket 24, beda nama, pita merek, warna ubin,
     # dan tata letak: pendingin di kiri, kasir + ATM di kanan dekat pintu.
@@ -2005,7 +2005,7 @@ MAPS = [
                 ('waitsofa', 4, 11), ('waitsofa', 21, 11),
                 ('queue', 30, 10), ('plant', 0, 11)],
          doors=[dict(id='bank.keluar', x=17, y=12.4, land=(17, 10.6), h=1.4, label='OUT')],
-         spawn=(17, 11), npcs=[]),
+         spawn=(17, 11), npcs=[('npc:satrio', 15, 9)]),
     # ── Interior Minimarket 24 ──────────────────────────────────────────────────
     # Pintunya di lukisan Jalan Pasar. Lemari pendingin menempel dinding belakang, dua
     # deret rak mengapit lorong tengah, kasir di dekat pintu.
@@ -2018,7 +2018,7 @@ MAPS = [
                 ('gondola', 17, 7), ('gondola', 17, 10),
                 ('mat', 13, 12)],
          doors=[dict(id='mart.keluar', x=15, y=12.4, land=(15, 10.6), h=1.4, label='OUT')],
-         spawn=(15, 11), npcs=[]),
+         spawn=(15, 11), npcs=[('npc:doni', 5, 3)]),
     # ── Interior GG Learning Center ─────────────────────────────────────────────
     # Pintunya juga di lukisan Jalan Pasar. Dinding belakang 4 baris supaya logo, layar
     # sambutan, papan rencana, rak buku, dan mural maskot muat berjajar.
@@ -2029,7 +2029,7 @@ MAPS = [
                 ('studydesk', 3, 8), ('studydesk', 3, 11),
                 ('studydesk', 21, 8), ('studydesk', 21, 11)],
          doors=[dict(id='gg.keluar', x=17, y=13.4, land=(17, 11.6), h=1.4, label='OUT')],
-         spawn=(17, 12), npcs=[]),
+         spawn=(17, 12), npcs=[('npc:vina', 16, 3.4)]),   # di belakang meja resepsionis; lantai GG mulai baris 4
     # ── Interior Gereja Kasih Sejati ────────────────────────────────────────────
     # Pintunya ada di lukisan Jalan Pasar (ART_LAYOUT J2), jadi ruangannya buatan kode:
     # panggung altar di baris 3-6, bangku jemaat 3 baris di kiri-kanan lorong karpet.
@@ -2040,7 +2040,7 @@ MAPS = [
                 ('pew', 3, 7), ('pew', 3, 9), ('pew', 3, 11),
                 ('pew', 17, 7), ('pew', 17, 9), ('pew', 17, 11)],
          doors=[dict(id='gereja.keluar', x=15, y=12.4, land=(15, 10.6), h=1.4, label='OUT')],
-         spawn=(15, 11), npcs=[]),
+         spawn=(15, 11), npcs=[('npc:markus', 23, 5)]),
     # ── Interior Puskesmas Cempaka ──────────────────────────────────────────────
     # Pintunya ada di lukisan Jalan Kafe (ART_LAYOUT J3), jadi ruangannya buatan kode:
     # dua bilik periksa bertirai di kiri, meja pendaftaran + lemari obat di kanan,
@@ -2082,7 +2082,7 @@ MAPS = [
                 ('cosmeticshelf', 1, 9), ('cosmeticshelf', 8, 9), ('cosmeticshelf', 17, 9),
                 ('standee', 22, 4), ('basket', 25, 11), ('plant', 0, 11), ('plant', 28, 11)],
          doors=[dict(id='glow.keluar', x=15, y=12.4, land=(15, 10.6), h=1.4, label='OUT')],
-         spawn=(15, 11), npcs=[]),
+         spawn=(15, 11), npcs=[('npc:sasa', 26, 5)]),
     # ── Interior FFC (gerai ayam goreng Pusat Kota) ─────────────────────────────
     # Pintunya ada di lukisan Pusat Kota (ART_LAYOUT J4), jadi ruangannya buatan kode:
     # jendela dapur + papan menu + plakat ember di dinding belakang, meja pesan panjang
@@ -2123,7 +2123,7 @@ MAPS = [
          props=[('wardrobe', 1, 0), ('koswindow', 8, 0), ('shelf', 15, 0),
                 ('kosbed', 14, 4), ('officedesk', 1, 5), ('kosrug', 7, 6), ('plant', 18, 8)],
          doors=[dict(id='kamar.keluar', x=10, y=9.4, land=(10, 7.6), h=1.4, label='OUT')],
-         spawn=(10, 8), npcs=[('npc:kasur', 12.6, 6)]),
+         spawn=(10, 8), npcs=[('npc:kasur', 12.6, 6), ('npc:tini', 4, 8)]),
 ]
 
 # Jalur dua arah antar pintu. Tiap pintu harus muncul tepat sekali di sini.
@@ -2288,21 +2288,27 @@ PIN_SIZE = (360, 216)
 # pin di Peta HP. Pasangan ditulis (barat, timur) — yang barat ada di kiri peta.
 # Area scene bab (Depan stasiun, Depan warung) ikut di sini; pintunya sudah digambar di scene,
 # AdventureGame tinggal mengarahkannya ulang ke tetangga yang benar (lihat BuildRoadDoors).
-# Jalur menanjak/menurun di peta (Jalan Kafe ke Taman, Pusat Kota ke Kampus, Depan warung ke
-# Gang) belum jadi jalan kaki: map jalan tidak punya tepi atas/bawah yang bisa dilewati, jadi
-# ke sana tetap lewat Peta HP.
+# Map jalan tidak punya tepi atas/bawah yang bisa dilewati, jadi seluruh kota disusun sebagai
+# SATU rantai barat-timur: Kampus - Taman - Pusat Kota - Depan stasiun - Jalan Pasar - Jalan
+# Kafe - Depan warung. Pusat Kota, Taman, dan Kampus ada di barat stasiun supaya bisa dicapai
+# dengan berjalan; Peta HP (PINS + draw_phone_map) digambar mengikuti urutan yang sama.
+# Depan stasiun tidak punya pintu gambaran tangan di sisi barat: AdventureGame membuat tepinya
+# dari lantai WalkableArea scene (TrySceneEdge).
 ROADS = [
+    ('Kampus Cempaka', 'Taman Cempaka'),
+    ('Taman Cempaka', 'Pusat Kota'),
+    ('Pusat Kota', 'Depan stasiun'),
     ('Depan stasiun', 'Jalan Pasar'),
     ('Jalan Pasar', 'Jalan Kafe'),
-    ('Jalan Kafe', 'Pusat Kota'),
-    ('Pusat Kota', 'Depan warung'),
-    ('Taman Cempaka', 'Kampus Cempaka'),
+    ('Jalan Kafe', 'Depan warung'),
 ]
 
 PINS = {  # area: (x, y, label di atas pin?)
-    'Dalam stasiun': (40, 108, True), 'Depan stasiun': (40, 150, False), 'Jalan Pasar': (100, 150, True),
-    'Jalan Kafe': (160, 150, False), 'Pusat Kota': (220, 150, True), 'Depan warung': (290, 150, False),
-    'Dalam Warung Bu Siti': (330, 122, True), 'Kampus Cempaka': (220, 42, False), 'Taman Cempaka': (150, 70, True),
+    # Jalan utama dari barat ke timur — urutannya sama dengan ROADS.
+    'Kampus Cempaka': (44, 150, True), 'Taman Cempaka': (90, 150, False), 'Pusat Kota': (136, 150, True),
+    'Dalam stasiun': (184, 108, True), 'Depan stasiun': (184, 150, False), 'Jalan Pasar': (232, 150, True),
+    'Jalan Kafe': (280, 150, False), 'Depan warung': (326, 150, True),
+    'Dalam Warung Bu Siti': (326, 110, True),
     'Halaman kos': (230, 196, True), 'Lantai 1 kos': (175, 196, True),
     'Kamar Dimas': (120, 196, True),
 }
@@ -2495,18 +2501,21 @@ def draw_phone_map():
         d.line(points, fill=C['out'], width=width + 4)
         d.line(points, fill=road, width=width)
 
-    street([(20, 150), (340, 150)])                          # jalan utama
-    street([(220, 150), (220, 40)])                          # jalan kampus
-    street([(150, 150), (150, 70), (220, 70)], 8)            # ke taman
-    street([(290, 150), (290, 200)], 8)                      # turunan ke jalan kos
-    street([(110, 196), (300, 196)], 8)                      # jalan kos
-    street([(40, 150), (40, 110)], 8)                        # stasiun
-    for (x0, y0, x1, y1, c) in [(12, 92, 70, 132, 'roof'), (80, 120, 124, 140, 'wall2'), (140, 118, 184, 140, 'roof3'),
-                                (196, 116, 248, 140, 'teal2'), (268, 118, 312, 140, 'roof'), (316, 118, 346, 140, 'wood'),
-                                (190, 16, 252, 42, 'brick'), (120, 52, 184, 92, 'grass2'),
-                                (120, 166, 214, 188, 'roof2')]:
+    street([(16, 150), (346, 150)])                          # jalan utama: kampus … warung
+    street([(326, 150), (326, 200)], 8)                      # turunan ke jalan kos
+    street([(110, 196), (326, 196)], 8)                      # jalan kos
+    street([(184, 150), (184, 110)], 8)                      # stasiun
+    street([(326, 150), (326, 118)], 8)                      # warung
+    for (x0, y0, x1, y1, c) in [(18, 108, 70, 140, 'brick'),      # kampus
+                                (72, 106, 108, 140, 'grass2'),    # taman
+                                (112, 116, 156, 140, 'teal2'),    # pusat kota
+                                (158, 90, 210, 132, 'roof'),      # stasiun
+                                (212, 120, 252, 140, 'wall2'),    # jalan pasar
+                                (258, 118, 302, 140, 'roof3'),    # jalan kafe
+                                (306, 92, 346, 128, 'wood'),      # warung Bu Siti
+                                (120, 166, 214, 188, 'roof2')]:   # kos
         d.rectangle([x0, y0, x1, y1], fill=C[c], outline=C['out'])
-    d.ellipse([140, 58, 164, 78], fill=C['water'], outline=C['out'])
+    d.ellipse([79, 112, 101, 130], fill=C['water'], outline=C['out'])   # kolam taman
     img.save(OUT / 'PhoneMap.png')
 
 

@@ -70,6 +70,14 @@ namespace Alif.Adventure
             (!task.NeedsCases || SideQuestRules.CasesDone(this, Chapter));
         public bool CanSleep(AdventureChapter chapter) => TutorialStep == 0 && Day < MaxDay &&
             (chapter.SleepAfter == null || Progress(chapter.SleepAfter)?.Complete == true);
+        /// <summary>Fajar tiba tanpa tidur (begadang): hari tetap maju supaya jadwal warga dan kasus
+        /// berikutnya ikut bergulir. Tidak butuh kamar; hanya ditahan tutorial dan batas hari.</summary>
+        public bool PassNight()
+        {
+            if (TutorialStep != 0 || Day >= MaxDay) return false;
+            Day++;
+            return true;
+        }
         /// <summary>Tidur di kos: hari cerita maju satu. Kasus yang belum selesai tetap terbuka besok.</summary>
         public bool Sleep(AdventureChapter chapter)
         {

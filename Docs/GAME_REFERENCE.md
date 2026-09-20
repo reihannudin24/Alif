@@ -155,13 +155,22 @@ jadi jalurnya memakai pintu yang sudah digambar di scene: `SideDoor()` mengambil
 di sisi itu dan tujuannya diarahkan ulang. Dulu kedua pintu itu saling menyambung langsung
 (Depan stasiun ⇄ Depan warung) sehingga berjalan ke kanan dari stasiun langsung tiba di warung
 dan melompati seluruh kota. Area scene tanpa pintu di sisi yang diminta (mis. Halaman kos yang
-hanya punya pintu balik) dilewati — jalurnya tidak dibuat, bukan dipaksakan.
+hanya punya pintu balik) **dan tidak disebut di `ROADS`** dilewati. Kalau `ROADS` meminta sisi yang
+tidak punya pintu — sisi barat Depan stasiun, menuju Pusat Kota — `TrySceneEdge()` membuat tepinya dari
+lantai `WalkableArea` scene: pita pemicu .5 unit di ujung terluar lantai, mendarat 1,5 unit ke dalam
+di tengah lantai terluas.
 
-**Akibatnya untuk Bab 1:** dari Depan stasiun ke Depan warung sekarang empat kali transisi jalan
-kaki (Jalan Pasar → Jalan Kafe → Pusat Kota). `NextDoor()` mem-BFS jalur itu, jadi panah petunjuk
+**Akibatnya untuk Bab 1:** dari Depan stasiun ke Depan warung tiga kali transisi jalan
+kaki (Jalan Pasar → Jalan Kafe → Depan warung). `NextDoor()` mem-BFS jalur itu, jadi panah petunjuk
 HUD otomatis mengarah ke pintu pertama yang benar; pemain yang ingin cepat tetap bisa memakai
-Peta HP. Jalur menanjak/menurun di peta (Jalan Kafe→Taman, Pusat Kota→Kampus, Depan warung→Gang)
-belum jadi jalan kaki: map jalan tidak punya tepi atas/bawah yang bisa dilewati.
+Peta HP.
+
+**Kota = satu rantai barat–timur.** Map jalan tidak punya tepi atas/bawah yang bisa dilewati, jadi
+Pusat Kota, Taman, dan Kampus ada di **barat stasiun** supaya bisa dicapai dengan berjalan:
+`Kampus ⇄ Taman ⇄ Pusat Kota ⇄ Depan stasiun ⇄ Jalan Pasar ⇄ Jalan Kafe ⇄ Depan warung`.
+Peta HP (`PINS` + `draw_phone_map()`) digambar mengikuti urutan yang sama, jadi kiri-kanan di
+dunia selalu cocok dengan kiri-kanan di peta. Ujung terjauh (Kampus → Depan warung) enam transisi;
+Peta HP tetap jadi jalan pintas.
 
 ### Interior gedung (15 ruangan)
 
@@ -275,6 +284,42 @@ kaca ganda (petak 33,3), dan deretan tanaman di depan fasadnya dipecah jadi dua 
 supaya ada celah selebar pintu (petak 31,9–34,9). Bu Ningsih, perawat jaga, berdiri di belakang
 meja pendaftaran — NPC tanpa quest, hanya baris santai + adegan perkenalan.
 
+**Jadwal harian warga (`Model/NpcSchedule.cs`).** Sehari dibagi empat waktu — **pagi 06–12, siang
+12–18, malam 18–24, larut malam 00–06** (tampil di HUD di samping jam). Kehadiran tiap tokoh kota
+diacak per *hari cerita × waktu* dengan peluang 75 / 80 / 55 / 20 %, tetapi **deterministik**
+(hash FNV dari id tokoh + hari + waktu): hasilnya sama setelah save/reload dan tidak disimpan.
+Jaminan: (1) tiap tokoh pasti hadir di pagi **atau** siang setiap hari; (2) **tidak ada map yang
+kosong** — kalau undian mengosongkan map, satu tokoh dipaksa berjaga, bergilir (`PresentIn`);
+(3) tokoh yang sedang punya langkah quest/kasus untuk pemain **tidak pernah dihilangkan**
+(`AdventureGame.ScheduledNpcs`), jadi pemain tidak pernah dibuat menunggu dan panah penunjuk
+selalu punya sasaran. Benda (papan, ranjang) tidak ikut jadwal. Pergantian waktu mengacak ulang
+kehadiran (`ClockTicked`, ditunda selama dialog/papan terbuka) dan memunculkan toast. Akibat
+jaminan (2): map yang penghuninya cuma satu praktis selalu berpenghuni orang yang sama — acaknya
+baru terasa di map dengan ≥ 2 tokoh.
+
+**Siang & malam (`Model/DayLight.cs` + `AdventureGame.Cases.cs › LateUpdate`).** Warna **Global Light
+2D** tiap scene mengikuti jam: fajar hangat (06) → putih netral (08–16) → sore keemasan (17.30) →
+senja ungu (19) → malam biru redup (21–04.30). Karena semua sprite memakai material Lit, seluruh
+dunia (latar, Alif, warga) ikut menggelap; teks dunia dan UI tidak terpengaruh. Kecerahan malam
+sengaja tidak pernah di bawah ±45 % supaya map tetap terbaca. **Interior** (`OutdoorAreas` =
+daftar area luar; sisanya dianggap ruangan) diterangi lampu: makin gelap langit, makin dominan
+warna lampu hangat (sampai 78 %), jadi malam di dalam ruangan hanya sedikit lebih redup (±80 %). Warna bergeser halus per frame, sehingga masuk gedung di malam hari
+atau bangun tidur tidak berkedip. Mengubah suasana = ubah tabel `Keys` di `DayLight`.
+
+**Jam & hari.** Jam tidak lagi berhenti di 23:59: lewat tengah malam masuk **larut malam** di hari
+cerita yang sama. Hari berganti lewat tidur, atau — kalau pemain begadang — otomatis saat fajar
+06:00 (`TimeSystem.OnStoryDawn` → `AdventureState.PassNight()`): kasus & jadwal tetap bergulir,
+tetapi energi tidak pulih dan kabar pagi hanya muncul sebagai toast.
+
+**Aturan: setiap map kota punya minimal satu tokoh sejak Hari 1** (dijaga tes
+`EveryCityMapHasAtLeastOneResidentFromDayOne`). Interior yang tidak punya tokoh quest diisi
+**penghuni tetap** tanpa quest di `SideQuestContent.Npcs` — satu baris santai bertema kebiasaan uang
++ adegan perkenalan berlatar interiornya (`kota:<file>`): Mbak Wulan (Lobi), Reza (Kelas), Bu Hana
+(Ruang Dosen), Pak Karjo (Toilet), Pak Satrio (Bank Syariah), Mas Doni (Minimarket 24), Kak Vina
+(GG), Pak Markus (Gereja), Kak Sasa (Glow), Bu Tini si ibu kos (Kamar Alif), selain Bu Ningsih,
+Mbak Fira, Mas Bayu, Mbak Rini, dan Pak Mahfud yang sudah ada. Map baru = tokoh baru + posisinya
+di `npcs=[…]` generator.
+
 Ruangan yang lebih kecil dari layar (6,4 unit) membuat `CameraBounds` mengunci kamera di tengah
 — seluruh ruangan terlihat sekaligus. Interior **tidak dipasang pin di peta HP**: masuknya lewat
 pintu. `Travel(int area)` tetap bisa menuju ke sana karena `NextDoor` mem-BFS jalur pintunya. Kamera `orthographicSize` 3,2
@@ -308,8 +353,7 @@ di tiap map kota**. Benang merahnya: sesuatu yang tidak pernah dibuat jelas dan 
 **Hari cerita.** `AdventureState.Day` (mulai 1, tersimpan, terbawa antar-bab) maju **hanya lewat
 tidur** di ranjang Kamar Alif (`npc:kasur` → `AdventureGame.Cases.cs`: konfirmasi → layar hitam
 "Hari ke-N" → energi pulih → kabar pagi). Tidur baru bisa setelah `c1.room`
-(`AdventureChapter.SleepAfter`). Jam HUD berhenti di 23:59 sampai pemain tidur
-(`TimeSystem.SetStoryDay`). HUD menampilkan `BAB 1 • HARI N • area`.
+(`AdventureChapter.SleepAfter`). Tanpa tidur, hari tetap berganti saat fajar 06:00 (lihat *Jam & hari*). HUD menampilkan `BAB 1 • HARI N • area`.
 
 **Kasus Warga (`CaseContent.cs`, wajib, satu per hari mulai Hari 2).** Kasus terbuka pada
 harinya dan **tidak hangus** — bisa menumpuk. Tokoh pendatang baru muncul di harinya
@@ -556,7 +600,8 @@ terkunci selama tutorial — jalan kaki antar area yang bersebelahan lihat `road
 | State & save | `AdventureState` (tugas, bukti, posisi, uang), JSON berversi + backup | `Adventure/Model/*`, `Core/ChapterProgress.cs` |
 | Inventory | 5 slot, stacking, pilih (pakai), tukar slot, event `OnItemAdded` | `Systems/InventorySystem.cs` |
 | Katalog barang | Kegunaan + fun fact per nama barang | `Systems/ItemCatalog.cs` |
-| Waktu | Jam/menit berjalan; **hari mengikuti hari cerita** (`SetStoryDay`), jam berhenti 23:59 sampai tidur | `Systems/TimeSystem.cs` |
+| Waktu | Jam/menit berjalan; **hari mengikuti hari cerita** (`SetStoryDay`); fajar tanpa tidur = `OnStoryDawn` | `Systems/TimeSystem.cs` |
+| Jadwal warga | Hadir acak per hari × waktu (pagi/siang/malam/larut malam), deterministik, map tak pernah kosong | `Adventure/Model/NpcSchedule.cs`, `AdventureGame.Cases.cs` |
 | Hari cerita & Kasus Warga | `AdventureState.Day`, tidur, gerbang `SideQuest.Day`/`QuestNpc.AppearsOnDay`, tugas `NeedsCases` | `Adventure/AdventureGame.Cases.cs`, `Model/CaseContent.cs`, `Model/SideQuest.cs` |
 | Energi | 0–100% | `Systems/EnergySystem.cs` |
 | Uang | Dompet + saldo bank, format Rupiah | `Systems/CurrencySystem.cs` |

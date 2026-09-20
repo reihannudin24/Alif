@@ -9,6 +9,7 @@
     "UniTask",
     "LitMotion",
     "YarnSpinner.Unity",
-    "LitMotion.Extensions"
+    "LitMotion.Extensions",
+    "Unity.RenderPipelines.Universal.2D.Runtime"
   ]
 }

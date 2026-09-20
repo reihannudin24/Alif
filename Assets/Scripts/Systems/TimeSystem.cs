@@ -23,8 +23,9 @@ namespace Alif.Systems
         [SerializeField] private int _currentWeek = 1;
 
         private float _minuteAccumulator = 0f;
-        // Hari dikendalikan cerita (tidur di kos), bukan jam: jam berhenti di 23:59 sampai pemain tidur.
-        private bool _storyDriven;
+        // Hari dikendalikan cerita: lewat tengah malam jam tetap berjalan (larut malam 00–06) tanpa
+        // mengganti hari; hari baru dimulai saat pemain tidur atau saat fajar 06:00 (OnStoryDawn).
+        private bool _storyDriven, _nightPassed;
 
         private static readonly string[] DayNames =
         {
@@ -37,6 +38,9 @@ namespace Alif.Systems
         // Event yang dipanggil setiap kali hari berganti, berguna untuk trigger event harian
         // (misalnya reset toko, jadwal NPC baru, dsb).
         public event Action OnDayChanged;
+
+        // Mode hari cerita: fajar (06:00) tiba setelah melewati tengah malam tanpa tidur.
+        public event Action OnStoryDawn;
 
         public int CurrentHour => _currentHour;
         public int CurrentMinute => _currentMinute;
@@ -80,9 +84,13 @@ namespace Alif.Systems
 
                 if (_currentHour >= 24)
                 {
-                    if (_storyDriven) { _currentHour = 23; _currentMinute = 59; return; }
                     _currentHour = 0;
-                    AdvanceDay();
+                    if (_storyDriven) _nightPassed = true; else AdvanceDay();
+                }
+                if (_storyDriven && _nightPassed && _currentHour == 6)
+                {
+                    _nightPassed = false;
+                    OnStoryDawn?.Invoke();   // pendengar memajukan hari cerita lalu memanggil SetStoryDay
                 }
             }
 
@@ -100,7 +108,7 @@ namespace Alif.Systems
             int index = Mathf.Max(0, storyDay - 1);
             _currentDayIndex = index % DayNames.Length;
             _currentWeek = index / DayNames.Length + 1;
-            if (morning) { _currentHour = 6; _currentMinute = 0; _minuteAccumulator = 0f; }
+            if (morning) { _currentHour = 6; _currentMinute = 0; _minuteAccumulator = 0f; _nightPassed = false; }
             OnDayChanged?.Invoke();
             OnMinuteChanged?.Invoke();
         }
