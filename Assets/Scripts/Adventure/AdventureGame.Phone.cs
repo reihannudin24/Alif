@@ -19,7 +19,8 @@ namespace Alif.Adventure
     {
         static readonly Color MapsColor = new Color(.36f, .62f, .38f), BagColor = new Color(.89f, .44f, .17f),
             JournalColor = new Color(.62f, .38f, .22f), ContactsColor = new Color(.93f, .47f, .6f),
-            CalendarColor = new Color(.78f, .29f, .25f), SettingsColor = new Color(.45f, .47f, .53f);
+            CalendarColor = new Color(.78f, .29f, .25f), SettingsColor = new Color(.45f, .47f, .53f),
+            InvestColor = new Color(.24f, .45f, .7f);
 
         Transform _teleportTarget;
 
@@ -31,14 +32,15 @@ namespace Alif.Adventure
                 ("Peta", PixelSkin.PinIcon(), MapsColor, ShowMapsApp),
                 ("Tas", PixelSkin.BagIcon(), BagColor, Bag),
                 ("Jurnal", PixelSkin.NotebookIcon(), JournalColor, () => Journal(0)),
-                ("Kontak", PixelSkin.HeartIcon(), ContactsColor, ShowContactsApp),
+                ("Kontak", PixelSkin.HeartIcon(), ContactsColor, () => ShowContactsApp(0)),
+                ("Investasi", PixelSkin.ChartIcon(), InvestColor, () => ShowInvestmentApp(0)),
                 ("Kalender", PixelSkin.CalendarIcon(), CalendarColor, ShowCalendarApp),
                 ("Pengaturan", PixelSkin.GearIcon(), SettingsColor, Pause),
             };
             for (int i = 0; i < apps.Length; i++)
             {
                 var (name, icon, color, open) = apps[i];
-                float x = .2f + (i % 3) * .3f, y = i < 3 ? .66f : .26f;
+                float x = .14f + (i % 4) * .24f, y = i < 4 ? .66f : .26f;
                 AppTile(screen, name, icon, color, new Vector2(x, y), open);
             }
             PhoneNav(screen, null);
@@ -162,23 +164,34 @@ namespace Alif.Adventure
 
         // ───────────────────────── Kontak & Kalender ─────────────────────────
 
-        void ShowContactsApp()
+        /// <summary>Kontak = NPC yang sudah dikenal (adegan perkenalannya sudah diputar).</summary>
+        void ShowContactsApp(int page)
         {
             var screen = PhoneScreen("KONTAK");
-            var contacts = SideQuestContent.Npcs.Where(n => _city != null && _city.Npcs.ContainsKey(n.Id)).ToArray();
-            for (int i = 0; i < contacts.Length; i++)
+            const int perPage = 5;
+            var contacts = SideQuestContent.Npcs.Where(n => _city != null && _city.Npcs.ContainsKey(n.Id) && StorySeen(StoryContent.NpcIntro(n.Id)) && StoryContent.NpcIntro(n.Id) != null).ToArray();
+            int pages = Mathf.Max(1, (contacts.Length + perPage - 1) / perPage);
+            page = Mathf.Clamp(page, 0, pages - 1);
+            if (contacts.Length == 0)
+                Text(screen, "Belum ada kontak. Sapa warga kota untuk berkenalan!", new Vector2(.05f, .4f), new Vector2(.95f, .6f), 18, PixelSkin.Cream).alignment = TextAlignmentOptions.Center;
+            for (int i = page * perPage; i < Mathf.Min(contacts.Length, (page + 1) * perPage); i++)
             {
                 var npc = contacts[i];
                 int hearts = SideQuestRules.Hearts(State, npc.Id);
                 string where = _city.Npcs[npc.Id].area;
                 int area = Array.IndexOf(Content.Areas, where);
-                float top = .86f - i * .15f;
+                float top = .86f - (i - page * perPage) * .15f;
                 var row = Panel(screen, new Vector2(.02f, top - .13f), new Vector2(.98f, top), Color.white);
                 ApplySprite(row, PixelSkin.Slot()); row.raycastTarget = false;
-                Text(row.transform, $"{npc.Name}   {new string('♥', hearts)}{new string('♡', SideQuestRules.MaxHearts - hearts)}", new Vector2(0f, .5f), new Vector2(.72f, 1f), 16, PixelSkin.TextDark);
+                Text(row.transform, $"{npc.Name}   {HeartText(hearts)}", new Vector2(0f, .5f), new Vector2(.72f, 1f), 16, PixelSkin.TextDark);
                 Text(row.transform, where, new Vector2(0f, 0f), new Vector2(.72f, .5f), 13, PixelSkin.Accent);
                 var visit = Button(row.transform, "Temui", new Vector2(.74f, .15f), new Vector2(.98f, .85f), () => TeleportTo(area));
                 visit.interactable = area >= 0;
+            }
+            if (pages > 1)
+            {
+                Button(screen, "<", new Vector2(.34f, -.02f), new Vector2(.44f, .08f), () => ShowContactsApp(page - 1)).interactable = page > 0;
+                Button(screen, ">", new Vector2(.56f, -.02f), new Vector2(.66f, .08f), () => ShowContactsApp(page + 1)).interactable = page < pages - 1;
             }
             PhoneNav(screen, OpenPhone);
             FocusFirst();

@@ -6,7 +6,7 @@ namespace Alif.Adventure.Tests
 {
     public class SideQuestTests
     {
-        static AdventureState Reload(AdventureState state)
+        internal static AdventureState Reload(AdventureState state)
         {
             var reloaded = AdventureSave.Decode(JsonUtility.ToJson(state));
             Assert.That(reloaded, Is.Not.Null, "Save dengan side quest harus tetap valid.");
@@ -15,7 +15,7 @@ namespace Alif.Adventure.Tests
 
         /// <summary>Selesaikan satu langkah persis seperti runtime: talk/give lewat Advance,
         /// papan lewat Place + Commit dengan jawaban yang benar.</summary>
-        static void Solve(AdventureState state, SideQuest quest, QuestStep step)
+        internal static void Solve(AdventureState state, SideQuest quest, QuestStep step)
         {
             if (step.Board == null)
             {
@@ -39,7 +39,8 @@ namespace Alif.Adventure.Tests
         [Test]
         public void EverySideQuestCompletesInOrderWithReloadAfterEveryStep()
         {
-            var state = new AdventureState();
+            // Hari cerita dimajukan melewati gerbang Kasus Warga (SideQuest.Day); urutan harinya diuji di CaseTests.
+            var state = new AdventureState { Day = SideQuestContent.All.Max(q => q.Day) };
             foreach (var quest in SideQuestContent.All)
             {
                 Assert.That(SideQuestRules.Available(state, quest), Is.True, quest.Id + " harus terbuka setelah prasyaratnya selesai.");
@@ -142,6 +143,47 @@ namespace Alif.Adventure.Tests
                     Assert.That(quest.Steps.Take(i).Any(s => s.RewardItem == step.RequiredItem), Is.True,
                         $"{quest.Id}: '{step.RequiredItem}' harus bisa didapat sebelum diberikan.");
                 }
+        }
+
+        [Test]
+        public void EveryNpcHasAnIntroSceneWithWellFormedLines()
+        {
+            foreach (var npc in SideQuestContent.Npcs.Where(n => !n.IsObject))   // benda (papan, ranjang) tidak berkenalan
+                Assert.That(StoryContent.NpcIntro(npc.Id), Is.Not.Null, npc.Id + " butuh adegan perkenalan.");
+            foreach (var scene in StoryContent.AllScenes)
+            {
+                Assert.That(scene.Art, Is.Not.Empty, scene.Id);
+                Assert.That(scene.Lines, Is.Not.Empty, scene.Id);
+                Assert.That(scene.Lines.All(l => l.Contains("|")), Is.True, scene.Id + ": format \"Pembicara|teks\".");
+            }
+        }
+
+        [Test]
+        public void InvestmentChainTeachesEveryCardOnceAndRevealsNpcsOneByOne()
+        {
+            var taught = SideQuestContent.All.SelectMany(q => q.Steps).Where(s => s.Card != null).Select(s => s.Card).ToList();
+            CollectionAssert.AreEquivalent(StoryContent.Cards.Select(c => c.Id), taught);
+
+            var state = new AdventureState();
+            var investors = SideQuestContent.Npcs.Where(n => n.AppearsWithQuest).ToList();
+            Assert.That(investors.Count(n => SideQuestRules.NpcVisible(state, n, SideQuestContent.All)), Is.EqualTo(1),
+                "Awalnya hanya NPC investasi pertama yang hadir.");
+            var first = SideQuestContent.All.First(q => q.Giver == investors[0].Id);
+            foreach (var step in first.Steps) Solve(state, first, step);
+            Assert.That(investors.Count(n => SideQuestRules.NpcVisible(state, n, SideQuestContent.All)), Is.EqualTo(2));
+        }
+
+        [Test]
+        public void UnlockedCardsAndSeenStoriesSurviveSaveAndChapterChange()
+        {
+            var state = new AdventureState { HighestUnlocked = 2 };
+            state.Cards.Add("saham");
+            state.SeenStories.Add("intro:arga");
+            var next = Reload(state.StartChapter(2));
+            Assert.That(next.Cards, Does.Contain("saham"));
+            Assert.That(next.SeenStories, Does.Contain("intro:arga"));
+            state.Cards.Add("tidak-ada");
+            Assert.That(AdventureSave.Decode(JsonUtility.ToJson(state)), Is.Null, "Kartu tak dikenal ditolak.");
         }
 
         [Test]

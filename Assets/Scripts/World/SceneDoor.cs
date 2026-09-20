@@ -27,6 +27,13 @@ namespace Alif.World
         public Transform Destination => _destination;
         public int SourceArea { get; private set; }
         public int DestinationArea { get; private set; }
+        /// <summary>Dipakai CityWorld saat merakit pintu kota runtime (tidak ada prefab-nya).</summary>
+        public void Configure(Transform destination, string confirmMessage)
+        {
+            _destination = destination;
+            if (!string.IsNullOrEmpty(confirmMessage)) _confirmMessage = confirmMessage;
+        }
+
         public void Bind(Alif.Adventure.AdventureGame game, int source, int destination)
         {
             _adventure = game;

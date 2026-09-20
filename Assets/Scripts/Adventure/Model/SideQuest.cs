@@ -17,6 +17,8 @@ namespace Alif.Adventure
         /// <summary>Dialog setelah langkah selesai, format sama dengan <see cref="Lines"/>.</summary>
         public string[] Outcome = Array.Empty<string>();
         public string RequiredItem, RewardItem;
+        /// <summary>Id kartu investasi (StoryContent.Cards) yang terbuka saat langkah selesai.</summary>
+        public string Card;
         public ActivityBoard Board;
         public int Bond;
         public float Logic, Sharia;
@@ -25,8 +27,19 @@ namespace Alif.Adventure
     public sealed class SideQuest
     {
         public string Id, Title, Theme, Summary;
+        /// <summary>NPC pemberi quest (dipakai untuk memunculkan NPC yang baru hadir bersama quest-nya).</summary>
+        public string Giver;
         public string[] Requires = Array.Empty<string>();
         public QuestStep[] Steps = Array.Empty<QuestStep>();
+        /// <summary>Hari cerita paling awal quest ini terbuka (<see cref="AdventureState.Day"/>).
+        /// 0 = tidak digerbang hari. Dipakai Kasus Warga yang muncul bertahap di tiap map.</summary>
+        public int Day;
+        /// <summary>Bab pemilik Kasus Warga; 0 = side quest bebas yang berlaku lintas bab.</summary>
+        public int Chapter;
+        /// <summary>Kasus wajib: babnya belum bisa ditutup sebelum quest ini selesai.</summary>
+        public bool Mandatory;
+        /// <summary>Kabar "Pembicara|teks" yang Alif dengar saat bangun di hari kasus ini terbuka.</summary>
+        public string News;
     }
 
     /// <summary>NPC pemberi quest: nama tampilan, id titik interaksi, dan baris santai saat
@@ -34,6 +47,19 @@ namespace Alif.Adventure
     public sealed class QuestNpc
     {
         public string Id, Name, Placeholder, Idle;
+        /// <summary>Baris santai pengganti <see cref="Idle"/> setelah quest <see cref="AfterQuest"/> selesai —
+        /// untuk tokoh yang sudah hadir sebelum kasusnya dan berubah sikap sesudahnya.</summary>
+        public string AfterQuest, IdleAfter;
+        /// <summary>Warna pembeda sprite placeholder (hex RRGGBB), kosong = tanpa warna.</summary>
+        public string Tint;
+        /// <summary>NPC baru muncul di dunia setelah quest pertamanya tersedia (rangkaian investasi).</summary>
+        public bool AppearsWithQuest;
+        /// <summary>NPC baru hadir mulai hari cerita ini; 0 = selalu hadir. Dipakai tokoh Kasus
+        /// Warga supaya map terasa tenang dulu sebelum kasusnya terbuka.</summary>
+        public int AppearsOnDay;
+        /// <summary>Benda yang bisa diperiksa (papan, lapak, ranjang): titik interaksi tanpa sprite,
+        /// tanpa adegan perkenalan, dan tanpa balon chat.</summary>
+        public bool IsObject;
     }
 
     [Serializable] public sealed class SideQuestProgress
@@ -65,7 +91,7 @@ namespace Alif.Adventure
             state.SideQuests.Find(p => p.Id == questId);
 
         public static bool Available(AdventureState state, SideQuest quest) =>
-            state.TutorialStep == 0 && Progress(state, quest.Id)?.Complete != true &&
+            state.TutorialStep == 0 && state.Day >= quest.Day && Progress(state, quest.Id)?.Complete != true &&
             quest.Requires.All(id => Progress(state, id)?.Complete == true);
 
         public static QuestStep CurrentStep(AdventureState state, SideQuest quest)
@@ -140,6 +166,21 @@ namespace Alif.Adventure
             else Prepare(state, quest);
         }
 
+        /// <summary>NPC rangkaian investasi baru hadir di dunia setelah quest-nya terbuka (atau
+        /// sudah pernah dijalani); NPC lain selalu hadir.</summary>
+        public static bool NpcVisible(AdventureState state, QuestNpc npc, IEnumerable<SideQuest> quests) =>
+            state.Day >= npc.AppearsOnDay &&
+            (!npc.AppearsWithQuest || quests.Any(q => q.Giver == npc.Id && (Progress(state, q.Id) != null || Available(state, q))));
+
+        /// <summary>Kasus Warga bab ini yang belum selesai — bab baru bisa ditutup kalau kosong.</summary>
+        public static IEnumerable<SideQuest> PendingCases(AdventureState state, int chapter) =>
+            SideQuestContent.All.Where(q => q.Mandatory && q.Chapter == chapter && Progress(state, q.Id)?.Complete != true);
+
+        public static bool CasesDone(AdventureState state, int chapter) => !PendingCases(state, chapter).Any();
+
+        public static string IdleLine(AdventureState state, QuestNpc npc) =>
+            npc.IdleAfter != null && Progress(state, npc.AfterQuest)?.Complete == true ? npc.IdleAfter : npc.Idle;
+
         public static int Hearts(AdventureState state, string npc) => state.Bonds.Find(b => b.Npc == npc)?.Hearts ?? 0;
 
         public static void AddBond(AdventureState state, string npc, int hearts)
@@ -153,7 +194,9 @@ namespace Alif.Adventure
         /// <summary>Validasi save: id & langkah harus cocok dengan konten yang ada.</summary>
         public static bool Valid(AdventureState state)
         {
-            if (state.SideQuests == null || state.Items == null || state.Bonds == null || state.PickedUp == null) return false;
+            if (state.SideQuests == null || state.Items == null || state.Bonds == null || state.PickedUp == null ||
+                state.SeenStories == null || state.Cards == null) return false;
+            if (state.Cards.Any(id => StoryContent.Card(id) == null) || state.Cards.Distinct().Count() != state.Cards.Count) return false;
             if (state.SideQuests.Any(p => p == null || p.Id == null || p.Placements == null)) return false;
             if (state.SideQuests.Select(p => p.Id).Distinct().Count() != state.SideQuests.Count) return false;
             foreach (var p in state.SideQuests)

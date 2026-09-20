@@ -17,8 +17,7 @@ lebih mudah digenerate konsisten.
                          └───────────────┬───────────────────────┘
 ┌──────────────────────────────── JALAN CEMPAKA (jalan utama) ────────────────────────────────┐
 │ [J1 Depan Stasiun]*  [J2 Jalan Pasar]  [J3 Jalan Kafe]  [J4 Pusat Kota]  [J5 Depan Warung]* │
-└───────────────────────────────────────────────────────────────────┬─────────────────────────┘
-                                                            [P1 Gang Permukiman] (Kos*, rumah Bima)
+└─────────────────────────────────────────────────────────────────────────────────────────────┘
 * = sudah ada
 ```
 
@@ -29,7 +28,6 @@ lebih mudah digenerate konsisten.
 | J4 | **Pusat Kota** | Bank Syariah (+ATM), Masjid (luar saja) | K-pop SQ-2, Dosen B |
 | K1 | **Gerbang Kampus** | Gedung Fakultas → Ruang Dosen | Dosen A |
 | K2 | **Taman Cempaka** | — (taman terbuka, disebut di Bab 5) | Epilog / ambience |
-| P1 | **Gang Permukiman** | Rumah & lapak Bima | Dosen A, B |
 
 | Kode | Interior (latar baru) |
 |---|---|
@@ -37,7 +35,7 @@ lebih mudah digenerate konsisten.
 | I2 | Dalam Kafe Senja |
 | I3 | Dalam Bank Syariah (teller, meja CS, antrean) |
 | I4 | Ruang Dosen (meja kerja, rak buku, papan tulis) |
-| I5 | Rumah Bima (ruang tamu sederhana + etalase dagangan) |
+| I5 | Warung Bima (ruang tamu sederhana + etalase dagangan; pintunya di Jalan Pasar) |
 | I6 | Dalam Toko Kosmetik "Glow" |
 
 ---
@@ -91,10 +89,6 @@ security post, a tree-lined path leading to a two-story faculty building, a phot
 **K2 · Taman Cempaka** — *A green city park with paved walking paths, frangipani trees, a small
 gazebo, benches, and a notice board, flower beds; open grass areas to walk.*
 
-**P1 · Gang Permukiman** — *A narrow residential alley with small row houses, potted plants, a
-clothesline, one house with a tiny front stall selling snacks (Bima's house), a boarding house
-gate "KOS CEMPAKA", motorbikes parked at the edges only.*
-
 **I1 · Dalam Toko Kelontong** — *Interior of a small grocery shop: wooden shelves of rice sacks,
 snacks, soap and drinks, a cashier counter with an old cash register, a fridge with drinks.*
 
@@ -108,7 +102,7 @@ information posters (blank).*
 **I4 · Ruang Dosen** — *A university lecturer office: a wooden desk with laptop and stacked
 papers, bookshelves, a whiteboard with charts, a small sofa for guests, a window.*
 
-**I5 · Rumah Bima** — *A modest living room of a small house: a sofa, a low table, a small glass
+**I5 · Warung Bima** — *A modest living room of a small house: a sofa, a low table, a small glass
 display case of packaged snacks for sale, a calendar on the wall, a fan.*
 
 **I6 · Dalam Toko Kosmetik "Glow"** — *A bright cosmetics store interior: pastel shelves of

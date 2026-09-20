@@ -8,7 +8,10 @@ namespace Alif.Adventure
         public const string OjkUrl = "https://www.ojk.go.id/waspada-investasi/id/FAQ.aspx";
         /// <summary>Map Kota Cempaka yang ada di setiap bab, ditambahkan setelah area bab
         /// (dirakit runtime oleh CityWorld dari Resources/Kota/city.json; urutan harus sama).</summary>
-        public static readonly string[] CityAreas = { "Jalan Pasar", "Jalan Kafe", "Pusat Kota", "Kampus Cempaka", "Taman Cempaka", "Gang Permukiman" };
+        public static readonly string[] CityAreas = { "Jalan Pasar", "Jalan Kafe", "Pusat Kota", "Kampus Cempaka", "Taman Cempaka",
+            // Interior — dimasuki lewat pintu (doors di city.json), bukan dari peta HP.
+            "Lobi Kampus", "Kelas Ekonomi", "Ruang Dosen", "Toilet Kampus", "Gereja Kasih Sejati", "Puskesmas Cempaka",
+            "Minimarket 24", "GG Learning Center", "FFC", "Masjid Al-Amanah", "Toko Glow", "Bank Syariah", "Idmaret", "Kafe Senja", "Kamar Alif" };
         public static int SceneAreaCount(AdventureChapter chapter) => chapter.Areas.Length - CityAreas.Length;
         static PuzzleStep S(string p, string e, string why, int answer, params string[] options) => new PuzzleStep(p,e,why,answer,options);
         static AdventureTask T(string id, int area, string target, string speaker, string title, string intro, string outcome, string kind = "talk", params PuzzleStep[] steps)
@@ -18,6 +21,7 @@ namespace Alif.Adventure
             var c = number == 1 ? One() : number == 2 ? Two() : number == 3 ? Three() : number == 4 ? Four() : Five();
             c.Number=number;
             if (number == 1) Array.Find(c.Tasks, t => t.Id == "c1.resolve").Cost = 18000;
+            if (number == 1) Array.Find(c.Tasks, t => t.Id == "c1.finale").NeedsCases = true;
             for(int i=1;i<c.Tasks.Length;i++) c.Tasks[i].Prerequisites=new[]{c.Tasks[i-1].Id};
             OriginalCampaign.Apply(c);
             if (number >= 2)
@@ -35,33 +39,34 @@ namespace Alif.Adventure
             }
             return c;
         }
+        // Bab 1 = Hari 1 (tutorial + struk Bu Siti) lalu enam Kasus Warga di CaseContent yang terbuka
+        // per hari cerita. "c1.room" memberi Alif kamar kos (tempat tidur = ganti hari); "c1.finale"
+        // baru bisa dikerjakan setelah semua kasus wajib selesai (AdventureTask.NeedsCases).
         static AdventureChapter One() => new AdventureChapter {
-            Title="Warung Bu Siti", Subtitle="01 / Awal yang jujur",
+            Title="Cempaka, Minggu Pertama", Subtitle="01 / Belajar bertanya", SleepAfter="c1.room",
             Areas=new[]{"Stasiun Cempaka", "Gang warung", "Warung Bu Siti"},
-            Introduction="Alif baru tiba di Cempaka. Di dalam tasnya ada buku catatan, alamat kos, dan uang untuk memulai hari. Sebelum mencari kamar, ia perlu makan. Di lingkungan baru ini, keputusan kecil akan mempertemukannya dengan teman-teman baru.",
-            Ending="Pesanan sudah cocok, uang kembali dengan benar, dan Raka merasa didengar. Bu Siti memberi alamat kos Dimas. Alif melipat struk pertama di buku catatannya: kejujuran sering dimulai dari hal kecil.",
+            Introduction="Alif baru tiba di Cempaka. Di dalam tasnya ada buku catatan dan uang untuk memulai hari. Sebelum mencari tempat menginap, ia perlu makan. Di kota ini setiap sudut punya ceritanya sendiri—dan hampir semuanya bermula dari sesuatu yang tidak pernah dibuat jelas.",
+            Ending="Tujuh hari di Cempaka: papan harga terpasang, taman wakaf terjaga, kembalian utuh, kas himpunan terlapor, upah terbayar, dan buku bon berparaf. Alif menutup halaman pertama buku catatannya: kejujuran sering dimulai dari hal kecil—lalu dicatat.",
             Optional=new[]{"Petugas stasiun|Warung Bu Siti ada di sebelah timur. Di kampung ini, orang masih saling menitipkan kabar lewat warung. Papan arah akan membantumu pulang juga.","Raka|Aku sedang mencari kerja sambilan. Kadang malu mengaku uangku terbatas. Terima kasih sudah bertanya sebelum menghakimi.","Bu Siti|Aku menulis harga besar-besar supaya setiap orang bisa memilih dengan tenang. Kalau ada yang tidak jelas, tanyakan sebelum memesan."},
             Tasks=new[]{
                 T("c1.arrival",0,"Papan arah","Alif","Baca petunjuk — papan stasiun","Papan menunjukkan jalan keluar stasiun dan arah Warung Bu Siti di sebelah timur. Periksa arah sebelum melanjutkan perjalanan.","Warung berada di timur. Ikuti penanda KELUAR menuju gang, lalu MASUK Warung Bu Siti."),
-                T("c1.greeting",1,"Bu Siti","Bu Siti","Tanyakan menu — depan warung","Selamat datang! Harga di papan berlaku untuk semua. Sebelum memesan, sisihkan dulu uang perjalananmu. Jangan sungkan minta penjelasan.","Alif menetapkan anggaran makan Rp20.000; uang perjalanan disimpan terpisah."),
-                T("c1.menu",2,"Papan menu","Alif","Susun pesanan — papan menu","Pilih makanan dan minuman tanpa melewati Rp20.000. Contoh: nasi Rp10.000 + air Rp2.000 menyisakan Rp8.000. Angka pada kartu bisa dibandingkan sebelum dipilih.","Pesanan dicatat: nasi telur dan es teh, total Rp18.000. Belum ada uang yang dipotong.","budget",
+                T("c1.menu",2,"Papan menu","Bu Siti","Susun pesanan — papan menu","Selamat datang, Nak! Harga di papan berlaku untuk semua. Sisihkan dulu uang perjalananmu, lalu pilih makanan dan minuman tanpa melewati Rp20.000. Jangan sungkan bertanya sebelum memesan.","Pesanan dicatat: nasi telur dan es teh, total Rp18.000. Belum ada uang yang dipotong; struknya menunggu di meja dekat jendela.","budget",
                     S("Pilih lauk agar es teh Rp6.000 tetap masuk anggaran.","ANGGARAN 20.000  |  Minuman 6.000  |  Batas lauk 14.000","Nasi telur Rp12.000 menyisakan Rp8.000, cukup untuk minuman Rp6.000.",1,"Ayam geprek • 18.000","Nasi telur • 12.000","Paket spesial • 22.000"),
                     S("Masukkan minuman sesuai pesanan.","Nasi telur 12.000  +  ?  =  total maksimal 20.000","Es teh Rp6.000 membuat total Rp18.000; masih ada Rp2.000 dari anggaran makan.",2,"Jus • 10.000","Kopi susu • 12.000","Es teh • 6.000"),
                     S("Pisahkan sisa anggaran makan.","20.000 − 12.000 − 6.000 = ?","Sisa Rp2.000 tetap milik Alif. Tidak perlu dihabiskan hanya karena sudah dianggarkan.",0,"Simpan 2.000","Tambah kerupuk 4.000","Anggap tidak ada sisa"),
                     S("Konfirmasi harga sebelum pesanan dibuat.","Nasi telur 12.000 / Es teh 6.000 / Tidak ada biaya lain","Kesepakatan pesanan memuat barang, jumlah, dan total yang jelas.",1,"Bayar berapa saja nanti","Pesan dua item • total 18.000","Minta paket tanpa harga")),
-                T("c1.order",2,"Bu Siti","Bu Siti","Sampaikan pesanan — kasir","Nasi telur satu, es teh satu, total delapan belas ribu. Kita cocokkan struk sebelum pembayaran. Silakan lihat meja di dekat jendela.","Bu Siti menyiapkan dua item yang disepakati."),
                 T("c1.receipt",2,"Meja jendela","Alif","Cocokkan struk — meja jendela","Ada tiga baris pada struk, padahal kita memesan dua item. Cocokkan setiap baris dengan pesanan. Contoh: dua teh di struk tetapi satu teh dipesan berarti jumlah perlu diperbaiki.","Struk diperbaiki: nasi telur Rp12.000 + es teh Rp6.000 = Rp18.000.","match",
                     S("Cocokkan baris makanan.","PESANAN: nasi telur 1 porsi / STRUK: nasi telur 1 × 12.000","Nama, jumlah, dan harga nasi telur cocok.",0,"Cocok dengan pesanan","Ganti menjadi dua porsi","Hapus makanan"),
                     S("Cocokkan baris minuman.","PESANAN: es teh 1 / STRUK: es teh 2 × 6.000","Jumlah teh perlu diubah dari dua menjadi satu; selisihnya Rp6.000.",2,"Harga teh salah","Biarkan dua gelas","Ubah jumlah menjadi satu"),
                     S("Periksa baris tambahan.","STRUK: kerupuk 4.000 / Tidak ada kerupuk pada pesanan atau meja","Item yang tidak dipesan perlu diklarifikasi dan dihapus dari tagihan ini.",1,"Bayar supaya cepat","Minta hapus kerupuk","Ambil uang kas sendiri"),
                     S("Hubungkan total baru dengan pesanan.","Nasi telur 12.000 + es teh 6.000 + kerupuk 0","Total yang disepakati adalah Rp18.000, bukan Rp28.000 pada struk awal.",0,"Total 18.000","Total 24.000","Total 28.000")),
-                T("c1.listen",1,"Raka","Raka","Dengarkan Raka — gang warung","Aku juga menerima struk yang berbeda. Aku kesal, lalu Bu Siti mengira aku menolak membayar. Sebenarnya aku ingin tahu apa yang dihitung.","Alif mengajak Raka membawa struk dan berbicara di kasir, bukan berteriak dari jalan."),
-                T("c1.resolve",2,"Bu Siti","Alif","Selesaikan pembayaran — kasir","Bantu kedua pihak memakai catatan yang sama. Contoh: sebutkan item yang berbeda, dengarkan penjelasan, lalu sepakati koreksi. Bayar hanya setelah rinciannya cocok.","Alif membayar Rp18.000 sekali. Bu Siti meminta maaf atas struk tertukar; Raka membantu menata pesanan.","sort",
+                T("c1.resolve",2,"Bu Siti","Alif","Selesaikan pembayaran — kasir","Bawa struk ke kasir dan pakai catatan yang sama dengan Bu Siti. Sebutkan item yang berbeda, dengarkan penjelasannya, lalu sepakati koreksi. Bayar hanya setelah rinciannya cocok.","Alif membayar Rp18.000 sekali. Bu Siti meminta maaf atas struk yang tertukar dan berjanji membacakan ulang setiap pesanan sebelum menagih.","sort",
                     S("Mulai percakapan dari fakta.","BUKTI: struk awal mencantumkan item yang tidak dipesan","Membandingkan pesanan dengan struk memberi ruang untuk memperbaiki kesalahan tanpa menuduh niat seseorang.",1,"Bu Siti pasti sengaja menipu","Mari cocokkan pesanan dan struk","Jangan bayar apa pun"),
                     S("Pilih koreksi yang dapat diperiksa.","Pesanan: 18.000 / Tagihan awal: 28.000 / Selisih: 10.000","Struk baru harus memuat dua item dan total Rp18.000.",0,"Tulis ulang dua item • 18.000","Coret total tanpa rincian","Minta semuanya gratis"),
                     S("Tentukan kembalian dari pembayaran Rp20.000.","Dibayar 20.000 − tagihan 18.000","Kembalian Rp2.000 sesuai kesepakatan. Dalam saldo permainan, hanya biaya bersih Rp18.000 yang dicatat.",2,"Tidak perlu kembalian","Kembalian 10.000","Kembalian 2.000"),
-                    S("Tutup percakapan dengan kesepakatan.","Struk sudah benar; Bu Siti dan Raka siap berdamai","Simpan struk dan akui koreksi. Masalah selesai tanpa mempermalukan salah satu pihak.",0,"Terima koreksi dan simpan struk","Sebarkan tuduhan lama","Minta Raka membayar dua kali")),
-                T("c1.next",1,"Papan arah","Bu Siti","Ambil alamat kos — papan gang","Dimas tinggal di lantai dua Kos Cempaka. Ia sedang memikirkan biaya kuliah. Bawa catatanmu; mungkin kalian bisa menata masalahnya bersama.","Alamat dicatat. Bab berikutnya terbuka: Jebakan Riba.")
+                    S("Tutup percakapan dengan kesepakatan.","Struk sudah benar; Bu Siti berterima kasih sudah diingatkan","Simpan struk dan akui koreksi. Masalah selesai tanpa mempermalukan salah satu pihak.",0,"Terima koreksi dan simpan struk","Sebarkan tuduhan lama","Minta pembeli lain ikut membayar")),
+                T("c1.room",2,"Bu Siti","Bu Siti","Tanyakan tempat menginap — kasir","Kamu belum punya tempat menginap, kan? Sepupu saya punya rumah kos di ujung timur Jalan Pasar—rumah bergenteng paling kanan. Kamar depannya kosong. Bilang saja dari Bu Siti.","Alamat kamar kos dicatat: rumah paling kanan di Jalan Pasar (lihat peta di HP). Tidur di ranjang untuk mengakhiri hari—tiap pagi ada kabar warga yang baru."),
+                T("c1.finale",2,"Bu Siti","Bu Siti","Kabari Bu Siti — kasir","Seminggu ini namamu sering disebut orang, Nak. Pak Yanto memasang papan harga, taman wakaf aman, Bima punya buku bon baru. Semuanya berawal dari hal yang sama dengan struk kita dulu: dibuat jelas, lalu dicatat.","Bu Siti menitipkan kabar: Dimas, mahasiswa di Kos Cempaka lantai dua, sedang bingung menghadapi tawaran pinjaman. Bawa catatanmu. Bab berikutnya terbuka: Jebakan Riba.")
             }
         };
         static AdventureChapter Two() => new AdventureChapter {

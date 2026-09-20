@@ -20,11 +20,15 @@ namespace Alif.Adventure
         public ActivityBoard Board;
         public string[] Prerequisites = Array.Empty<string>();
         public PuzzleStep[] Steps = Array.Empty<PuzzleStep>();
+        /// <summary>Tugas penutup: baru terbuka setelah semua Kasus Warga wajib bab ini selesai.</summary>
+        public bool NeedsCases;
     }
     public sealed class AdventureChapter
     {
         public int Number, StartArea;
         public string Title, Subtitle, Introduction, Ending;
+        /// <summary>Id tugas yang harus selesai sebelum Alif boleh tidur (punya kamar kos); null = bebas.</summary>
+        public string SleepAfter;
         public string[] Areas, Optional;
         public AdventureTask[] Tasks;
     }
@@ -38,8 +42,12 @@ namespace Alif.Adventure
     }
     [Serializable] public sealed class AdventureState
     {
-        public int Version = 3, Chapter = 1, Area, Money = 100000, Bank = 1000000, HighestUnlocked = 1;
+        public int Version = 4, Chapter = 1, Area, Money = 100000, Bank = 1000000, HighestUnlocked = 1;
         public int TutorialStep;
+        /// <summary>Hari cerita (1 = hari kedatangan). Maju lewat tidur di kos, bukan waktu nyata;
+        /// menggerbang Kasus Warga dan kehadiran tokohnya (SideQuest.Day, QuestNpc.AppearsOnDay).</summary>
+        public int Day = 1;
+        public const int MaxDay = 30;
         [NonSerialized] public bool ReadOnlySave;
         public bool HasPosition;
         public float X = 0, Y = -2.5f;
@@ -53,9 +61,22 @@ namespace Alif.Adventure
         public List<ItemStack> Items = new List<ItemStack>();
         public List<NpcBond> Bonds = new List<NpcBond>();
         public List<string> PickedUp = new List<string>();
+        // Adegan cerita yang sudah diputar & kartu investasi yang sudah terbuka (lintas bab).
+        public List<string> SeenStories = new List<string>();
+        public List<string> Cards = new List<string>();
         public float PlaySeconds;
         public TaskProgress Progress(string id) => Tasks.Find(t => t.Id == id);
-        public bool CanStart(AdventureTask task) => !Completed && task.Prerequisites.All(id => Progress(id)?.Complete == true);
+        public bool CanStart(AdventureTask task) => !Completed && task.Prerequisites.All(id => Progress(id)?.Complete == true) &&
+            (!task.NeedsCases || SideQuestRules.CasesDone(this, Chapter));
+        public bool CanSleep(AdventureChapter chapter) => TutorialStep == 0 && Day < MaxDay &&
+            (chapter.SleepAfter == null || Progress(chapter.SleepAfter)?.Complete == true);
+        /// <summary>Tidur di kos: hari cerita maju satu. Kasus yang belum selesai tetap terbuka besok.</summary>
+        public bool Sleep(AdventureChapter chapter)
+        {
+            if (!CanSleep(chapter)) return false;
+            Day++;
+            return true;
+        }
         public bool Accept(AdventureTask task, int option, out string feedback)
         {
             feedback = "Selesaikan tugas sebelumnya dahulu.";
@@ -127,16 +148,16 @@ namespace Alif.Adventure
         public AdventureState StartChapter(int chapter)
         {
             if (chapter < 1 || chapter > HighestUnlocked) throw new ArgumentOutOfRangeException(nameof(chapter));
-            return new AdventureState { Chapter = chapter, Area = AdventureContent.Get(chapter).StartArea, HighestUnlocked = HighestUnlocked,
+            return new AdventureState { Chapter = chapter, Area = AdventureContent.Get(chapter).StartArea, HighestUnlocked = HighestUnlocked, Day = Day,
                 CompletedChapters = new List<int>(CompletedChapters), ReadOnlySave = ReadOnlySave,
                 SideQuests = SideQuests.ConvertAll(q => new SideQuestProgress { Id = q.Id, Step = q.Step, Complete = q.Complete, Placements = new List<int>(q.Placements) }),
                 Items = Items.ConvertAll(i => new ItemStack { Name = i.Name, Quantity = i.Quantity }),
                 Bonds = Bonds.ConvertAll(b => new NpcBond { Npc = b.Npc, Hearts = b.Hearts }),
-                PickedUp = new List<string>(PickedUp) };
+                PickedUp = new List<string>(PickedUp), SeenStories = new List<string>(SeenStories), Cards = new List<string>(Cards) };
         }
         public bool Valid()
         {
-            if (Version != 3 || Chapter < 1 || Chapter > 5 || HighestUnlocked < Chapter || HighestUnlocked > 5 || TutorialStep < 0 || TutorialStep > 3 ||
+            if (Version != 4 || Day < 1 || Day > MaxDay || Chapter < 1 || Chapter > 5 || HighestUnlocked < Chapter || HighestUnlocked > 5 || TutorialStep < 0 || TutorialStep > 3 ||
                 Area < 0 || Area >= AdventureContent.Get(Chapter).Areas.Length || Money < 0 || Money > 2000000 || Bank < 0 || Bank > 2000000 || !float.IsFinite(X) || !float.IsFinite(Y) ||
                 Math.Abs(X) > 500 || Math.Abs(Y) > 500 || !float.IsFinite(PlaySeconds) || PlaySeconds < 0 ||
                 Tasks == null || Evidence == null || Discoveries == null || CompletedChapters == null || !SideQuestRules.Valid(this)) return false;
@@ -147,7 +168,7 @@ namespace Alif.Adventure
             {
                 var task = chapter.Tasks.FirstOrDefault(t => t.Id == p.Id);
                 if (task == null || p.Step < 0 || p.Step > task.Steps.Length || p.Choices == null || p.Choices.Count != p.Step ||
-                    (p.Complete && p.Step != task.Steps.Length) || !task.Prerequisites.All(id => Progress(id)?.Complete == true || chapter.Tasks.Any(t => t.Id == id && t.Kind == "encounter"))) return false;
+                    (p.Complete && p.Step != task.Steps.Length) || (task.NeedsCases && !SideQuestRules.CasesDone(this, Chapter)) || !task.Prerequisites.All(id => Progress(id)?.Complete == true || chapter.Tasks.Any(t => t.Id == id && t.Kind == "encounter"))) return false;
                 if (p.Placements == null) return false;
                 if (task.Board != null && (p.Placements.Count != task.Board.Cards.Length || p.Placements.Any(v => v < -1 || v >= (task.Board.Kind == "budget" ? 2 : task.Board.Slots.Length)) || (p.Complete && !task.Board.Solved(p.Placements)))) return false;
                 for (int i = 0; i < p.Step; i++) if (p.Choices[i] != task.Steps[i].Answer) return false;
@@ -167,7 +188,7 @@ namespace Alif.Adventure
             try
             {
                 var s = JsonUtility.FromJson<AdventureState>(json);
-                if (s == null || (s.Version != 2 && s.Version != 3)) return null;
+                if (s == null || s.Version < 2 || s.Version > 4) return null;
                 if (s.Version == 2)
                 {
                     s.Version = 3;
@@ -175,13 +196,16 @@ namespace Alif.Adventure
                     if (s.Completed && s.Chapter >= 2 && s.Chapter <= 5 && s.Tasks != null && s.Progress("c" + s.Chapter + ".encounter") == null)
                         s.Tasks.Add(new TaskProgress { Id = "c" + s.Chapter + ".encounter", Complete = true });
                 }
+                // v3 belum mengenal hari cerita: mulai dari hari 1. Save Bab 1 yang sedang berjalan
+                // gugur di Valid() karena rantai tugasnya berganti — itu disengaja.
+                if (s.Version == 3) { s.Version = 4; s.Day = 1; }
                 return s.Valid() ? s : null;
             }
             catch (Exception) { return null; }
         }
         static bool FutureVersion(string json)
         {
-            try { return !string.IsNullOrEmpty(json) && JsonUtility.FromJson<AdventureState>(json)?.Version > 3; }
+            try { return !string.IsNullOrEmpty(json) && JsonUtility.FromJson<AdventureState>(json)?.Version > 4; }
             catch (Exception) { return false; }
         }
         public static AdventureState Load(out string notice)

@@ -1,0 +1,154 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace Alif.Adventure
+{
+    /// <summary>Adegan cerita layar penuh (gambar + dialog), diputar sekali: saat pertama
+    /// bertemu NPC, saat bab dimulai, atau saat pertama bertemu tokoh main quest.</summary>
+    public sealed class StoryScene
+    {
+        public string Id;
+        /// <summary>Kunci gambar di StoryArtLibrary, mis. "cerita_kafe"; "kota:&lt;file&gt;" masih didukung untuk map kota.</summary>
+        public string Art;
+        /// <summary>Tokoh yang digambar besar di adegan (nama CharacterData placeholder), boleh null.</summary>
+        public string Character;
+        public string[] Lines = Array.Empty<string>();
+    }
+
+    /// <summary>Kartu investasi syariah yang terbuka setelah quest NPC-nya selesai (aplikasi
+    /// Investasi di HP). Kolom mengikuti tabel rancangan: contoh, cara hasil, risiko. Stars =
+    /// penilaian "cocok untuk game" dari rancangan — hanya untuk urutan, tidak ditampilkan.</summary>
+    public sealed class InvestmentCard
+    {
+        public string Id, Name, Examples, Returns, Risk, Lesson;
+        public int Stars;
+    }
+
+    /// <summary>
+    /// Konten cerita & investasi. Tokoh investasi memakai sprite tokoh lama sebagai placeholder
+    /// (QuestNpc.Placeholder) sampai gambar finalnya dibuat. Klaim syariah perlu ditinjau
+    /// narasumber sebelum rilis (lihat Docs/QUEST_DESIGN.md).
+    /// </summary>
+    public static class StoryContent
+    {
+        public static readonly InvestmentCard[] Cards =
+        {
+            new InvestmentCard { Id = "saham", Name = "Saham Syariah", Stars = 5, Risk = "Tinggi",
+                Examples = "Saham yang masuk Daftar Efek Syariah (DES), ISSI, atau JII.",
+                Returns = "Capital gain (kenaikan harga) + dividen.",
+                Lesson = "Saham lolos seleksi syariah bila usahanya halal, utang berbasis bunga ≤45% total aset, dan pendapatan non-halal ≤10%. Harganya naik-turun: pakai uang dingin, untuk jangka panjang." },
+            new InvestmentCard { Id = "sukuk", Name = "Sukuk", Stars = 5, Risk = "Rendah–menengah",
+                Examples = "Sukuk Ritel (SR), Sukuk Tabungan (ST), sukuk korporasi.",
+                Returns = "Imbal hasil / bagi hasil / sewa (ijarah) sesuai akad.",
+                Lesson = "Sukuk berbasis aset dasar (underlying asset), bukan utang berbunga. SR bisa diperdagangkan sebelum jatuh tempo; ST tidak, tetapi bisa dicairkan sebagian lebih awal." },
+            new InvestmentCard { Id = "reksadana", Name = "Reksa Dana Syariah", Stars = 5, Risk = "Rendah–tinggi tergantung jenis",
+                Examples = "Pasar uang, pendapatan tetap, saham, campuran.",
+                Returns = "Kenaikan NAB (Nilai Aktiva Bersih) per unit.",
+                Lesson = "Dikelola manajer investasi dan diawasi Dewan Pengawas Syariah. Pilih jenis sesuai jangka waktu: pasar uang untuk jangka pendek, saham untuk jangka panjang." },
+            new InvestmentCard { Id = "emas", Name = "Emas Syariah", Stars = 5, Risk = "Menengah",
+                Examples = "Emas fisik / layanan emas syariah.",
+                Returns = "Kenaikan harga emas.",
+                Lesson = "Fatwa DSN-MUI 77/2010: jual beli emas tidak tunai boleh selama emas bukan alat tukar resmi. Beli di lembaga resmi dengan bukti kepemilikan; waspadai selisih harga jual-beli." },
+            new InvestmentCard { Id = "etf", Name = "ETF Syariah", Stars = 4, Risk = "Menengah–tinggi",
+                Examples = "ETF berbasis indeks syariah.",
+                Returns = "Kenaikan harga + kinerja portofolio acuannya.",
+                Lesson = "Reksa dana yang unitnya diperdagangkan di bursa seperti saham, berisi sekeranjang saham syariah mengikuti indeks." },
+            new InvestmentCard { Id = "p2p", Name = "P2P / Crowdfunding Syariah", Stars = 4, Risk = "Menengah–tinggi",
+                Examples = "Pendanaan UMKM berbasis syariah.",
+                Returns = "Bagi hasil / margin sesuai akad.",
+                Lesson = "Pastikan platform berizin OJK, baca akad dan profil usaha, sebar dana ke beberapa UMKM. Risikonya gagal bayar dan dana belum bisa ditarik sebelum tenor selesai." },
+            new InvestmentCard { Id = "properti", Name = "Properti Syariah", Stars = 4, Risk = "Menengah",
+                Examples = "Kepemilikan properti atau investasi real estate syariah.",
+                Returns = "Sewa + apresiasi (kenaikan nilai) aset.",
+                Lesson = "Pembiayaan rumah syariah memakai akad seperti murabahah (harga disepakati di awal) atau musyarakah mutanaqisah. Properti sulit dijual cepat dan butuh biaya perawatan." },
+            new InvestmentCard { Id = "deposito", Name = "Deposito Syariah", Stars = 3, Risk = "Rendah",
+                Examples = "Deposito mudharabah bank syariah.",
+                Returns = "Bagi hasil sesuai nisbah.",
+                Lesson = "Hasilnya dari nisbah bagi hasil atas pendapatan bank, bukan bunga tetap, sehingga bisa naik-turun. Simpanan di bank syariah juga dijamin LPS sesuai ketentuan." },
+            new InvestmentCard { Id = "dire", Name = "DIRE Syariah", Stars = 3, Risk = "Menengah",
+                Examples = "Dana Investasi Real Estat syariah.",
+                Returns = "Pendapatan properti (sewa) yang dibagikan.",
+                Lesson = "Investor membeli unit; dananya dipakai memiliki properti produktif seperti gedung perkantoran atau pusat belanja. Risikonya bila tingkat hunian atau sewa menurun." },
+            new InvestmentCard { Id = "eba", Name = "EBA Syariah", Stars = 2, Risk = "Menengah",
+                Examples = "Efek Beragun Aset syariah.",
+                Returns = "Arus kas dari aset dasar (underlying asset).",
+                Lesson = "Kumpulan aset keuangan, misalnya piutang pembiayaan, dikemas menjadi efek. Strukturnya lebih rumit — pelajari setelah memahami investasi dasar." },
+        };
+
+        public static InvestmentCard Card(string id) => Cards.FirstOrDefault(c => c.Id == id);
+
+        static readonly Dictionary<string, StoryScene> NpcIntros = new[]
+        {
+            // Side quest yang sudah ada
+            Scene("intro:kirana", "cerita_kafe", "naya", "Narator|Di depan toko kosmetik Glow, seorang gadis berkaus lilac melompat-lompat kecil sambil memeluk kotak-kotak skincare.", "Kirana|Kakak! Kakak suka K-pop nggak? Aku barusan dapet photocard NOVA, lihat deh!", "Alif (Batin)|Semangatnya menular… tapi kotak di tangannya banyak sekali."),
+            Scene("intro:tara", "cerita_kafe", "bu_siti", "Narator|Seorang mahasiswi berhijab merah muda duduk tenang di meja kafe, lightstick putih bersandar di cangkirnya.", "Tara|Halo. Kamu temannya Kirana, ya? Aku Tara—bendahara grup fans kami.", "Tara|Tugas bendahara itu berat, lho. Harus bikin teman-teman senang tanpa bikin dompet mereka nangis."),
+            Scene("intro:bank", "cerita_pusat", "naya", "Narator|Pintu kaca Bank Syariah terbuka. Seorang petugas berhijab hijau menyambut dengan papan klip di tangan.", "Petugas Bank Syariah|Selamat datang di Bank Syariah Cempaka. Ada yang bisa kami bantu hari ini?", "Alif (Batin)|Tempat yang pas untuk bertanya soal uang tanpa rasa sungkan."),
+            Scene("intro:fadli", "cerita_kampus", "raka", "Narator|Di depan Fakultas Ekonomi & Bisnis, seorang pria berkemeja batik biru memandangi ponselnya dengan wajah gelisah.", "Pak Fadli|Oh, maaf—saya Fadli, dosen di sini. Kelihatan sekali ya saya sedang banyak pikiran?", "Pak Fadli|Mengajar keuangan itu mudah. Menagih uang ke sahabat sendiri… itu yang sulit."),
+            Scene("intro:bima", "cerita_pasar", "dimas", "Narator|Di Jalan Pasar, seorang pria menata keripik di etalase warung kecilnya. Ponselnya yang retak terus berbunyi.", "Bima|Eh, mau beli keripik? Silakan… maaf, HP-ku ramai notifikasi terus.", "Alif (Batin)|Wajahnya lelah, seperti sedang menanggung sesuatu sendirian."),
+            // Investasi — satu NPC untuk satu jenis
+            Scene("intro:arga", "cerita_kafe", "raka", "Narator|Di Kedai Kopi, seorang barista meracik kopi sambil melirik grafik hijau-merah di laptopnya.", "Mas Arga|Kopi sama saham itu mirip: dua-duanya pahit kalau diminum sambil panik.", "Mas Arga|Aku Arga. Pagi jadi barista, malam belajar jadi investor. Duduk dulu, Mas."),
+            Scene("intro:ratna", "cerita_pusat", "bu_siti", "Narator|Di bangku dekat air mancur, seorang ibu pensiunan guru merajut syal sambil mengawasi burung merpati.", "Bu Ratna|Anak muda sekarang sukanya yang cepat-cepat. Ibu dulu sukanya yang pasti-pasti saja.", "Bu Ratna|Panggil saja Bu Ratna. Tiga puluh tahun mengajar, gajinya Ibu tanam pelan-pelan."),
+            Scene("intro:dewi", "cerita_kampus", "naya", "Narator|Seorang mahasiswi menempelkan poster kuis di papan pengumuman kampus: \"MENANG KUIS, DAPAT KOPI GRATIS!\"", "Dewi|Kakak mau ikut kuis? Tenang, ini kuis beneran, bukan undian!", "Dewi|Aku Dewi, anak klub investasi kampus. Misi kami: bikin teman-teman berani mulai investasi dari kecil."),
+            Scene("intro:harun", "cerita_pasar", "pak_ustad", "Narator|Di Jalan Pasar, seorang bapak menimbang cincin di timbangan kecil sambil bersenandung.", "Pak Harun|Emas itu nggak pernah bohong, Nak. Tapi harganya bisa bikin jantung naik-turun.", "Pak Harun|Harun, pedagang emas tiga generasi. Mau lihat cara Bapak memeriksa keaslian emas?"),
+            Scene("intro:nadia", "cerita_taman", "naya", "Narator|Di Taman Cempaka, seorang kreator konten merekam video sambil berlari kecil mengitari kolam.", "Kak Nadia|Halo, teman-teman! Hari ini kita bahas… eh, maaf, aku kira kamu penontonku!", "Kak Nadia|Aku Nadia. Kontenku soal keuangan anak muda—biar nggak takut sama istilah ribet."),
+            Scene("intro:laras", "cerita_pasar", "bu_siti", "Narator|Aroma keripik pisang tercium dari lapak kecil di Jalan Pasar. Seorang ibu mengemas pesanan dengan cekatan.", "Bu Laras|Mampir, Nak! Keripik ini hasil urunan warga lewat pendanaan syariah, lho.", "Bu Laras|Saya Laras. Dulu modal cuma wajan satu, sekarang sudah kirim ke tiga kota."),
+            Scene("intro:darto", "cerita_pusat", "pak_ustad", "Narator|Di trotoar Pusat Kota, seorang bapak menghitung tagihan listrik kontrakannya sambil mencatat di buku kecil.", "Pak Darto|Punya rumah itu enak, Nak. Merawatnya yang bikin pusing.", "Pak Darto|Saya Darto, pemilik kontrakan ini. Dulu belinya lewat pembiayaan syariah."),
+            Scene("intro:sinta", "cerita_pusat", "naya", "Narator|Seorang teller muda keluar dari Bank Syariah untuk istirahat siang, membawa kotak bekal.", "Mbak Sinta|Istirahat dulu, hitung-hitungan uang orang lain terus bikin lapar.", "Mbak Sinta|Aku Sinta, teller di sini. Pertanyaan favoritku: \"Bunganya berapa, Mbak?\" Hehe."),
+            Scene("intro:hendra", "cerita_pasar", "raka", "Narator|Seorang pria berkemeja rapi mengamati ruko-ruko di Jalan Pasar sambil menghitung jumlah penyewa.", "Om Hendra|Tahu nggak? Gedung besar itu kadang dimiliki ribuan orang sekaligus.", "Om Hendra|Hendra. Pekerjaanku mengelola properti untuk para pemilik yang patungan."),
+            Scene("intro:yusuf", "cerita_kampus", "dimas", "Narator|Di depan Gedung Rektorat, seorang dosen berkacamata tebal membawa setumpuk buku keuangan.", "Pak Yusuf|Materi saya ini biasanya untuk semester akhir. Tapi kalau kamu sudah sampai sini, berarti kamu siap.", "Pak Yusuf|Yusuf. Saya mengajar pasar modal syariah."),
+            // Warga Puskesmas Cempaka
+            Scene("intro:ningsih", "kota:J3P_Puskesmas", "bu_siti", "Narator|Pintu kaca Puskesmas menutup pelan. Aroma antiseptik, deret kursi tunggu, dan seorang perawat berhijab biru muda menata berkas di meja pendaftaran.", "Bu Ningsih|Selamat datang di Puskesmas Cempaka. Mau berobat, atau cuma numpang teduh?", "Bu Ningsih|Saya Ningsih. Di sini saya sering lihat orang sehat jadi sakit karena memikirkan biaya—padahal bisa disiapkan dari jauh hari."),
+            // Kasir FFC Pusat Kota
+            Scene("intro:fira", "kota:J4F_FFC", "naya", "Narator|Pintu kaca FFC mendesis menutup. Aroma ayam goreng, papan menu bercahaya, dan seorang kasir berseragam merah menyapa dari balik meja pesan.", "Mbak Fira|Selamat datang di FFC! Mau paket hemat atau cuma numpang adem, Kak?", "Mbak Fira|Aku Fira. Tiap hari aku lihat orang bayar pakai \"nanti dipikir\"—padahal struknya tetap datang di akhir bulan."),
+            // Pemilik Kafe Senja
+            Scene("intro:bayu", "kota:J3S_KafeSenja", "raka", "Narator|Lonceng pintu Kafe Senja berdenting. Cahaya jingga dari jendela jatuh di lantai ubin, dan seorang pria bercelemek mengelap mesin espresso.", "Mas Bayu|Mari, Kak. Mau seduh manual atau yang cepat saja?", "Mas Bayu|Aku Bayu, yang punya tempat ini. Dulu kafenya ramai tapi kasnya kosong—ternyata uang warung kucampur uang rumah."),
+            // Tokoh Kasus Warga Bab 1 (CaseContent) — satu map, satu persoalan
+            Scene("intro:yanto", "cerita_pasar", "pak_ustad", "Narator|Di depan Toko Kelontong, seorang bapak menata jeruk dan salak di meja dagangan. Tidak ada satu pun papan harga di lapaknya.", "Pak Yanto|Monggo, Mas, dilihat-lihat dulu. Buahnya segar semua, baru turun dari lereng."),
+            Scene("intro:mira", "cerita_pasar", "naya", "Narator|Seorang perempuan berdiri di dekat lapak buah sambil menggenggam kantong jeruk dan selembar nota. Wajahnya merah menahan kesal.", "Mbak Mira|Mas, maaf, boleh saya minta tolong jadi saksi? Saya merasa dibohongi, tapi bingung membuktikannya."),
+            Scene("intro:wati", "cerita_pasar", "bu_siti", "Narator|Seorang ibu berjalan mondar-mandir di trotoar Jalan Pasar, sesekali menoleh ke arah lapak keripik Bima.", "Bu Wati|Nak, kamu yang sering bantu-bantu warga itu, kan? Tolong Ibu. Ibu ditagih utang yang sudah Ibu bayar."),
+            Scene("intro:salamah", "cerita_taman", "bu_siti", "Narator|Di Taman Cempaka, seorang ibu sepuh menyapu daun kering di jalan setapak dengan sapu lidi, pelan tapi telaten.", "Bu Salamah|Pendatang baru, ya? Duduklah di bangku mana saja. Taman ini memang dibuat supaya siapa pun boleh singgah."),
+            Scene("intro:gunawan", "cerita_taman", "raka", "Narator|Kerumunan kecil terbentuk di dekat gazebo. Seorang pria bermap cokelat menancapkan papan: \"TANAH SENGKETA — MILIK AHLI WARIS\".", "Pak Gunawan|Mulai hari ini taman ini ditutup. Saya ahli warisnya, dan saya punya hak atas tanah ini!", "Alif (Batin)|Warga saling pandang. Tidak ada yang berani membantah—tapi tidak ada juga yang percaya begitu saja."),
+            Scene("intro:mahfud", "kota:J4M_Masjid", "pak_ustad", "Narator|Masjid Al-Amanah lengang selepas zuhur. Seorang bapak berpeci merapikan mushaf di rak, lalu menoleh sambil tersenyum.", "Pak Mahfud|Assalamu'alaikum. Saya Mahfud, takmir sekaligus nazhir wakaf di lingkungan sini. Ada yang bisa saya bantu?"),
+            Scene("intro:joko", "cerita_pusat", "dimas", "Narator|Di depan Idmaret, seorang bapak berdiri sambil menatap struk belanja dan sebutir permen di telapak tangannya.", "Pak Joko|Saya belanja dua puluh sembilan ribu lima ratus, bayar tiga puluh ribu. Kembaliannya… permen. Permen!"),
+            Scene("intro:rini", "kota:J4I_Idmaret", "naya", "Narator|Pintu kaca Idmaret bergeser. Di balik meja kasir, seorang pegawai berseragam biru menyapa dengan senyum yang sudah terlatih.", "Mbak Rini|Selamat datang di Idmaret, selamat berbelanja!"),
+            Scene("intro:salsa", "cerita_kampus", "naya", "Narator|Di plaza kampus, seorang mahasiswi duduk memeluk kardus berisi nota-nota yang menyembul tidak beraturan.", "Salsa|Eh—maaf, aku nggak lihat ada orang. Aku Salsa, bendahara himpunan. Kardus ini? Ini… PR-ku yang paling menakutkan."),
+            Scene("intro:ilham", "cerita_kampus", "raka", "Narator|Beberapa mahasiswa berkerumun di depan mading. Seorang di antaranya menunjuk-nunjuk selembar kertas bertulisan tangan.", "Ilham|Baca sendiri! Sudah tiga minggu, dan uang iuran kita tidak jelas ke mana!"),
+            Scene("intro:gilang", "cerita_kafe", "dimas", "Narator|Kafe Senja tutup di jam yang biasanya ramai. Seorang pemuda bercelemek duduk di trotoar, menghitung uang receh di telapak tangannya.", "Gilang|Oh, maaf, kafenya lagi tutup, Mas. Aku? Aku kerja di sini. Harusnya sih… masih."),
+        }.ToDictionary(s => s.Id.Substring("intro:".Length));
+
+        /// <summary>Adegan saat pertama bertemu NPC side quest (kunci = id NPC tanpa "npc:").</summary>
+        public static StoryScene NpcIntro(string npcId) =>
+            npcId != null && NpcIntros.TryGetValue(npcId.Replace("npc:", ""), out var scene) ? scene : null;
+
+        static readonly Dictionary<string, StoryScene> MainIntros = new[]
+        {
+            Scene("main:Bu Siti", "warung_depan", "bu_siti", "Narator|Asap arang dan aroma ayam geprek memenuhi gang. Di balik gerobak, seorang ibu berhijab batik tersenyum hangat.", "Bu Siti|Selamat datang, Nak! Baru sampai Cempaka, ya? Kelihatan dari kopernya."),
+            Scene("main:Raka", "warung_depan", "raka", "Narator|Seorang pemuda berbatik merah bata berdiri di pinggir gang sambil memegang struk dengan wajah kesal.", "Raka|Kamu lihat sendiri kan? Struknya beda sama yang aku pesan!"),
+            Scene("main:Dimas", "kos_kamar", "dimas", "Narator|Kamar kos lantai dua. Dimas duduk memeluk lutut, layar ponselnya penuh iklan pinjaman cepat cair.", "Dimas|Alif? Maaf kamarnya berantakan… pikiranku juga."),
+            Scene("main:Ustadz Farid", "kos_halaman", "pak_ustad", "Narator|Seorang ustadz berpeci hitam duduk di teras sambil memutar tasbih, menyambut siapa saja yang ingin bertanya.", "Ustadz Farid|Duduklah. Pertanyaan yang baik adalah awal dari keputusan yang baik."),
+            Scene("main:Naya", "warung_depan", "naya", "Narator|Di tengah keramaian bazar, Naya mencatat keluhan pembeli di tabletnya dengan cepat dan teliti.", "Naya|Alif! Pas sekali. Aku butuh orang yang bisa melihat fakta tanpa buru-buru menyalahkan."),
+            Scene("main:Penjual", "warung_depan", "raka", "Narator|Penjual radio berdiri kaku di lapaknya, tangannya menutupi stiker di casing radio.", "Penjual|Kalian dari mana? Barang saya semua bagus, kok."),
+        }.ToDictionary(s => s.Id.Substring("main:".Length));
+
+        /// <summary>Adegan saat pertama bertemu tokoh main quest (kunci = nama pembicara tugas).</summary>
+        public static StoryScene MainIntro(string speaker) =>
+            speaker != null && MainIntros.TryGetValue(speaker, out var scene) ? scene : null;
+
+        static readonly string[] ChapterArt = { "panel_tiba", "kos_kamar", "kos_halaman", "warung_depan", "stasiun_depan" };
+
+        /// <summary>Adegan pembuka bab: judul lalu pengantar cerita.</summary>
+        public static StoryScene ChapterIntro(AdventureChapter chapter) => new StoryScene
+        {
+            Id = "chapter:" + chapter.Number,
+            Art = ChapterArt[Math.Max(0, Math.Min(ChapterArt.Length - 1, chapter.Number - 1))],
+            Lines = new[] { $"Narator|Bab {chapter.Number} — {chapter.Title}. {chapter.Subtitle}.", "Alif (Batin)|" + chapter.Introduction },
+        };
+
+        static StoryScene Scene(string id, string art, string character, params string[] lines) =>
+            new StoryScene { Id = id, Art = art, Character = character, Lines = lines };
+
+        public static IEnumerable<StoryScene> AllScenes =>
+            NpcIntros.Values.Concat(MainIntros.Values);
+    }
+}

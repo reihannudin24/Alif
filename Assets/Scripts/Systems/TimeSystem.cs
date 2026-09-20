@@ -23,6 +23,8 @@ namespace Alif.Systems
         [SerializeField] private int _currentWeek = 1;
 
         private float _minuteAccumulator = 0f;
+        // Hari dikendalikan cerita (tidur di kos), bukan jam: jam berhenti di 23:59 sampai pemain tidur.
+        private bool _storyDriven;
 
         private static readonly string[] DayNames =
         {
@@ -78,11 +80,28 @@ namespace Alif.Systems
 
                 if (_currentHour >= 24)
                 {
+                    if (_storyDriven) { _currentHour = 23; _currentMinute = 59; return; }
                     _currentHour = 0;
                     AdvanceDay();
                 }
             }
 
+            OnMinuteChanged?.Invoke();
+        }
+
+        /// <summary>
+        /// Samakan kalender dengan hari cerita (1 = Senin minggu pertama). Dipanggil Adventure saat
+        /// memuat save dan tiap Alif tidur; <paramref name="morning"/> memulai hari dari pukul 06:00.
+        /// Setelah dipanggil, pergantian hari hanya terjadi lewat method ini.
+        /// </summary>
+        public void SetStoryDay(int storyDay, bool morning)
+        {
+            _storyDriven = true;
+            int index = Mathf.Max(0, storyDay - 1);
+            _currentDayIndex = index % DayNames.Length;
+            _currentWeek = index / DayNames.Length + 1;
+            if (morning) { _currentHour = 6; _currentMinute = 0; _minuteAccumulator = 0f; }
+            OnDayChanged?.Invoke();
             OnMinuteChanged?.Invoke();
         }
 

@@ -147,7 +147,7 @@ namespace Alif.Adventure
         void BeginChapterIntroduction(string notice="")
         {
             if(!State.IntroductionSeen)
-                Say("Alif",Content.Introduction,()=>{State.IntroductionSeen=true;Save();},"Mulai menjelajah");
+                PlayStory(StoryContent.ChapterIntro(Content),()=>{State.IntroductionSeen=true;Save();SetPlaying();});
             else {SetPlaying();Toast(string.IsNullOrEmpty(notice)?"Checkpoint dimuat • "+Content.Areas[State.Area]:notice,8);}
         }
         void BindOriginalScene()
@@ -303,6 +303,7 @@ namespace Alif.Adventure
             if(!_dayText)return; // HUD lama sudah dihancurkan (BuildHud ulang)
             var time=TimeSystem.Instance;
             string day=time?(DayNamesId.TryGetValue(time.CurrentDayName,out var id)?id:time.CurrentDayName):"—";
+            if(State!=null)day=$"Hari {State.Day}  •  {day}";
             _dayText.text=day;
             _dayTab.sizeDelta=new Vector2(_dayText.GetPreferredValues(day).x+44,_dayTab.sizeDelta.y);
             _clockText.text=time?$"{time.GetFormattedTime()}   Minggu ke-{time.CurrentWeek}":"--:--";
@@ -456,11 +457,12 @@ namespace Alif.Adventure
             var t=CurrentTask;int done=0;
             var tasks=Content.Tasks;
             for(int i=0;i<tasks.Length;i++)if(State.Progress(tasks[i].Id)?.Complete==true)done++;
-            _location.text=$"BAB {Chapter}  •  {Content.Areas[State.Area]}";
-            _objective.text=t==null?"Perjalanan bab selesai":Objective($"TUGAS {done+1}/{Content.Tasks.Length}",t.Title);
+            _location.text=$"BAB {Chapter}  •  HARI {State.Day}  •  {Content.Areas[State.Area]}";
+            bool waiting=WaitingForCases(t);
+            _objective.text=t==null?"Perjalanan bab selesai":waiting?CaseObjective():Objective($"TUGAS {done+1}/{Content.Tasks.Length}",t.Title);
             foreach(var p in _points)
             {
-                bool active=t!=null && t.Target==p.Target && t.Area==p.Area;
+                bool active=t!=null && !waiting && t.Target==p.Target && t.Area==p.Area;
                 if(p.Label){p.Label.text=p.Target;p.Label.gameObject.SetActive(active&&p.Area==State.Area);}
             }
         }
@@ -471,6 +473,7 @@ namespace Alif.Adventure
             if(k!=null && k.tabKey.wasPressedThisFrame) CycleFocus((k.leftShiftKey.isPressed || k.rightShiftKey.isPressed)?-1:1);
             if(Chapter==0 || State==null)return;
             AnimateHotbar();
+            if(_story)return; // cutscene cerita memegang input sendiri
             if(_toast && Time.unscaledTime>_toastUntil)_toast.text="";
             if(k!=null && k.escapeKey.wasPressedThisFrame){if(_paused)Resume();else if(Activity==CampaignActivity.Journal||Activity==CampaignActivity.Bag||Activity==CampaignActivity.Item||Activity==CampaignActivity.Phone)CloseModal();else Pause();return;}
             if(Activity!=CampaignActivity.World)return;
@@ -484,7 +487,7 @@ namespace Alif.Adventure
             var collider=_player.InteractionTarget;
             var nearest=collider?collider.GetComponentInParent<AdventurePoint>():null;
             bool near=nearest!=null;
-            _prompt.text=near&&(!TutorialActive||(State.TutorialStep==2&&nearest.Target==TutorialTarget))?"E • "+nearest.Target:"";
+            _prompt.text=near&&(!TutorialActive||(State.TutorialStep==2&&nearest.Target==TutorialTarget))?"E • "+PointName(nearest.Target):"";
             if(TutorialActive)
             {
                 UpdateTutorial(pos);
@@ -496,7 +499,18 @@ namespace Alif.Adventure
             }
             var target=CurrentTask;
             Transform guide=null;
-            if(target!=null)
+            if(WaitingForCases(target))
+            {
+                // Bab menunggu Kasus Warga: tunjuk tokoh langkah kasus yang terbuka, atau ranjang kamar kos.
+                var (caseTarget,caseArea)=CaseGuideTarget();
+                if(caseArea>=0)
+                {
+                    var door=caseArea==State.Area?null:NextDoor(caseArea);
+                    guide=caseArea==State.Area?(_questNpcRoots.TryGetValue(caseTarget,out var npcRoot)&&npcRoot&&npcRoot.activeSelf?npcRoot.transform:null):door?.transform;
+                    if(guide)ShowGuide(guide,pos,caseArea==State.Area?PointName(caseTarget):"Pintu ke "+Content.Areas[door.DestinationArea]);
+                }
+            }
+            else if(target!=null)
             {
                 var door=target.Area==State.Area?null:NextDoor(target.Area);
                 guide=target.Area==State.Area?FindPoint(target.Target,target.Area)?.transform:door?.transform;
@@ -566,10 +580,23 @@ namespace Alif.Adventure
             }
             var t=CurrentTask;
             if(t==null){ShowEnding();return;}
+            if(WaitingForCases(t))
+            {
+                // Tugas penutup bab tertahan sampai semua Kasus Warga selesai.
+                var (openCase,openStep)=OpenCaseStep();
+                string hint=openStep!=null?$"Kasus warga: {openCase.Title} — {openStep.Objective}":"Belum ada kabar baru hari ini • tidur di kamar kos";
+                if(t.Target==target&&t.Area==State.Area)Say(t.Speaker,"Masih ada warga yang menunggu uluran tanganmu, Nak. Tuntaskan dulu, nanti ceritakan semuanya padaku.",()=>{SetPlaying();Toast(hint,6);});
+                else Toast(hint,5);
+                return;
+            }
             if(t.Target!=target||t.Area!=State.Area){Toast("Tugas berikutnya: "+t.Title,5);return;}
             _task=t;
-            if (t.Kind == "encounter") { Say(t.Speaker,t.Introduction,BeginEncounter); return; }
-            Say(t.Speaker,t.Introduction,()=>{if(t.Board!=null){State.PrepareBoard(t);Save();OpenBoard(MainBoard(t));}else CompleteTalk(t);});
+            // Pertama bertemu tokoh main quest: adegan cerita dulu, lalu tugasnya.
+            PlayStoryOnce(StoryContent.MainIntro(t.Speaker),()=>
+            {
+                if (t.Kind == "encounter") { Say(t.Speaker,t.Introduction,BeginEncounter); return; }
+                Say(t.Speaker,t.Introduction,()=>{if(t.Board!=null){State.PrepareBoard(t);Save();OpenBoard(MainBoard(t));}else CompleteTalk(t);});
+            });
         }
         void CompleteTalk(AdventureTask task)
         {

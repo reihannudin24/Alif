@@ -243,6 +243,8 @@ namespace Alif.Player
                 _interactAction.performed -= HandleInteractPerformed;
                 _interactAction.Disable();
             }
+
+            UpdateTalkBubble(null);
         }
 
         private void HandleInteractPerformed(InputAction.CallbackContext context)
@@ -462,6 +464,11 @@ namespace Alif.Player
         // Keycap "E" di atas kepala Player, dibuat saat pertama kali ada target interaksi.
         private InteractionPromptFX _interactPrompt;
 
+        // Balon chat di atas kepala NPC yang sedang jadi target. Dibuat ulang tiap ganti NPC
+        // (bukan dipindah) supaya animasi pop-in FloatingPrompt ikut mengulang dari awal.
+        private Transform _talkAnchor;
+        private GameObject _talkBubble;
+
         /// <summary>
         /// Cari collider IInteractable terdekat dalam radius interact (NPC atau benda statis
         /// seperti bangku). Dipakai baik oleh tombol Interact maupun klik mouse.
@@ -513,9 +520,10 @@ namespace Alif.Player
         }
 
         /// <summary>
-        /// Tampilkan keycap "E" di atas kepala Player selama ada target interaksi dalam jangkauan.
-        /// Panah "InteractionArrow" per-objek buatan builder tidak lagi ditampilkan: objek painted
-        /// cuma zona tak terlihat, sehingga panahnya menutupi gambar objek itu sendiri.
+        /// Tampilkan keycap "E" di atas kepala Player selama ada target interaksi dalam jangkauan,
+        /// plus balon chat di atas kepala target kalau targetnya NPC. Panah "InteractionArrow"
+        /// per-objek buatan builder tidak lagi ditampilkan: objek painted cuma zona tak terlihat,
+        /// sehingga panahnya menutupi gambar objek itu sendiri.
         /// </summary>
         private void UpdateInteractionPrompt()
         {
@@ -531,6 +539,27 @@ namespace Alif.Player
             {
                 _interactPrompt.gameObject.SetActive(hasTarget);
             }
+
+            UpdateTalkBubble(hasTarget ? TalkAnchorOf(InteractionTarget) : null);
+        }
+
+        /// <summary>Balon chat hanya untuk NPC — bukan ATM, papan, bangku, atau titik pindah area.</summary>
+        private static Transform TalkAnchorOf(Collider2D collider)
+        {
+            IInteractable interactable = GetInteractable(collider);
+            if (interactable is NPCController npc) return npc.transform;
+            // NPC quest kota: AdventurePoint-nya ada di anak "Adventure interaction", badannya di induk.
+            if (interactable is Alif.Adventure.AdventurePoint point && point.IsNpc)
+                return point.transform.parent != null ? point.transform.parent : point.transform;
+            return null;
+        }
+
+        private void UpdateTalkBubble(Transform anchor)
+        {
+            if (anchor == _talkAnchor && (anchor == null || _talkBubble != null)) return;
+            if (_talkBubble != null) Destroy(_talkBubble);
+            _talkAnchor = anchor;
+            _talkBubble = anchor != null ? SpeechBubbleFX.Create(anchor) : null;
         }
 
         /// <summary>

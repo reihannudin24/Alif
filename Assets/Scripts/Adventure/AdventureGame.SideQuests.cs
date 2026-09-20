@@ -19,13 +19,10 @@ namespace Alif.Adventure
     /// </summary>
     public sealed partial class AdventureGame
     {
-        // Warna pembeda sprite placeholder (dipinjam dari tokoh lama) sampai sprite final ada.
-        static readonly Dictionary<string, Color> PlaceholderTints = new Dictionary<string, Color>
-        {
-            [SideQuestContent.Kirana] = new Color(1f, .86f, 1f),
-            [SideQuestContent.Bank] = new Color(.84f, 1f, .88f),
-        };
         CityWorld.Built _city;
+        readonly Dictionary<string, GameObject> _questNpcRoots = new Dictionary<string, GameObject>();
+        /// <summary>Indeks area tiap tokoh/benda kota — dipakai panah penunjuk Kasus Warga.</summary>
+        readonly Dictionary<string, int> _questNpcAreas = new Dictionary<string, int>();
 
         /// <summary>Kota Cempaka (6 map) ditambahkan setelah area scene; harus dibangun sebelum
         /// pemain ditempatkan agar AreaOf/Spawns mengenali posisi di kota.</summary>
@@ -36,6 +33,115 @@ namespace Alif.Adventure
             Spawns = Spawns.Concat(_city.Spawns).ToArray();
             if (Centers.Length != Content.Areas.Length)
                 Debug.LogError($"[Alif] Jumlah area tidak cocok: {Centers.Length} pusat vs {Content.Areas.Length} nama area.");
+            BuildEntranceMarkers();
+            BuildRoadDoors();
+        }
+
+        /// <summary>Penanda pintu masuk gedung kota: label ("IN") + panah bawah melayang bebas di
+        /// atas serambi pintu, supaya pemain tahu pintu itu bisa dituju. Titik lantai & tinggi
+        /// bebasnya dari <c>city.json</c> (lihat <c>entrances</c> di Tools/city-art/generate_city.py);
+        /// geser penandanya dengan mengubah tinggi itu, bukan angka di sini.</summary>
+        void BuildEntranceMarkers()
+        {
+            const float Gap = .12f;          // jarak panah dari puncak serambi/kusen
+            const float ArrowScale = 1.4f;   // sprite 10 px pada PPU 33 ≈ .3 unit — dinaikkan agar terbaca
+            foreach (var (area, foot, height, label) in _city.Entrances)
+            {
+                var root = new GameObject("Entrance " + area + " " + label);
+                root.transform.position = foot;
+
+                var arrow = new GameObject("Arrow").AddComponent<SpriteRenderer>();
+                arrow.transform.SetParent(root.transform, false);
+                arrow.sprite = PixelSkin.EntranceArrow();
+                arrow.transform.localScale = Vector3.one * ArrowScale;
+                float arrowY = height + Gap + arrow.sprite.bounds.extents.y * ArrowScale;
+                arrow.transform.localPosition = new Vector3(0f, arrowY, 0f);
+                arrow.sortingOrder = YSortOrder.PromptOrderBase + 20;
+                arrow.gameObject.AddComponent<FloatingPrompt>();
+
+                var text = WorldLabel(root.transform, label, arrowY + arrow.sprite.bounds.extents.y * ArrowScale + .10f, .45f, PixelSkin.Cream);
+                text.outlineColor = PixelSkin.Outline; text.outlineWidth = .3f;
+            }
+        }
+
+        // ───────────────────────── Jalur jalan kaki antar area ─────────────────────────
+
+        /// <summary>Menyambung area yang bersebelahan di Peta HP (<c>roads</c> di city.json):
+        /// berjalan sampai tepi map memunculkan pemain di tepi seberang tetangganya, jadi arah
+        /// kiri-kanan di dunia sama dengan urutan pin di peta. Tepi map kota dipasangi strip
+        /// pemicu setinggi lantainya; sisi area scene memakai pintu yang sudah digambar di scene
+        /// dan hanya diarahkan ulang — dulu pintu ujung jalan itu saling menyambung langsung
+        /// (Depan stasiun ⇄ Depan warung) sehingga seluruh kota terlompati.</summary>
+        void BuildRoadDoors()
+        {
+            var spec = CityWorld.Load();
+            if (spec?.roads == null) return;
+            var root = new GameObject("Jalur jalan kaki").transform;
+            foreach (var road in spec.roads)
+            {
+                if (!TryRoadSide(road.west, true, out var west) || !TryRoadSide(road.east, false, out var east)) continue;
+                LinkRoad(root, west, east.Landing, road.east, true);
+                LinkRoad(root, east, west.Landing, road.west, false);
+            }
+        }
+
+        /// <summary>Tepi satu area: titik pemicunya, titik mendarat saat datang dari sisi itu, dan
+        /// (kalau areanya bukan map kota) pintu scene yang sudah ada di sisi tersebut.</summary>
+        struct RoadSide { public int Area; public Vector2 Foot, Landing, Size; public SceneDoor Door; }
+
+        bool TryRoadSide(string area, bool east, out RoadSide side)
+        {
+            side = default;
+            int index = Array.IndexOf(Content.Areas, area);
+            if (index < 0) return false;                       // area itu tidak ada di bab ini
+            var edges = east ? _city.EastEdges : _city.WestEdges;
+            if (edges.TryGetValue(area, out var edge))
+            {
+                side = new RoadSide { Area = index, Foot = edge.Foot, Landing = edge.Landing, Size = edge.Size };
+                return true;
+            }
+            // Area scene: geometri lantainya tidak ada di city.json, jadi jalurnya hanya dibuat
+            // kalau sisi itu sudah punya pintu gambaran tangan (Halaman kos yang cuma punya pintu
+            // balik ke kiri, misalnya, dilewati saja).
+            var door = SideDoor(index, east);
+            if (!door) return false;
+            Vector2 foot = door.transform.position;
+            side = new RoadSide { Area = index, Foot = foot, Landing = foot + new Vector2(east ? -1.5f : 1.5f, 0f), Door = door };
+            return true;
+        }
+
+        /// <summary>Pintu scene terluar di sisi kiri/kanan sebuah area (diukur dari pusat areanya).</summary>
+        SceneDoor SideDoor(int area, bool east)
+        {
+            SceneDoor best = null;
+            foreach (var door in FindObjectsByType<SceneDoor>(FindObjectsSortMode.None))
+            {
+                if (AreaOf(door.transform.position) != area) continue;
+                float offset = door.transform.position.x - Centers[area].x;
+                if (east ? offset <= .5f : offset >= -.5f) continue;
+                if (!best || (east ? door.transform.position.x > best.transform.position.x
+                                   : door.transform.position.x < best.transform.position.x)) best = door;
+            }
+            return best;
+        }
+
+        void LinkRoad(Transform root, RoadSide side, Vector2 destination, string destinationArea, bool east)
+        {
+            var landing = new GameObject("Road landing " + destinationArea).transform;
+            landing.SetParent(root, false);
+            landing.position = destination;
+            string message = "Jalan ke " + destinationArea + "?";
+            if (side.Door) { side.Door.Configure(landing, message); return; }
+
+            var go = new GameObject($"Road {Content.Areas[side.Area]} → {destinationArea}");
+            go.transform.SetParent(root, false);
+            go.transform.position = side.Foot;
+            var box = go.AddComponent<BoxCollider2D>();
+            box.size = side.Size;
+            box.isTrigger = true;
+            go.AddComponent<SceneDoor>().Configure(landing, message);
+            var label = WorldLabel(go.transform, (east ? "Kanan · " : "Kiri · ") + destinationArea, .9f, .42f, PixelSkin.Cream);
+            label.outlineColor = PixelSkin.Outline; label.outlineWidth = .3f;
         }
 
         readonly Dictionary<string, TMP_Text> _questMarkers = new Dictionary<string, TMP_Text>();
@@ -48,6 +154,7 @@ namespace Alif.Adventure
                 if (State.PickedUp.Contains(pickup.ItemName)) pickup.MarkCollected();
             ItemPickup.Collected -= RecordPickup;
             ItemPickup.Collected += RecordPickup;
+            SyncStoryDay(false);
             BuildQuestNpcs();
         }
 
@@ -88,8 +195,10 @@ namespace Alif.Adventure
                 int areaIndex = Array.IndexOf(Content.Areas, area);
                 var info = SideQuestContent.Npc(npc);
                 if (areaIndex < 0 || info == null) continue;
-                Color tint = PlaceholderTints.TryGetValue(npc, out Color t) ? t : Color.white;
-                if (!TryFindNpcSpot(position, out Vector2 spot))
+                // Warna pembeda sprite placeholder (dipinjam dari tokoh lama) sampai sprite final ada.
+                Color tint = !string.IsNullOrEmpty(info.Tint) && ColorUtility.TryParseHtmlString("#" + info.Tint, out Color t) ? t : Color.white;
+                Vector2 spot = position;
+                if (!info.IsObject && !TryFindNpcSpot(position, out spot))
                 {
                     Debug.LogWarning($"[Alif] NPC quest {info.Name} tidak dimunculkan: tidak ada lantai bebas di sekitar {position}.");
                     continue;
@@ -98,25 +207,31 @@ namespace Alif.Adventure
                 var root = new GameObject("QuestNpc " + info.Name);
                 root.transform.position = spot;
                 var body = root.AddComponent<SpriteRenderer>();
-                var data = Cast.FirstOrDefault(c => c && c.name.EndsWith(info.Placeholder, StringComparison.OrdinalIgnoreCase));
-                body.sprite = data ? (data.WorldSprite ? data.WorldSprite : data.Portrait) : null;
-                body.color = tint;
-                root.AddComponent<YSortOrder>();
-                BlobShadow.Ensure(root.transform);
-                var feet = root.AddComponent<CapsuleCollider2D>();
-                feet.direction = CapsuleDirection2D.Horizontal; feet.size = new Vector2(.3f, .18f); feet.offset = new Vector2(0f, .09f);
+                if (!info.IsObject)
+                {
+                    var data = Cast.FirstOrDefault(c => c && c.name.EndsWith(info.Placeholder, StringComparison.OrdinalIgnoreCase));
+                    body.sprite = data ? (data.WorldSprite ? data.WorldSprite : data.Portrait) : null;
+                    body.color = tint;
+                    root.AddComponent<YSortOrder>();
+                    BlobShadow.Ensure(root.transform);
+                    var feet = root.AddComponent<CapsuleCollider2D>();
+                    feet.direction = CapsuleDirection2D.Horizontal; feet.size = new Vector2(.3f, .18f); feet.offset = new Vector2(0f, .09f);
+                }
 
                 var trigger = new GameObject("Adventure interaction") { layer = 7 };
                 trigger.transform.SetParent(root.transform, false);
                 var circle = trigger.AddComponent<CircleCollider2D>(); circle.isTrigger = true; circle.radius = .45f; circle.offset = new Vector2(0f, .3f);
-                var point = trigger.AddComponent<AdventurePoint>(); point.Game = this; point.Target = npc; point.Area = areaIndex;
+                var point = trigger.AddComponent<AdventurePoint>(); point.Game = this; point.Target = npc; point.Area = areaIndex; point.Object = info.IsObject;
 
-                float head = body.sprite ? body.sprite.bounds.max.y : 1f;
+                // Benda sudah tergambar di latar: labelnya cukup setinggi papan, tanpa badan.
+                float head = body.sprite ? body.sprite.bounds.max.y : info.IsObject ? .55f : 1f;
                 var name = WorldLabel(root.transform, info.Name, head + .12f, .42f, PixelSkin.TextLight);
                 name.outlineColor = PixelSkin.Outline; name.outlineWidth = .25f;
                 var marker = WorldLabel(root.transform, "!", head + .42f, 1.1f, PixelSkin.Orange);
                 marker.outlineColor = PixelSkin.Outline; marker.outlineWidth = .3f;
                 _questMarkers[npc] = marker;
+                _questNpcRoots[npc] = root;
+                _questNpcAreas[npc] = areaIndex;
             }
             RefreshQuestMarkers();
         }
@@ -155,6 +270,9 @@ namespace Alif.Adventure
         {
             if (_questMarkers.Count == 0 || State == null) return;
             var inventory = InventorySystem.Instance;
+            // NPC rangkaian investasi hadir satu per satu, saat quest-nya terbuka.
+            foreach (var pair in _questNpcRoots)
+                if (pair.Value) pair.Value.SetActive(SideQuestRules.NpcVisible(State, SideQuestContent.Npc(pair.Key), SideQuestContent.All));
             foreach (var pair in _questMarkers)
             {
                 if (!pair.Value) continue;
@@ -170,9 +288,12 @@ namespace Alif.Adventure
         void InteractQuestNpc(string npc)
         {
             if (TutorialActive) { Toast("Selesaikan atau lewati tutorial sebelum membantu warga", 4); return; }
+            if (npc == CaseContent.Bed) { InteractBed(); return; }
+            var intro = StoryContent.NpcIntro(npc);
+            if (!StorySeen(intro)) { PlayStoryOnce(intro, () => InteractQuestNpc(npc)); return; }
             var info = SideQuestContent.Npc(npc);
             var (quest, step) = SideQuestRules.StepAt(State, SideQuestContent.All, npc);
-            if (step == null) { SayLines(new[] { info.Idle }, null); return; }
+            if (step == null) { SayLines(new[] { SideQuestRules.IdleLine(State, info) }, null); return; }
 
             if (step.Kind == "give")
             {
@@ -226,13 +347,15 @@ namespace Alif.Adventure
             if (step.Logic != 0) ScoreSystem.Instance?.AdjustFinancialLogic(step.Logic);
             if (step.Sharia != 0) ScoreSystem.Instance?.AdjustShariaCompliance(step.Sharia);
             SideQuestRules.AddBond(State, step.Target, step.Bond);
+            if (!string.IsNullOrEmpty(step.Card)) UnlockCard(step.Card);
             bool questDone = SideQuestRules.Progress(State, quest.Id)?.Complete == true;
             Save(false);
             RefreshQuestMarkers();
             SayLines(step.Outcome, () =>
             {
-                if (questDone) Toast($"Cerita sampingan selesai • {quest.Title}", 6);
-                else if (step.Bond > 0) Toast($"Hubungan dengan {SideQuestContent.Npc(step.Target)?.Name} bertambah", 4);
+                if (questDone && quest.Mandatory) Toast(SideQuestRules.CasesDone(State, Chapter) ? "Semua kasus warga selesai • kabari Bu Siti" : $"Kasus warga selesai • {quest.Title}", 7);
+                else if (questDone) Toast($"Cerita sampingan selesai • {quest.Title}", 6);
+                else if (step.Bond > 0 && string.IsNullOrEmpty(step.Card)) Toast($"Hubungan dengan {SideQuestContent.Npc(step.Target)?.Name} bertambah", 4);
                 SetPlaying();
             });
         }
@@ -262,15 +385,16 @@ namespace Alif.Adventure
             {
                 var progress = SideQuestRules.Progress(State, quest.Id);
                 bool unlocked = quest.Requires.All(id => SideQuestRules.Progress(State, id)?.Complete == true);
-                if (!unlocked && progress == null) continue;
-                if (progress?.Complete == true) { yield return $"✓  SAMPINGAN  /  {quest.Title} — selesai"; continue; }
+                if ((!unlocked || State.Day < quest.Day) && progress == null) continue;
+                string kind = quest.Mandatory ? "KASUS WARGA" : "SAMPINGAN";
+                if (progress?.Complete == true) { yield return $"✓  {kind}  /  {quest.Title} — selesai"; continue; }
                 var step = quest.Steps[progress?.Step ?? 0];
-                yield return $">  SAMPINGAN  /  {quest.Title} — {step.Objective} ({SideQuestContent.Npc(step.Target)?.Name})";
+                yield return $">  {kind}  /  {quest.Title} — {step.Objective} ({SideQuestContent.Npc(step.Target)?.Name})";
             }
             foreach (var npc in SideQuestContent.Npcs)
             {
                 int hearts = SideQuestRules.Hearts(State, npc.Id);
-                if (hearts > 0) yield return $"HUBUNGAN  /  {npc.Name}  " + new string('♥', hearts) + new string('♡', SideQuestRules.MaxHearts - hearts);
+                if (hearts > 0) yield return $"HUBUNGAN  /  {npc.Name}  " + HeartText(hearts);
             }
         }
     }

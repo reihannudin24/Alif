@@ -36,7 +36,7 @@ namespace Alif.Campaign
 
         private static TMP_FontAsset _font;
         private static bool _fontLoaded;
-        private static Sprite _button, _panel, _tab, _slot, _barFill, _clockIcon, _coinIcon, _boltIcon, _menuIcon, _notebookIcon, _bagIcon, _chartIcon, _crescentIcon, _phoneIcon, _pinIcon, _heartIcon, _calendarIcon, _gearIcon, _phoneFrame, _appTile, _disc, _knob, _joystickBase;
+        private static Sprite _button, _panel, _tab, _slot, _barFill, _clockIcon, _coinIcon, _boltIcon, _entranceArrow, _speechBubble, _menuIcon, _notebookIcon, _bagIcon, _chartIcon, _crescentIcon, _phoneIcon, _pinIcon, _heartIcon, _calendarIcon, _gearIcon, _phoneFrame, _appTile, _disc, _knob, _joystickBase;
 
         /// <summary>Font pixel (Pixelify Sans, OFL) sebagai TMP font asset dinamis. Glyph yang
         /// tidak ada (✓, ↗, …) jatuh ke font default TMP Settings. Null bila TTF hilang.</summary>
@@ -96,6 +96,39 @@ namespace Alif.Campaign
             ".oYYo...",
             ".oYo....",
             ".oo.....",
+        });
+
+        /// <summary>Panah bawah penanda pintu masuk (dipakai di atas pintu gedung kota).</summary>
+        public static Sprite EntranceArrow() => _entranceArrow ??= PatternSprite("PixelSkinEntranceArrow", new[]
+        {
+            "...oooo...",
+            "...oSSo...",
+            "...oSSo...",
+            "...oSSo...",
+            "ooooSSoooo",
+            "oSSSSSSSSo",
+            ".oSSSSSSo.",
+            "..oSSSSo..",
+            "...oSSo...",
+            "....oo....",
+        });
+
+        /// <summary>Balon chat "…" — penanda NPC yang bisa diajak bicara. Ekornya di kiri-bawah,
+        /// jadi balonnya dipasang agak ke kanan dari kepala NPC.</summary>
+        public static Sprite SpeechBubble() => _speechBubble ??= PatternSprite("PixelSkinSpeechBubble", new[]
+        {
+            "...ooooooooo...",
+            "..occccccccco..",
+            "..occccccccco..",
+            "..ockcckcckco..",
+            "..ockcckcckco..",
+            "..occccccccco..",
+            "..occccccccco..",
+            "...occoooooo...",
+            "...occo........",
+            "..occo.........",
+            ".occo..........",
+            ".ooo...........",
         });
 
         /// <summary>Ikon menu (tiga garis) untuk tombol Jeda.</summary>

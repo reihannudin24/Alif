@@ -12,6 +12,12 @@ namespace Alif.Adventure.Tests
             Assert.That(s.CanStart(c.Tasks[1]),Is.False);
             foreach(var task in c.Tasks)
             {
+                if(task.NeedsCases)
+                {
+                    // Tugas penutup tertahan sampai semua Kasus Warga bab ini selesai.
+                    Assert.That(s.CanStart(task),Is.False);
+                    s=CaseTests.SolveAllCases(s,c);
+                }
                 Assert.That(s.CanStart(task));
                 if(task.Kind=="encounter")
                 {

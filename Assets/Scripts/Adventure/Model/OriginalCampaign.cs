@@ -33,7 +33,6 @@ namespace Alif.Adventure
             foreach(var t in c.Tasks)
             {
                 t.Area=c.Number==1?(t.Area==0?0:t.Area==1?2:3):c.Number==2?(t.Area==1?1:0):c.Number==3?(t.Area==2?1:2):c.Number==4?(t.Area==2?3:2):(t.Area==0?1:0);
-                if(t.Id=="c1.next")t.Area=2;
                 t.Title=t.Title.Split('—')[0].Trim()+" — "+c.Areas[t.Area];
                 if(t.Steps.Length==0)continue;
                 // Documents are matched simultaneously, rather than one multiple-choice question at a time.
