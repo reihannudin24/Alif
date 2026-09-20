@@ -375,9 +375,9 @@ namespace Alif.EditorTools
             AttachPropShadow(crates,.75f);
             // Prop meja kasir/counter memakai pivot bawah: y = permukaan atas counter dunia
             // (kasir -37.385, CounterSajiKanan -39.06) supaya duduk di atas furnitur, bukan melayang.
-            AddAmbience("VariantC_ReceiptTray",game.LocationPropSprites.ElementAtOrDefault(3),new Vector2(36.6f,-37.385f),.55f,30);
-            AddAmbience("VariantC_Condiments",game.LocationPropSprites.ElementAtOrDefault(4),new Vector2(42.55f,-39.06f),.65f,30);
-            AddAmbience("VariantC_ServingCounter",game.LocationPropSprites.ElementAtOrDefault(5),new Vector2(43.45f,-39.06f),1.25f,18);
+            // Baki struk, kotak bumbu, dan rak saji bambu tidak dipasang lagi: interior Warung
+            // Bu Siti sekarang memakai lukisan tangan yang sudah menggambar semua itu, jadi prop
+            // terpisahnya tampak seperti tempelan di atas gambar.
             AssertInteractPointsReachable();
             EditorUtility.SetDirty(game);EditorSceneManager.MarkSceneDirty(scene);EditorSceneManager.SaveScene(scene,path);
             Debug.Log("[Alif] Chapter 1 uses six explicit interaction props across the authored four-area route.");

@@ -20,7 +20,13 @@ namespace Alif.Adventure
         {
             var c = number == 1 ? One() : number == 2 ? Two() : number == 3 ? Three() : number == 4 ? Four() : Five();
             c.Number=number;
-            if (number == 1) Array.Find(c.Tasks, t => t.Id == "c1.resolve").Cost = 18000;
+            if (number == 1)
+            {
+                Array.Find(c.Tasks, t => t.Id == "c1.resolve").Cost = 18000;
+                Array.Find(c.Tasks, t => t.Id == "c1.meal").SkipMinutes = 10;   // waktu makan
+                Array.Find(c.Tasks, t => t.Id == "c1.rent").Cost = 40000;       // sewa malam pertama
+                c.StartHour = 13;                                               // turun dari kereta siang hari
+            }
             if (number == 1) Array.Find(c.Tasks, t => t.Id == "c1.finale").NeedsCases = true;
             for(int i=1;i<c.Tasks.Length;i++) c.Tasks[i].Prerequisites=new[]{c.Tasks[i-1].Id};
             OriginalCampaign.Apply(c);
@@ -36,6 +42,18 @@ namespace Alif.Adventure
                     "Godaan teratasi. Gunakan bukti dan lanjutkan penyelesaian bersama.", "encounter"));
                 c.Tasks = tasks.ToArray();
                 for (int i = 1; i < c.Tasks.Length; i++) c.Tasks[i].Prerequisites = new[] { c.Tasks[i - 1].Id };
+            }
+            if (number == 1)
+            {
+                // Apply() memetakan semua tugas bab 1 ke area scene; tugas sewa terjadi di kota,
+                // di trotoar depan kos, jadi areanya diperbaiki setelah pemetaan itu.
+                var rent = Array.Find(c.Tasks, t => t.Id == "c1.rent");
+                int street = Array.IndexOf(c.Areas, "Jalan Pasar");
+                if (rent != null && street >= 0)
+                {
+                    rent.Area = street;
+                    rent.Title = rent.Title.Split('—')[0].Trim() + " — " + c.Areas[street];
+                }
             }
             return c;
         }
@@ -55,17 +73,34 @@ namespace Alif.Adventure
                     S("Masukkan minuman sesuai pesanan.","Nasi telur 12.000  +  ?  =  total maksimal 20.000","Es teh Rp6.000 membuat total Rp18.000; masih ada Rp2.000 dari anggaran makan.",2,"Jus • 10.000","Kopi susu • 12.000","Es teh • 6.000"),
                     S("Pisahkan sisa anggaran makan.","20.000 − 12.000 − 6.000 = ?","Sisa Rp2.000 tetap milik Alif. Tidak perlu dihabiskan hanya karena sudah dianggarkan.",0,"Simpan 2.000","Tambah kerupuk 4.000","Anggap tidak ada sisa"),
                     S("Konfirmasi harga sebelum pesanan dibuat.","Nasi telur 12.000 / Es teh 6.000 / Tidak ada biaya lain","Kesepakatan pesanan memuat barang, jumlah, dan total yang jelas.",1,"Bayar berapa saja nanti","Pesan dua item • total 18.000","Minta paket tanpa harga")),
-                T("c1.receipt",2,"Meja jendela","Alif","Cocokkan struk — meja jendela","Ada tiga baris pada struk, padahal kita memesan dua item. Cocokkan setiap baris dengan pesanan. Contoh: dua teh di struk tetapi satu teh dipesan berarti jumlah perlu diperbaiki.","Struk diperbaiki: nasi telur Rp12.000 + es teh Rp6.000 = Rp18.000.","match",
-                    S("Cocokkan baris makanan.","PESANAN: nasi telur 1 porsi / STRUK: nasi telur 1 × 12.000","Nama, jumlah, dan harga nasi telur cocok.",0,"Cocok dengan pesanan","Ganti menjadi dua porsi","Hapus makanan"),
-                    S("Cocokkan baris minuman.","PESANAN: es teh 1 / STRUK: es teh 2 × 6.000","Jumlah teh perlu diubah dari dua menjadi satu; selisihnya Rp6.000.",2,"Harga teh salah","Biarkan dua gelas","Ubah jumlah menjadi satu"),
-                    S("Periksa baris tambahan.","STRUK: kerupuk 4.000 / Tidak ada kerupuk pada pesanan atau meja","Item yang tidak dipesan perlu diklarifikasi dan dihapus dari tagihan ini.",1,"Bayar supaya cepat","Minta hapus kerupuk","Ambil uang kas sendiri"),
-                    S("Hubungkan total baru dengan pesanan.","Nasi telur 12.000 + es teh 6.000 + kerupuk 0","Total yang disepakati adalah Rp18.000, bukan Rp28.000 pada struk awal.",0,"Total 18.000","Total 24.000","Total 28.000")),
+                // Urutan warung mengikuti alur nyata: lihat papan menu → duduk & makan (adegan
+                // Bu Siti mengantar pesanan) → baru struknya ketahuan keliru saat membayar.
+                T("c1.meal",2,"Meja jendela","Bu Siti","Nikmati pesananmu — meja jendela","Pesanan datang ke meja: nasi telur hangat dan es teh. Makan dulu, tidak perlu buru-buru.","Makan selesai. Di kasir ada tamu yang bicara keras soal pinjaman — bayar dulu, lalu urus itu."),
+                // Dua baris keliru saja — baris yang sudah benar dan baris total dulu ikut dikartukan,
+                // dan itu membuat papannya terasa berat tanpa menambah pelajaran apa pun.
+                T("c1.receipt",2,"Bu Siti","Alif","Periksa struk — kasir","Di kasir, struknya tertulis Rp28.000 padahal pesananmu Rp18.000. Ada dua baris yang tidak cocok — pasangkan tiap baris itu dengan tindakan yang benar sebelum membayar.","Struk diperbaiki: nasi telur Rp12.000 + es teh Rp6.000 = Rp18.000.","match",
+                    S("Periksa jumlah minuman.","Es teh ditulis 2 x 6.000, padahal kamu pesan 1 gelas","Jumlahnya dikoreksi jadi satu; selisihnya Rp6.000.",0,"Ubah jumlahnya jadi satu","Biarkan saja"),
+                    S("Periksa baris tambahan.","Kerupuk 4.000 tertulis, padahal tidak dipesan","Barang yang tidak dipesan diminta dihapus dari tagihan, bukan dibayar supaya cepat.",0,"Minta hapus dari struk","Bayar saja supaya cepat")),
                 T("c1.resolve",2,"Bu Siti","Alif","Selesaikan pembayaran — kasir","Bawa struk ke kasir dan pakai catatan yang sama dengan Bu Siti. Sebutkan item yang berbeda, dengarkan penjelasannya, lalu sepakati koreksi. Bayar hanya setelah rinciannya cocok.","Alif membayar Rp18.000 sekali. Bu Siti meminta maaf atas struk yang tertukar dan berjanji membacakan ulang setiap pesanan sebelum menagih.","sort",
                     S("Mulai percakapan dari fakta.","BUKTI: struk awal mencantumkan item yang tidak dipesan","Membandingkan pesanan dengan struk memberi ruang untuk memperbaiki kesalahan tanpa menuduh niat seseorang.",1,"Bu Siti pasti sengaja menipu","Mari cocokkan pesanan dan struk","Jangan bayar apa pun"),
                     S("Pilih koreksi yang dapat diperiksa.","Pesanan: 18.000 / Tagihan awal: 28.000 / Selisih: 10.000","Struk baru harus memuat dua item dan total Rp18.000.",0,"Tulis ulang dua item • 18.000","Coret total tanpa rincian","Minta semuanya gratis"),
                     S("Tentukan kembalian dari pembayaran Rp20.000.","Dibayar 20.000 − tagihan 18.000","Kembalian Rp2.000 sesuai kesepakatan. Dalam saldo permainan, hanya biaya bersih Rp18.000 yang dicatat.",2,"Tidak perlu kembalian","Kembalian 10.000","Kembalian 2.000"),
                     S("Tutup percakapan dengan kesepakatan.","Struk sudah benar; Bu Siti berterima kasih sudah diingatkan","Simpan struk dan akui koreksi. Masalah selesai tanpa mempermalukan salah satu pihak.",0,"Terima koreksi dan simpan struk","Sebarkan tuduhan lama","Minta pembeli lain ikut membayar")),
+                // Kejadian utama Hari 1: tawaran pinjaman Raka ke Bu Siti — pembuka Bab 2 (Jebakan Riba).
+                T("c1.offer",2,"Bu Siti","Alif","Bongkar tawaran pinjaman — kasir","Map yang ditinggalkan Raka masih di meja kasir. Pisahkan mana syarat yang wajar dan mana tanda bahaya, supaya Bu Siti memutuskan dengan mata terbuka, bukan karena terdesak.","Bu Siti menahan tanda tangannya. Tawaran itu ditolak untuk sekarang; Alif mencatat cirinya di buku perjalanan sebagai bekal menghadapi kasus serupa.","sort",
+                    S("Periksa bunganya.","Bunga 10% per hari, dihitung harian","Bunga harian menggandakan utang dalam hitungan minggu — ini tanda pinjaman menjerat.",0,"Tanda bahaya","Syarat yang wajar"),
+                    S("Periksa jaminannya.","KTP ditahan sebagai jaminan","Menahan identitas bukan jaminan yang sah; itu alat menekan, bukan pengaman pinjaman.",0,"Tanda bahaya","Syarat yang wajar"),
+                    S("Periksa perjanjiannya.","Tidak ada surat yang boleh dibaca sebelum tanda tangan","Akad yang tidak boleh dibaca menutup hak orang untuk tahu apa yang ia sepakati.",0,"Tanda bahaya","Syarat yang wajar"),
+                    S("Periksa hak meninjau.","Boleh dibawa pulang dan dibaca dulu sebelum menyetujui","Waktu untuk membaca dan bertanya adalah syarat paling dasar dari kesepakatan yang adil.",1,"Tanda bahaya","Syarat yang wajar")),
                 T("c1.room",2,"Bu Siti","Bu Siti","Tanyakan tempat menginap — kasir","Kamu belum punya tempat menginap, kan? Sepupu saya punya rumah kos di ujung timur Jalan Pasar—rumah bergenteng paling kanan. Kamar depannya kosong. Bilang saja dari Bu Siti.","Alamat kamar kos dicatat: rumah paling kanan di Jalan Pasar (lihat peta di HP). Tidur di ranjang untuk mengakhiri hari—tiap pagi ada kabar warga yang baru."),
+                // Sewa kamar: Bu Tini membuka Rp50.000 semalam. Yang dilatih bukan menawar sekeras
+                // mungkin, tapi menawar dengan cara yang sehat — bertanya, membandingkan, minta kuitansi.
+                // Biayanya dipotong saat tugas selesai, jadi kamar baru terbuka setelah benar-benar dibayar.
+                T("c1.rent",2,"Bu Tini","Bu Tini","Sewa kamar — depan kos","Kamar depan masih kosong, Nak. Lima puluh ribu semalam, dibayar tiap kali menginap. Kalau mau menawar, silakan—asal caranya baik.","Bu Tini setuju Rp40.000 per malam dengan kuitansi tertulis tiap bayar. Sewa malam ini lunas; berikutnya ditagih setiap Alif tidur.","sort",
+                    S("Tanyakan dulu isinya.","Tanya apa saja yang sudah termasuk: listrik, air, kamar mandi","Tahu dulu apa yang dibayar, baru bicara harga.",0,"Cara menawar yang sehat","Sebaiknya dihindari"),
+                    S("Pakai pembanding yang nyata.","Sebut harga kamar sebelah yang Rp40.000 sebagai pembanding","Menawar dengan pembanding yang bisa dicek itu wajar, bukan menekan.",0,"Cara menawar yang sehat","Sebaiknya dihindari"),
+                    S("Kunci kesepakatannya.","Minta kuitansi tertulis tiap kali membayar","Kesepakatan yang dicatat melindungi dua pihak, persis seperti struk di warung tadi.",0,"Cara menawar yang sehat","Sebaiknya dihindari"),
+                    S("Periksa janji yang belum tentu sanggup.","Janji bayar sebulan di muka padahal uangnya belum ada","Janji yang tidak sanggup ditepati adalah utang baru, bukan cara menawar.",1,"Cara menawar yang sehat","Sebaiknya dihindari")),
                 T("c1.finale",2,"Bu Siti","Bu Siti","Kabari Bu Siti — kasir","Seminggu ini namamu sering disebut orang, Nak. Pak Yanto memasang papan harga, taman wakaf aman, Bima punya buku bon baru. Semuanya berawal dari hal yang sama dengan struk kita dulu: dibuat jelas, lalu dicatat.","Bu Siti menitipkan kabar: Dimas, mahasiswa di Kos Cempaka lantai dua, sedang bingung menghadapi tawaran pinjaman. Bawa catatanmu. Bab berikutnya terbuka: Jebakan Riba.")
             }
         };

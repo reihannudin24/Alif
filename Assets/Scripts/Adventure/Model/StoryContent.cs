@@ -142,6 +142,42 @@ namespace Alif.Adventure
             Scene("main:Penjual", "warung_depan", "raka", "Narator|Penjual radio berdiri kaku di lapaknya, tangannya menutupi stiker di casing radio.", "Penjual|Kalian dari mana? Barang saya semua bagus, kok."),
         }.ToDictionary(s => s.Id.Substring("main:".Length));
 
+        static readonly Dictionary<string, StoryScene> AreaIntros = new[]
+        {
+            Scene("area:Dalam Warung Bu Siti", "warung_dalam", "bu_siti",
+                "Narator|Aroma nasi hangat dan sambal goreng menyambut dari balik pintu. Kipas angin berputar pelan di atas meja-meja kayu yang sudah terisi separuh.",
+                "Bu Siti|Mari, Nak, duduk saja di mana suka. Papan menunya di sebelah sana — harganya sudah ditulis semua, jadi tidak ada kejutan.",
+                "Alif (Batin)|Tempat pertama di kota ini yang terasa seperti rumah. Lihat papan menunya dulu, baru pesan."),
+        }.ToDictionary(s => s.Id.Substring("area:".Length));
+
+        static readonly Dictionary<string, StoryScene> TaskScenes = new[]
+        {
+            Scene("task:c1.meal", "warung_dalam", "bu_siti",
+                "Narator|Tidak sampai sepuluh menit, Bu Siti datang membawa nampan: nasi telur yang masih mengepul dan segelas es teh berembun.",
+                "Bu Siti|Ini pesanannya, Nak. Nasi telur satu, es teh satu. Dimakan pelan-pelan saja, warung belum ramai.",
+                "Narator|— sepuluh menit kemudian —",
+                "Narator|Piring Alif tinggal sisa kerak nasi ketika pintu warung terbuka keras. Seorang pemuda berbatik merah bata masuk, menaruh map plastik di meja kasir tanpa dipersilakan.",
+                "Raka|Bu, saya bawa yang kemarin. Modal cair hari ini juga, tidak pakai ribet. Bunganya kecil kok, sepuluh persen — harian.",
+                "Bu Siti|Nanti dulu, Mas. Saya belum baca apa-apa…",
+                "Raka|Nggak usah dibaca, Bu. Orang lain juga langsung tanda tangan. KTP-nya saya pegang dulu buat jaminan, ya.",
+                "Alif (Batin)|Sepuluh persen sehari. KTP ditahan. Tanpa surat yang boleh dibaca. Ini bukan bantuan — ini jerat.",
+                "Alif (Batin)|Aku bayar dulu makananku, baru urus ini. Pesananku dua item, Rp18.000. Angka itu kuingat baik-baik."),
+
+            Scene("task:c1.offer", "warung_dalam", "bu_siti",
+                "Narator|Raka pergi setelah meninggalkan map plastiknya di meja kasir. Bu Siti menatap map itu lama sekali.",
+                "Bu Siti|Dapur saya perlu diperbaiki, Nak. Tawarannya cepat sekali cair… tapi dadanya kok tidak enak, ya.",
+                "Alif|Boleh saya bantu baca, Bu? Kita pisahkan mana yang wajar dan mana yang jadi tanda bahaya."),
+        }.ToDictionary(s => s.Id.Substring("task:".Length));
+
+        /// <summary>Adegan pembuka satu tugas (kunci = id tugasnya), diputar sekali sebelum
+        /// dialog tugas itu dimulai — mis. Bu Siti mengantar makanan sebelum Alif makan.</summary>
+        public static StoryScene TaskScene(string taskId) =>
+            taskId != null && TaskScenes.TryGetValue(taskId, out var scene) ? scene : null;
+
+        /// <summary>Adegan saat pertama kali memasuki sebuah area (kunci = nama areanya).</summary>
+        public static StoryScene AreaIntro(string area) =>
+            area != null && AreaIntros.TryGetValue(area, out var scene) ? scene : null;
+
         /// <summary>Adegan saat pertama bertemu tokoh main quest (kunci = nama pembicara tugas).</summary>
         public static StoryScene MainIntro(string speaker) =>
             speaker != null && MainIntros.TryGetValue(speaker, out var scene) ? scene : null;
@@ -160,6 +196,6 @@ namespace Alif.Adventure
             new StoryScene { Id = id, Art = art, Character = character, Lines = lines };
 
         public static IEnumerable<StoryScene> AllScenes =>
-            NpcIntros.Values.Concat(MainIntros.Values);
+            NpcIntros.Values.Concat(MainIntros.Values).Concat(AreaIntros.Values).Concat(TaskScenes.Values);
     }
 }

@@ -155,6 +155,9 @@ namespace Alif.Adventure
             if (!_sun) return;
             var time = TimeSystem.Instance;
             float hour = time ? time.CurrentHour + time.CurrentMinute / 60f : 12f;
+            // Map yang punya lukisan malam (Kafe Senja) menukar latarnya di jam yang sama dengan
+            // langit berubah ungu, jadi lampunya menyala bersamaan dengan gelapnya dunia.
+            _city?.SetNight(DayLight.IsNight(hour));
             bool outdoor = State.Area >= 0 && State.Area < Content.Areas.Length && OutdoorAreas.Contains(Content.Areas[State.Area]);
             Color target = outdoor ? DayLight.Outdoor(hour) : DayLight.Indoor(hour);
             var now = _sun.color;
@@ -191,12 +194,15 @@ namespace Alif.Adventure
             SceneFadeController.Instance.PlayTimeSkip($"Hari ke-{State.Day + 1}", _player, () =>
             {
                 State.Sleep(Content);
+                string rent = State.PayRent();                 // sewa kamar ditagih tiap malam
                 EnergySystem.Instance?.RestoreFull();
                 SyncStoryDay(true);
                 _partShown = false;          // pagi baru: jadwal warga diacak ulang tanpa pengumuman
                 RefreshQuestMarkers();
+                CurrencySystem.Instance?.RestoreBalances(State.Money, State.Bank);
                 Save(false);
                 RefreshHud();
+                if (!string.IsNullOrEmpty(rent)) Toast(rent, 6);
             }, () =>
             {
                 _transition = false;

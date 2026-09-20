@@ -25,6 +25,9 @@ namespace Alif.UI
         [SerializeField] private RectTransform _touchArea;
         [SerializeField] private RectTransform _background;
         [SerializeField] private RectTransform _knob;
+        /// <summary>Posisi diam alas joystick (pojok kiri-bawah). Mode Floating kembali ke sini
+        /// begitu jari dilepas, jadi kontrol geraknya selalu terlihat di kiri layar.</summary>
+        private Vector2 _homePosition;
         [Tooltip("Jarak maksimum (dalam pixel UI) knob bisa digeser dari titik tengah.")]
         [SerializeField] private float _handleRange = 60f;
         [SerializeField] private JoystickMode _mode;
@@ -43,12 +46,11 @@ namespace Alif.UI
             _touchArea = touchArea;
             _background = background;
             _knob = knob;
-            // Perangkat tanpa layar sentuh (desktop) dan belum ada preferensi tersimpan:
-            // joystick disembunyikan default — keyboard/mouse sudah lengkap. Mode tetap
-            // bisa diubah dari pengaturan jeda; preferensi tersimpan selalu diutamakan.
-            bool autoHideDesktop = !PlayerPrefs.HasKey(ModePreferenceKey)
-                && Touchscreen.current == null && !Application.isMobilePlatform;
-            SetMode(autoHideDesktop ? JoystickMode.Hidden : mode);
+            if (_background != null) _homePosition = _background.anchoredPosition;
+            // Dulu joystick otomatis disembunyikan di desktop tanpa layar sentuh. Sekarang tetap
+            // ditampilkan — tombol E di kanan juga selalu ada, dan tutorial pembuka menunjuk
+            // keduanya. Yang mau layar bersih tinggal pilih "Sembunyikan" di pengaturan jeda.
+            SetMode(mode);
         }
 
         public static JoystickMode ParseMode(int value)
@@ -76,6 +78,10 @@ namespace Alif.UI
                 minY <= maxY ? Mathf.Clamp(point.y, minY, maxY) : area.center.y);
         }
 
+        /// <summary>Dipakai kontrol lain yang menggantikan stik analog (D-pad di HUD Adventure):
+        /// arahnya disetel dari luar, komponen ini tinggal jadi sumber baca PlayerController.</summary>
+        public void SetDirection(Vector2 direction) => Direction = direction;
+
         public void SetMode(JoystickMode mode)
         {
             _mode = mode;
@@ -83,8 +89,10 @@ namespace Alif.UI
             if (_knob != null) _knob.anchoredPosition = Vector2.zero;
             if (_background != null)
             {
-                bool separateTouchArea = _touchArea != null && _touchArea != _background;
-                _background.gameObject.SetActive(mode != JoystickMode.Hidden && (mode != JoystickMode.Floating || !separateTouchArea));
+                // Selalu terlihat kecuali Hidden; Floating hanya berarti alasnya melompat ke titik
+                // sentuh, lalu kembali ke posisi diamnya setelah dilepas.
+                _background.anchoredPosition = _homePosition;
+                _background.gameObject.SetActive(mode != JoystickMode.Hidden);
             }
 
             var graphic = GetComponent<UnityEngine.UI.Graphic>();
@@ -131,7 +139,7 @@ namespace Alif.UI
             }
             if (_mode == JoystickMode.Floating && _touchArea != null && _background != null && _touchArea != _background)
             {
-                _background.gameObject.SetActive(false);
+                _background.anchoredPosition = _homePosition;      // kembali ke pojok kiri-bawah
             }
         }
     }

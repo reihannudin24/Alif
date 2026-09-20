@@ -148,11 +148,13 @@ namespace Alif.Core
             // Zoom sprint dijalankan SEBELUM clamp supaya ClampToBounds di bawah selalu
             // membaca ukuran viewport terkini (bukan ukuran frame sebelumnya).
             float zoomTarget = _sprintZoom && PlayerPrefs.GetInt("Alif_ReducedMotion", 0) == 0 ? 0.4f : 0f;
-            if (!Mathf.Approximately(_sprintZoomOffset, zoomTarget))
+            _sprintZoomOffset = Mathf.MoveTowards(_sprintZoomOffset, zoomTarget, dt * 1.2f);
+            if (_camera != null && _camera.orthographic)
             {
-                _sprintZoomOffset = Mathf.MoveTowards(_sprintZoomOffset, zoomTarget, dt * 1.2f);
-                if (_camera != null && _camera.orthographic)
-                    _camera.orthographicSize = _baseOrthoSize + _sprintZoomOffset;
+                // Jarak kamera sama di mana pun, termasuk di dalam ruangan: ruangan yang lebih
+                // kecil dari layar dibiarkan dibingkai gelap (seperti interior stasiun yang
+                // digambar tangan), bukan didekati — merapat membuat lantai terasa sempit.
+                _camera.orthographicSize = _baseOrthoSize + _sprintZoomOffset;
             }
 
             // Shake ikut di-clamp: offset digabung SEBELUM ClampToBounds supaya getaran
@@ -162,9 +164,7 @@ namespace Alif.Core
             transform.position = Vector3.Lerp(transform.position, desiredPosition, 1f - Mathf.Exp(-_smoothSpeed * dt));
         }
 
-        /// <summary>
-        /// Kunci kamera di dalam CameraBounds area yang sedang ditempati target.
-        /// </summary>
+        /// <summary>Kunci kamera di dalam CameraBounds area yang sedang ditempati target.</summary>
         private Vector3 ClampToBounds(Vector3 desiredPosition)
         {
             if (_camera == null || !_camera.orthographic) return desiredPosition;

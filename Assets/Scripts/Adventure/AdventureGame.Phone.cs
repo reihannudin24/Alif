@@ -26,6 +26,7 @@ namespace Alif.Adventure
 
         void OpenPhone()
         {
+            CoachOpened(5);                       // langkah tutorial "HP" selesai saat dibuka
             var screen = PhoneScreen("HP");
             var apps = new (string name, Sprite icon, Color color, Action open)[]
             {

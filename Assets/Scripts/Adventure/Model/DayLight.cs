@@ -27,6 +27,10 @@ namespace Alif.Adventure
         /// <summary>Warna lampu ruangan yang menyala saat langit menggelap.</summary>
         static readonly Color Lamp = new Color(1f, .93f, .80f);
 
+        /// <summary>Jam malam untuk latar berlukis: dari langit berubah ungu (19.00) sampai fajar
+        /// (06.00). Map yang punya lukisan malam (Kota/&lt;file&gt;_Malam) ditukar di rentang ini.</summary>
+        public static bool IsNight(float hour) => hour >= 19f || hour < 6f;
+
         public static Color Outdoor(float hour)
         {
             hour = Mathf.Repeat(hour, 24f);

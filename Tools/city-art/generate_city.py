@@ -10,6 +10,7 @@ oleh CityWorld.cs. Jalankan ulang setelah mengubah tata letak:
 Butuh Pillow. Koordinat dalam petak (16 px, 0,5 unit), y dihitung dari atas gambar.
 """
 import json
+import math
 import random
 import uuid
 from pathlib import Path
@@ -24,6 +25,15 @@ FONT = ROOT / "Assets/Resources/Fonts/PixelifySans-SemiBold.ttf"
 T = 16            # piksel per petak
 PPU = 32          # 1 petak = 0,5 unit
 W, H = 64, 24     # ukuran map (petak)
+MIN_LANDING = .8          # unit — jarak minimum titik mendarat dari daun pintunya; lebih dekat
+                          # dari itu pemain mendarat di dalam trigger seberang (tinggi 0,5 unit)
+                          # dan langsung ditanya balik. Dijaga otomatis oleh door_landing().
+INTERIOR_SCALE = .625     # 1 petak = 0,3125 unit, sama dengan map jalan (scale .625 di ART_LAYOUT).
+                          # Tanpa ini interior 1,6x lebih "gemuk": pintu 1,5 unit di samping Alif
+                          # yang tingginya 0,8 unit. Gambarnya tidak ikut mengecil — PPU impornya
+                          # yang dinaikkan 1/scale, jadi resolusi lukisan tetap penuh.
+NIGHT_SUFFIX = "_Malam"   # art/<file>_Malam.png = latar yang dipakai CityWorld saat malam
+STRETCHED = []            # lukisan yang rasionya tidak pas petak map-nya (dilaporkan di akhir)
 ART_PPU = 50      # px lukisan per unit dunia — sama untuk semua map, jadi kerapatan detailnya seragam
 
 
@@ -1897,7 +1907,9 @@ MAPS = [
          back=[('tree', 1, 0), ('tree', 34, 0), ('tree', 42, 1), ('tree', 60, 0)],
          props=[('plant', 12, 11), ('halte', 34, 12), ('lamp', 23, 12), ('bin', 44, 12),
                 ('motor', 56, 13), ('plant', 55, 11), ('lamp', 62, 12), ('bike', 3, 15)],
-         spawn=(20, 14), npcs=[('npc:harun', 53, 15), ('npc:hendra', 16, 15),
+         # Bu Tini menunggu di trotoar depan kos (pintu kamar di petak 61,5), bukan di dalam kamar:
+         # pemain baru bisa masuk setelah Bu Siti memberi alamatnya.
+         spawn=(20, 14), npcs=[('npc:harun', 53, 15), ('npc:hendra', 16, 15), ('npc:tini', 58, 12),
                                ('npc:bima', 9, 15), ('npc:laras', 40, 16),
                                # Kasus Warga Bab 1 (CaseContent.cs): lapak di meja dagangan Toko Kelontong
                                ('npc:yanto', 3.4, 11.2), ('npc:lapak', 6, 11.4), ('npc:mira', 8.6, 11.6),
@@ -2061,7 +2073,7 @@ MAPS = [
     # mihrab + mimbar di dinding kiblat, tiga saf karpet sajadah, dan serambi dalam
     # berubin tempat rak sandal serta kotak amal.
     dict(id='J4M', area='Masjid Al-Amanah', file='J4M_Masjid', template='mosque', seed=20,
-         size=(36, 15), front=18,
+         inset=0.5, size=(36, 15), front=18,
          buildings=[], back=[],
          props=[('mihrab', 16, 0), ('speaker', 10, 1), ('clock', 13, 1), ('speaker', 25, 1),
                 ('mimbar', 20, 3), ('quranrack', 1, 3), ('quranrack', 31, 3),
@@ -2073,7 +2085,7 @@ MAPS = [
     # dua baris rak pajang di kiri, meja rias bercermin + meja kasir di kanan, dan lorong
     # lurus dari pintu ke belakang toko (petak 14-18) supaya pemain tidak terkurung rak.
     dict(id='J3G', area='Toko Glow', file='J3G_Glow', template='indoor', seed=21,
-         size=(30, 15), front=15, floor=('cream', 'stone'), wall='pink2',
+         inset=0.5, size=(30, 15), front=15, floor=('cream', 'stone'), wall='pink2',
          buildings=[], back=[],
          props=[('wallshelf', 1, 0), ('promo', 6, 0), ('glowsign', 10, 0),
                 ('wallshelf', 21, 0), ('wallshelf', 26, 0),
@@ -2118,12 +2130,12 @@ MAPS = [
     # Pintunya di rumah paling kanan lukisan Jalan Pasar. 'npc:kasur' = titik tidur di sisi
     # ranjang: dari sini hari cerita maju dan Kasus Warga hari berikutnya terbuka.
     dict(id='J2K', area='Kamar Alif', file='J2K_KamarAlif', template='indoor', seed=22,
-         size=(20, 12), front=10, floor=('walk', 'walk2'), wall='cream',
+         inset=1.2, size=(20, 12), front=10, floor=('walk', 'walk2'), wall='cream',
          buildings=[], back=[],
          props=[('wardrobe', 1, 0), ('koswindow', 8, 0), ('shelf', 15, 0),
                 ('kosbed', 14, 4), ('officedesk', 1, 5), ('kosrug', 7, 6), ('plant', 18, 8)],
          doors=[dict(id='kamar.keluar', x=10, y=9.4, land=(10, 7.6), h=1.4, label='OUT')],
-         spawn=(10, 8), npcs=[('npc:kasur', 12.6, 6), ('npc:tini', 4, 8)]),
+         spawn=(10, 8), npcs=[('npc:kasur', 12.6, 6)]),
 ]
 
 # Jalur dua arah antar pintu. Tiap pintu harus muncul tepat sekali di sini.
@@ -2290,7 +2302,7 @@ PIN_SIZE = (360, 216)
 # AdventureGame tinggal mengarahkannya ulang ke tetangga yang benar (lihat BuildRoadDoors).
 # Map jalan tidak punya tepi atas/bawah yang bisa dilewati, jadi seluruh kota disusun sebagai
 # SATU rantai barat-timur: Kampus - Taman - Pusat Kota - Depan stasiun - Jalan Pasar - Jalan
-# Kafe - Depan warung. Pusat Kota, Taman, dan Kampus ada di barat stasiun supaya bisa dicapai
+# Kafe. Pusat Kota, Taman, dan Kampus ada di barat stasiun supaya bisa dicapai
 # dengan berjalan; Peta HP (PINS + draw_phone_map) digambar mengikuti urutan yang sama.
 # Depan stasiun tidak punya pintu gambaran tangan di sisi barat: AdventureGame membuat tepinya
 # dari lantai WalkableArea scene (TrySceneEdge).
@@ -2300,15 +2312,26 @@ ROADS = [
     ('Pusat Kota', 'Depan stasiun'),
     ('Depan stasiun', 'Jalan Pasar'),
     ('Jalan Pasar', 'Jalan Kafe'),
-    ('Jalan Kafe', 'Depan warung'),
+]
+
+# Pintu dari map kota ke interior yang tinggal di scene bab (digambar tangan di scene, bukan map
+# kota). Sisi kotanya dipasang runtime oleh AdventureGame.BuildSceneDoors(); sisi dalamnya memakai
+# pintu keluar yang sudah ada di scene, tinggal diarahkan ulang ke titik mendarat di sini.
+SCENE_DOORS = [
+    # Warung Bu Siti sekarang dimasuki lewat etalase Toko Kelontong (petak 9,5 di Jalan Pasar).
+    # Area luar lamanya, "Depan warung", tidak dipakai lagi: pin & jalurnya sudah dicabut dan
+    # isinya dimatikan runtime oleh RetireUnusedAreas().
+    dict(map='Jalan Pasar', area='Dalam Warung Bu Siti', x=9.5, y=11.3, land=(9.5, 13.6), h=3.6, label='IN'),
 ]
 
 PINS = {  # area: (x, y, label di atas pin?)
     # Jalan utama dari barat ke timur — urutannya sama dengan ROADS.
     'Kampus Cempaka': (44, 150, True), 'Taman Cempaka': (90, 150, False), 'Pusat Kota': (136, 150, True),
     'Dalam stasiun': (184, 108, True), 'Depan stasiun': (184, 150, False), 'Jalan Pasar': (232, 150, True),
-    'Jalan Kafe': (280, 150, False), 'Depan warung': (326, 150, True),
-    'Dalam Warung Bu Siti': (326, 110, True),
+    'Jalan Kafe': (280, 150, False),
+    # Warung Bu Siti kini dimasuki dari etalase Toko Kelontong di Jalan Pasar, jadi pinnya
+    # menempel di atas Jalan Pasar; area luar lamanya ("Depan warung") sudah tidak dipakai.
+    'Dalam Warung Bu Siti': (232, 110, True),
     'Halaman kos': (230, 196, True), 'Lantai 1 kos': (175, 196, True),
     'Kamar Dimas': (120, 196, True),
 }
@@ -2320,18 +2343,21 @@ def draw_map(spec):
     cv = Canvas(mw, mh)
     tpl = spec['template']
     walk, blocks = [], []
+    # Lukisan interior yang punya tembok kiri-kanan (kamar kos) lantainya menjorok ke dalam;
+    # tanpa 'inset' pemain bisa berjalan menembus tembok yang tergambar.
+    inset = spec.get('inset', 0)
     if tpl == 'indoor':
         floor_a, floor_b = (C[c] for c in spec.get('floor', ('walk', 'walk2')))
         room(cv, floor_a, floor_b, C[spec.get('wall', 'wall')], spec['front'])
-        walk.append((0, 3, mw, mh - 5))
+        walk.append((inset, 3, mw - 2 * inset, mh - 5))
         base = 3
     elif tpl == 'church':
         church_room(cv, spec['front'])
-        walk.append((0, 3, mw, mh - 5))
+        walk.append((inset, 3, mw - 2 * inset, mh - 5))
         base = 3
     elif tpl == 'mosque':
         mosque_room(cv, spec['front'])
-        walk.append((0, 3, mw, mh - 5))
+        walk.append((inset, 3, mw - 2 * inset, mh - 5))
         base = 3
     elif tpl == 'gg':
         gg_room(cv, spec['front'])
@@ -2352,7 +2378,7 @@ def draw_map(spec):
         base = 3
     elif tpl == 'cafe':
         cafe_room(cv, spec['front'])
-        walk.append((0, 3, mw, mh - 5))
+        walk.append((inset, 3, mw - 2 * inset, mh - 5))
         base = 3
     elif tpl == 'street':
         ground_grass(cv, range(0, BASE), rng)
@@ -2403,25 +2429,32 @@ def draw_map(spec):
         cv.shade(0, 3 * T, mw * T, 3)
 
     OUT.mkdir(parents=True, exist_ok=True)
-    art = install_art(spec['file'])
+    art = install_art(spec)
     width, height, k = mw, mh, 1.0
     if art:
-        # Lukisan tangan menang: gambar kode disimpan sebagai cadangan, geometrinya diganti.
+        # Lukisan tangan menang untuk gambarnya; gambar kode disimpan sebagai cadangan.
         BACKUP.mkdir(parents=True, exist_ok=True)
         cv.img.convert('RGB').save(BACKUP / f"{spec['file']}.png")
-        layout = ART_LAYOUT[spec['file']]
-        # ART_LAYOUT ditulis dalam petak; penghalang dari PROPS sudah dalam piksel.
-        walk = layout['walk']
-        blocks = [tuple(v * T for v in box) for box in layout['blocks']]
-        width, height, k = art_grid(spec['file'])
+        if spec['file'] in ART_LAYOUT:
+            # Map jalan: geometrinya ikut lukisan (ART_LAYOUT ditulis dalam petak; penghalang
+            # dari PROPS sudah dalam piksel).
+            layout = ART_LAYOUT[spec['file']]
+            walk = layout['walk']
+            blocks = [tuple(v * T for v in box) for box in layout['blocks']]
+            width, height, k = art_grid(spec['file'])
+        # Interior: geometri gambar kode dipertahankan — lukisannya mengikuti tata letak itu.
     else:
         cv.img.convert('RGB').save(OUT / f"{spec['file']}.png")
+    if spec['file'] not in ART_LAYOUT:
+        # Semua interior (berlukisan maupun gambar kode) memakai skala yang sama dengan map jalan.
+        k = map_scale(spec)
+        width, height = mw * k, mh * k
     px = lambda v: round(v * T * k)      # petak → piksel map (sudah diskalakan)
     pp = lambda v: round(v * k)          # piksel gambar → piksel map
     return dict(
         id=spec['id'], area=spec['area'], file=spec['file'], width=width, height=height,
         doors=[dict(id=d['id'], label=d['label'], x=px(d['x']), y=px(d['y']), h=px(d['h']),
-                    landX=px(d['land'][0]), landY=px(d['land'][1]), area='', tx=0, ty=0)
+                    landX=px(door_landing(d, k)[0]), landY=px(door_landing(d, k)[1]), area='', tx=0, ty=0)
                for d in doors_of(spec)],
         walk=[dict(x=px(x), y=px(y), w=px(w), h=px(h)) for x, y, w, h in walk],
         blocks=[dict(x=pp(x), y=pp(y), w=pp(w), h=pp(h)) for x, y, w, h in blocks],
@@ -2429,6 +2462,19 @@ def draw_map(spec):
         npcs=[dict(id=n, x=round((x * T + T // 2) * k), y=round((y * T + T - 2) * k)) for n, x, y in spec['npcs']],
     )
 
+
+
+def door_landing(door, k):
+    """Titik mendarat satu pintu, digeser menjauh dari daun pintunya kalau jaraknya kurang dari
+    MIN_LANDING unit setelah diskalakan. Ruangan interior dikecilkan lewat INTERIOR_SCALE, jadi
+    jarak yang aman di petak jadi lebih besar daripada waktu ruangannya masih skala 1."""
+    lx, ly = door['land']
+    dx, dy = lx - door['x'], ly - door['y']
+    span = math.hypot(dx, dy) * T * k / PPU
+    if span <= 0 or span >= MIN_LANDING:
+        return lx, ly
+    stretch = MIN_LANDING / span
+    return door['x'] + dx * stretch, door['y'] + dy * stretch
 
 
 def doors_of(spec):
@@ -2472,19 +2518,64 @@ def art_size(file):
     return round(width * T / PPU * ART_PPU), round(height * T / PPU * ART_PPU)
 
 
-def install_art(file):
-    """Salin lukisan tangan art/<file>.png ke Resources pada skala map-nya. True kalau dipakai."""
+def install_art(spec):
+    """Salin lukisan tangan art/<file>.png ke Resources pada skala map-nya. True kalau dipakai.
+
+    Dua jenis lukisan:
+    * map jalan (ada di ART_LAYOUT) — selalu 8:3, ukurannya ikut `scale`, dan geometrinya
+      (lantai, penghalang, pintu) diambil dari ART_LAYOUT, bukan dari gambar kode;
+    * interior — rasionya mengikuti petak map itu sendiri dan **geometrinya tetap dari gambar
+      kode**, karena lukisannya memang diminta mengikuti tata letak prop yang sama
+      (lihat Tools/city-art/PROMPT_INTERIOR.md). Jadi mengganti latar tidak mengubah tabrakan.
+
+    Kalau ada art/<file>_Malam.png, ikut dipasang sebagai latar malam (lihat NIGHT_SUFFIX).
+    """
+    file = spec['file']
     src = ART / f"{file}.png"
-    if file not in ART_LAYOUT or not src.exists():
+    if not src.exists():
         return False
+    street = file in ART_LAYOUT
+    mw, mh = spec.get('size', (W, H))
+    # Ukuran file = petak x 25 px, tidak ikut mengecil oleh scale interior; yang mengecilkan
+    # jejak dunianya adalah PPU impor (lihat art_import_ppu).
+    size = art_size(file) if street else (round(mw * T / PPU * ART_PPU), round(mh * T / PPU * ART_PPU))
+    ratio = (W / H) if street else (mw / mh)
+    tolerance = .01 if street else .06          # lukisan interior digambar tangan, sedikit meleset wajar
     img = Image.open(src).convert('RGB')
-    if abs(img.width / img.height - W / H) > 0.01:
-        raise SystemExit(f"[kota] {src.name} harus berasio {W}:{H} (8:3), bukan {img.width}x{img.height}")
-    size = art_size(file)
-    if img.size != size:
-        img = img.resize(size, Image.LANCZOS)
-    img.save(OUT / f"{file}.png")
+    off = img.width / img.height / ratio - 1    # selisih rasio, relatif
+    if abs(off) > tolerance:
+        raise SystemExit(f"[kota] {src.name} harus berasio {ratio:.3f} ({mw}x{mh} petak), "
+                         f"bukan {img.width}x{img.height} ({img.width / img.height:.3f})")
+    if abs(off) > .02:                          # masih dipakai, tapi gambarnya diregangkan
+        STRETCHED.append(f"{file} {abs(off) * 100:.0f}%")
+    img.resize(size, Image.LANCZOS).save(OUT / f"{file}.png")
+    night = ART / f"{file}{NIGHT_SUFFIX}.png"
+    if night.exists():
+        Image.open(night).convert('RGB').resize(size, Image.LANCZOS).save(OUT / f"{file}{NIGHT_SUFFIX}.png")
     return True
+
+
+def map_scale(spec):
+    """Skala jejak dunia map: map jalan punya `scale` sendiri di ART_LAYOUT, interior seragam."""
+    if spec['file'] in ART_LAYOUT:
+        return ART_LAYOUT[spec['file']].get('scale', 1)
+    return spec.get('scale', INTERIOR_SCALE)
+
+
+def art_import_ppu(spec):
+    """PPU impor sprite: dinaikkan 1/scale supaya gambar resolusi penuh tetap menempati jejak
+    dunia yang sudah dikecilkan (map jalan sudah mengecilkan filenya sendiri lewat art_size)."""
+    painted = (ART / f"{spec['file']}.png").exists()
+    base = ART_PPU if painted else PPU
+    return base if spec['file'] in ART_LAYOUT else round(base / map_scale(spec), 2)
+
+
+def painted_files(spec):
+    """File lukisan yang terpasang untuk satu map: latar siang, plus latar malam kalau ada."""
+    if not (ART / f"{spec['file']}.png").exists():
+        return []
+    night = ART / f"{spec['file']}{NIGHT_SUFFIX}.png"
+    return [spec['file']] + ([spec['file'] + NIGHT_SUFFIX] if night.exists() else [])
 
 
 def draw_phone_map():
@@ -2501,18 +2592,18 @@ def draw_phone_map():
         d.line(points, fill=C['out'], width=width + 4)
         d.line(points, fill=road, width=width)
 
-    street([(16, 150), (346, 150)])                          # jalan utama: kampus … warung
-    street([(326, 150), (326, 200)], 8)                      # turunan ke jalan kos
-    street([(110, 196), (326, 196)], 8)                      # jalan kos
+    street([(16, 150), (302, 150)])                          # jalan utama: kampus … Jalan Kafe
+    street([(280, 150), (280, 200)], 8)                      # turunan ke jalan kos
+    street([(110, 196), (280, 196)], 8)                      # jalan kos
     street([(184, 150), (184, 110)], 8)                      # stasiun
-    street([(326, 150), (326, 118)], 8)                      # warung
+    street([(232, 150), (232, 118)], 8)                      # warung Bu Siti (lewat Toko Kelontong)
     for (x0, y0, x1, y1, c) in [(18, 108, 70, 140, 'brick'),      # kampus
                                 (72, 106, 108, 140, 'grass2'),    # taman
                                 (112, 116, 156, 140, 'teal2'),    # pusat kota
                                 (158, 90, 210, 132, 'roof'),      # stasiun
                                 (212, 120, 252, 140, 'wall2'),    # jalan pasar
                                 (258, 118, 302, 140, 'roof3'),    # jalan kafe
-                                (306, 92, 346, 128, 'wood'),      # warung Bu Siti
+                                (210, 88, 254, 118, 'wood'),      # warung Bu Siti (di atas Jalan Pasar)
                                 (120, 166, 214, 188, 'roof2')]:   # kos
         d.rectangle([x0, y0, x1, y1], fill=C[c], outline=C['out'])
     d.ellipse([79, 112, 101, 130], fill=C['water'], outline=C['out'])   # kolam taman
@@ -2646,25 +2737,63 @@ TextureImporter:
 """
 
 
+# Area scene bab yang sudah tidak dipakai: isinya dimatikan runtime supaya latar & NPC lamanya
+# tidak lagi muncul, dan pemain yang save-nya tersimpan di sana dipindahkan ke area pengganti.
+# Prop tempelan di scene bab yang sudah tidak cocok setelah interiornya diganti lukisan tangan
+# (rak saji bambu, kotak bumbu, baki struk di Warung Bu Siti). Dimatikan runtime; kalau scene-nya
+# dibangun ulang lewat AlifAdventureBuilder prop ini memang sudah tidak dibuat lagi.
+HIDDEN_PROPS = ['VariantC_ServingCounter', 'VariantC_Condiments', 'VariantC_ReceiptTray']
+
+RETIRED_AREAS = [
+    # Penghuninya (NPC yang bisa diajak bicara) ikut pindah ke depan pintu penggantinya di kota;
+    # latar & propnya dimatikan. Titiknya = titik mendarat SCENE_DOORS ke Jalan Pasar.
+    # 'keep' kosong: tidak ada yang dipindah ke trotoar. Bu Siti, Raka, dan papan arah gang semuanya
+    # duplikat dari tokoh yang sudah ada di dalam warung — menaruhnya lagi di depan etalase membuat
+    # pemain bisa bicara dengan Bu Siti tanpa masuk warung, dan trotoarnya jadi sesak.
+    dict(area='Depan warung', to='Jalan Pasar', x=7.0, y=10.9, keep=[]),
+]
+
+
+def scene_door(door):
+    """Satu entri SCENE_DOORS dalam piksel map kotanya (petak x scale map itu)."""
+    spec = next(m for m in MAPS if m['area'] == door['map'])
+    px = lambda v: round(v * T * map_scale(spec))
+    return dict(map=door['map'], area=door['area'], label=door['label'],
+                x=px(door['x']), y=px(door['y']), h=px(door['h']),
+                landX=px(door['land'][0]), landY=px(door['land'][1]))
+
+
 def main():
     maps = [draw_map(spec) for spec in MAPS]
     link_doors(maps)
     draw_phone_map()
     city = dict(tile=T, ppu=PPU, mapWidth=PIN_SIZE[0], mapHeight=PIN_SIZE[1], maps=maps,
                 pins=[dict(area=a, x=x, y=y, up=up) for a, (x, y, up) in PINS.items()],
-                roads=[dict(west=w, east=e) for w, e in ROADS])
+                roads=[dict(west=w, east=e) for w, e in ROADS],
+                sceneDoors=[scene_door(d) for d in SCENE_DOORS],
+                hiddenProps=HIDDEN_PROPS,
+                retired=[dict(area=r['area'], to=r['to'], keep=r.get('keep', []),
+                              x=round(r['x'] * T * map_scale(next(m for m in MAPS if m['area'] == r['to']))),
+                              y=round(r['y'] * T * map_scale(next(m for m in MAPS if m['area'] == r['to']))))
+                         for r in RETIRED_AREAS])
     (OUT / 'city.json').write_text(json.dumps(city, indent=1, ensure_ascii=False))
     for spec in MAPS:
-        art = (ART / f"{spec['file']}.png").exists() and spec['file'] in ART_LAYOUT
-        ensure_meta(OUT / f"{spec['file']}.png", ppu=ART_PPU if art else PPU)
+        files = painted_files(spec)
+        for file in files or [spec['file']]:
+            ensure_meta(OUT / f"{file}.png", ppu=art_import_ppu(spec))
     ensure_meta(OUT / 'PhoneMap.png', ppu=100)
     ensure_meta(OUT / 'city.json', text=True)
     folder_meta = Path(str(OUT) + '.meta')
     if not folder_meta.exists():
         folder_meta.write_text(f"fileFormatVersion: 2\nguid: {uuid.uuid5(uuid.NAMESPACE_URL, 'alif-kota/folder').hex}\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {{}}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n")
-    painted = [m['file'] for m in MAPS if (ART / f"{m['file']}.png").exists() and m['file'] in ART_LAYOUT]
+    painted = [f for m in MAPS for f in painted_files(m)]
+    streets = [m['file'] for m in MAPS if m['file'] in ART_LAYOUT and (ART / f"{m['file']}.png").exists()]
     print(f"{len(maps)} map + PhoneMap.png + city.json → {OUT.relative_to(ROOT)}")
-    print(f"  lukisan tangan ({len(painted)}): {', '.join(painted) or '—'}")
+    print(f"  lukisan jalan ({len(streets)}): {', '.join(streets) or '—'}")
+    if STRETCHED:
+        print(f"  ! diregangkan agar pas petak map: {', '.join(STRETCHED)}")
+    print(f"  lukisan interior ({len(painted) - len(streets)}): "
+          f"{', '.join(f for f in painted if f not in streets) or '—'}")
 
 
 if __name__ == '__main__':

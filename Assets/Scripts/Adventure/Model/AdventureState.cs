@@ -17,6 +17,8 @@ namespace Alif.Adventure
     {
         public string Id, Title, Target, Speaker, Introduction, Outcome, Kind;
         public int Area, Cost;
+        /// <summary>Menit in-game yang dilewati saat tugas ini selesai (mis. waktu makan).</summary>
+        public int SkipMinutes;
         public ActivityBoard Board;
         public string[] Prerequisites = Array.Empty<string>();
         public PuzzleStep[] Steps = Array.Empty<PuzzleStep>();
@@ -25,6 +27,8 @@ namespace Alif.Adventure
     }
     public sealed class AdventureChapter
     {
+        /// <summary>Jam saat bab dimulai pertama kali (Bab 1: Alif turun dari kereta pukul 13.00).</summary>
+        public int StartHour = 6;
         public int Number, StartArea;
         public string Title, Subtitle, Introduction, Ending;
         /// <summary>Id tugas yang harus selesai sebelum Alif boleh tidur (punya kamar kos); null = bebas.</summary>
@@ -47,6 +51,9 @@ namespace Alif.Adventure
         /// <summary>Hari cerita (1 = hari kedatangan). Maju lewat tidur di kos, bukan waktu nyata;
         /// menggerbang Kasus Warga dan kehadiran tokohnya (SideQuest.Day, QuestNpc.AppearsOnDay).</summary>
         public int Day = 1;
+        /// <summary>Sewa kamar kos per malam. Bu Tini membuka harga Rp50.000; hasil nego yang
+        /// sehat menurunkannya (lihat tugas c1.rent). Ditagih tiap kali Alif tidur.</summary>
+        public int RentPerDay = 50000;
         public const int MaxDay = 30;
         [NonSerialized] public bool ReadOnlySave;
         public bool HasPosition;
@@ -85,6 +92,18 @@ namespace Alif.Adventure
             Day++;
             return true;
         }
+
+        /// <summary>Sewa semalam ditagih saat Alif tidur. Kalau uangnya kurang, sisanya jadi
+        /// tunggakan yang dicatat di Buku Perjalanan — bukan menahan pemain tidur.</summary>
+        public string PayRent()
+        {
+            if (RentPerDay <= 0) return null;
+            if (Money >= RentPerDay) { Money -= RentPerDay; return $"Sewa kamar Rp{RentPerDay:N0} dibayar ke Bu Tini."; }
+            int unpaid = RentPerDay - Money; Money = 0;
+            string note = $"Sewa kamar hari ini kurang Rp{unpaid:N0} — bicarakan dengan Bu Tini besok.";
+            if (!Evidence.Contains(note)) Evidence.Add(note);
+            return note;
+        }
         public bool Accept(AdventureTask task, int option, out string feedback)
         {
             feedback = "Selesaikan tugas sebelumnya dahulu.";
@@ -104,8 +123,13 @@ namespace Alif.Adventure
             }
             if (p.Step == task.Steps.Length)
             {
-                if (Money < task.Cost) { feedback = "Saldo tidak cukup. Pilih penyelesaian tanpa biaya tambahan bersama Bu Siti."; return false; }
+                // Biaya tugas harus lunas sebelum tugasnya dianggap selesai — sewa kamar tidak bisa
+                // "diselesaikan" tanpa membayar, jadi pintunya pun tetap terkunci.
+                if (Money < task.Cost) { feedback = $"Uangmu kurang Rp{task.Cost - Money:N0}. Selesaikan pembayarannya dulu."; return false; }
                 Money -= task.Cost;
+                // Nego sewa yang sehat menurunkan tarif malam berikutnya dari Rp50.000 ke harga
+                // yang disepakati (= biaya tugas ini, yaitu sewa malam pertama).
+                if (task.Id == "c1.rent" && task.Cost > 0) RentPerDay = task.Cost;
                 p.Complete = true;
                 feedback = task.Outcome;
             }

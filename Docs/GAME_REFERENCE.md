@@ -130,6 +130,22 @@ Titik mendarat sengaja dijauhkan ≥ 0,7 unit dari trigger seberang (trigger set
 supaya pemain tidak langsung terpental balik. Transisinya lewat `SceneFadeController` (fade
 hitam) dan **terkunci selama tutorial** — `Travel(SceneDoor)` menolak kalau `TutorialActive`.
 
+### Pintu kota → interior di scene bab (`sceneDoors`) & area pensiunan (`retired`)
+
+Interior yang digambar tangan di scene bab (Warung Bu Siti) tidak perlu dipindah jadi map kota:
+`SCENE_DOORS` di `generate_city.py` memasang pintunya dari fasad toko di map kota, dan
+`AdventureGame.BuildSceneDoors()` merakitnya runtime — trigger baru di sisi kota (mendarat di titik
+masuk interior yang sudah digambar di scene) plus pintu keluar interior yang diarahkan ulang ke
+trotoar depan fasad itu. Warung Bu Siti sekarang dimasuki lewat **etalase Toko Kelontong di Jalan
+Pasar** (petak 9,5).
+
+`RETIRED_AREAS` mendaftar area scene yang tidak dipakai lagi. `RetireUnusedAreas()` mematikan latar
+& propnya, melucuti pintu yang masih menuju ke sana, memindahkan warga yang bisa diajak bicara ke
+depan pintu penggantinya, dan memindahkan pemain yang checkpoint-nya tersimpan di area itu. Saat
+ini: **Depan warung** (pin peta & jalur jalan kakinya sudah dicabut). Nama areanya masih ada di
+`OriginalCampaign.Areas` karena `Centers`/`Spawns` bab 1 tersimpan di scene — menghapusnya betulan
+perlu menjalankan ulang `AlifAdventureBuilder` di Unity.
+
 ### Jalur jalan kaki antar area (`roads`)
 
 Arah kiri-kanan di dunia **sama dengan urutan pin di Peta HP**. `ROADS` di `generate_city.py`
@@ -174,9 +190,25 @@ Peta HP tetap jadi jalan pintas.
 
 ### Interior gedung (15 ruangan)
 
-Buatan kode (`template='indoor'`, belum ada lukisan) pada **skala 1**, jadi propnya sepadan
-dengan tokoh. Dinding belakang di 3 baris atas, dinding depan berkaca di 2 baris bawah (tempat
-pintu keluar), lantai berubin di antaranya; lantai yang bisa dilewati = baris 3 s.d. tinggi−3.
+Tata letaknya digambar kode (`template='indoor'`, `'cafe'`, `'mosque'`, `'church'`) pada
+**skala 1**, jadi propnya sepadan dengan tokoh. Dinding belakang di 3 baris atas, dinding depan
+berkaca di 2 baris bawah (tempat pintu keluar), lantai berubin di antaranya; lantai yang bisa
+dilewati = baris 3 s.d. tinggi−3.
+
+**Sepuluh ruangan sudah berlukisan tangan** (Kamar Alif, Kafe Senja, Puskesmas, Masjid, Toko Glow,
+Minimarket 24, Idmaret, Bank Syariah, GG Learning Center, FFC). Berbeda dengan map jalan, lukisan
+interior **hanya mengganti gambarnya** — lantai, penghalang, pintu, spawn, dan posisi NPC tetap
+dari gambar kode, karena lukisannya memang dipesan mengikuti tata letak prop yang sama
+(promptnya: [`Tools/city-art/PROMPT_INTERIOR.md`](../Tools/city-art/PROMPT_INTERIOR.md)). Jadi
+mengganti latar tidak pernah membuat tabrakan meleset, dan gambar kodenya tetap jadi cadangan di
+`Tools/city-art/generated/`.
+
+Aturan file: taruh di `Tools/city-art/art/<file>.png` dengan rasio petak map-nya (`lebar_px =
+petak × 25` untuk ukuran akhir; gambar boleh lebih besar, skrip yang mengecilkan dengan LANCZOS).
+Meleset > 2 % dilaporkan saat generate ("diregangkan agar pas petak map"), > 6 % ditolak.
+`art/<file>_Malam.png` opsional: latar malam yang ditukar `CityWorld.Built.SetNight()` pada pukul
+19.00–06.00 (`DayLight.IsNight`), mengikuti jam langit berubah ungu — dipakai Kafe Senja
+(sore hangat → malam berlampu).
 
 | Area | Petak | Unit | Isi | Pintu |
 |---|---|---|---|---|
@@ -306,6 +338,11 @@ daftar area luar; sisanya dianggap ruangan) diterangi lampu: makin gelap langit,
 warna lampu hangat (sampai 78 %), jadi malam di dalam ruangan hanya sedikit lebih redup (±80 %). Warna bergeser halus per frame, sehingga masuk gedung di malam hari
 atau bangun tidur tidak berkedip. Mengubah suasana = ubah tabel `Keys` di `DayLight`.
 
+**Kecepatan jam.** 1 detik nyata = **3 menit in-game** (`TimeSystem._gameMinutesPerRealSecond`,
+nilainya tersimpan juga di tiap scene). Satu jam in-game = 20 detik nyata, dan satu hari main
+(06:00 → tengah malam) = 6 menit nyata, jadi pagi → siang → malam sempat berganti dalam satu
+sesi. Mengubah kecepatan = ubah default di `TimeSystem.cs` **dan** nilai di scene-nya.
+
 **Jam & hari.** Jam tidak lagi berhenti di 23:59: lewat tengah malam masuk **larut malam** di hari
 cerita yang sama. Hari berganti lewat tidur, atau — kalau pemain begadang — otomatis saat fajar
 06:00 (`TimeSystem.OnStoryDawn` → `AdventureState.PassNight()`): kasus & jadwal tetap bergulir,
@@ -320,11 +357,24 @@ tetapi energi tidak pulih dan kabar pagi hanya muncul sebagai toast.
 Mbak Fira, Mas Bayu, Mbak Rini, dan Pak Mahfud yang sudah ada. Map baru = tokoh baru + posisinya
 di `npcs=[…]` generator.
 
-Ruangan yang lebih kecil dari layar (6,4 unit) membuat `CameraBounds` mengunci kamera di tengah
-— seluruh ruangan terlihat sekaligus. Interior **tidak dipasang pin di peta HP**: masuknya lewat
-pintu. `Travel(int area)` tetap bisa menuju ke sana karena `NextDoor` mem-BFS jalur pintunya. Kamera `orthographicSize` 3,2
-(+0,4 saat sprint) → setengah layar 3,6 unit, jadi map tidak boleh lebih pendek dari 7,2 unit:
-**`.625` batas bawahnya** (7,5 unit). Di bawah itu kamera berhenti mengikuti pemain vertikal.
+**Skala interior = skala jalan.** `INTERIOR_SCALE = .625` di `generate_city.py` mengecilkan jejak
+dunia tiap interior, jadi 1 petak = 0,3125 unit di seluruh permainan. Tanpa itu interior 1,6x lebih
+"gemuk" daripada jalan: pintu 1,5 unit di samping Alif yang tingginya 0,8 unit, dan perabot di
+lukisan ikut terlihat raksasa. Gambarnya **tidak ikut mengecil** — `art_import_ppu()` menaikkan PPU
+impornya sebesar 1/scale (lukisan 50 → 80, gambar kode 32 → 51,2), jadi resolusinya tetap penuh
+sementara jejak dunianya menyusut. `MIN_LANDING` (0,8 unit) menjaga titik mendarat tiap pintu tetap
+di luar trigger seberang walau ruangannya mengecil; `door_landing()` menggesernya otomatis.
+
+**Jarak kamera sama di mana pun** (`orthographicSize` 3,2, +0,4 saat sprint), termasuk di dalam
+ruangan. Ruangan yang lebih kecil dari layar dibiarkan **dibingkai gelap**, seperti interior stasiun
+yang digambar tangan — `CameraBounds.ClampAxis` menaruh kamera di tengah areanya. Versi yang
+merapatkan kamera ke ukuran ruangan sempat dicoba dan dibatalkan: lantai jadi terasa sempit dan
+perpindahan zoom di pintu mengganggu. Ruangan yang lukisannya sedikit (Kamar Alif & Toilet Kampus,
+6,25 × 3,75 unit) memang tampak kecil di layar; memperbesarnya = menaikkan `scale` map itu (dengan
+konsekuensi perabotnya ikut membesar terhadap tokoh) atau menggambar ulang ruangannya lebih luas.
+
+Interior **tidak dipasang pin di peta HP**: masuknya lewat pintu. `Travel(int area)` tetap bisa
+menuju ke sana karena `NextDoor` mem-BFS jalur pintunya.
 
 | Map | Isi |
 |---|---|

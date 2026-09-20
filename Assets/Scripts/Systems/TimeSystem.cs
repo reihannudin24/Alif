@@ -13,8 +13,11 @@ namespace Alif.Systems
         public static TimeSystem Instance { get; private set; }
 
         [Header("Kecepatan Waktu")]
+        // 3 menit in-game per detik nyata: satu hari main (06:00 sampai tengah malam) = 6 menit
+        // nyata, jadi pagi-siang-malam sempat berganti dalam satu sesi bermain yang wajar.
+        // Nilai ini juga tersimpan di tiap scene; ubah keduanya kalau mau kecepatan lain.
         [Tooltip("Berapa menit in-game yang berlalu untuk setiap 1 detik real time.")]
-        [SerializeField] private float _gameMinutesPerRealSecond = 1f;
+        [SerializeField] private float _gameMinutesPerRealSecond = 3f;
 
         [Header("Waktu Saat Ini")]
         [SerializeField] private int _currentHour = 6;   // Format 24 jam, mulai jam 06:00
@@ -97,18 +100,30 @@ namespace Alif.Systems
             OnMinuteChanged?.Invoke();
         }
 
+        /// <summary>Majukan jam beberapa menit sekaligus — dipakai adegan yang melompati waktu
+        /// (mis. Alif makan dulu). Pergantian jam/hari tetap lewat AdvanceMinute, jadi fajar dan
+        /// jadwal warga tetap terpicu.</summary>
+        public void SkipMinutes(int minutes)
+        {
+            for (int i = 0; i < Mathf.Clamp(minutes, 0, 24 * 60); i++) AdvanceMinute();
+        }
+
         /// <summary>
         /// Samakan kalender dengan hari cerita (1 = Senin minggu pertama). Dipanggil Adventure saat
         /// memuat save dan tiap Alif tidur; <paramref name="morning"/> memulai hari dari pukul 06:00.
         /// Setelah dipanggil, pergantian hari hanya terjadi lewat method ini.
         /// </summary>
-        public void SetStoryDay(int storyDay, bool morning)
+        public void SetStoryDay(int storyDay, bool morning) => SetStoryDay(storyDay, morning, 6);
+
+        /// <param name="startHour">Jam saat hari dimulai bila <paramref name="morning"/> true —
+        /// 6 untuk bangun tidur, tapi Bab 1 dimulai pukul 13.00 saat Alif baru turun dari kereta.</param>
+        public void SetStoryDay(int storyDay, bool morning, int startHour)
         {
             _storyDriven = true;
             int index = Mathf.Max(0, storyDay - 1);
             _currentDayIndex = index % DayNames.Length;
             _currentWeek = index / DayNames.Length + 1;
-            if (morning) { _currentHour = 6; _currentMinute = 0; _minuteAccumulator = 0f; _nightPassed = false; }
+            if (morning) { _currentHour = Mathf.Clamp(startHour, 0, 23); _currentMinute = 0; _minuteAccumulator = 0f; _nightPassed = false; }
             OnDayChanged?.Invoke();
             OnMinuteChanged?.Invoke();
         }

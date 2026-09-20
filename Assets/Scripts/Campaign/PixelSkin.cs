@@ -412,6 +412,148 @@ namespace Alif.Campaign
 
         /// <summary>Sprite dari pola ASCII (baris atas dulu): o = garis, Y = kuning, c = krem,
         /// S = oranye tua, l = garis halaman, g = hijau, p = merah muda, b = biru, . = kosong.</summary>
+        static Sprite _riceIcon, _chickenIcon, _teaIcon, _juiceIcon, _checkIcon, _bowlIcon, _bottleIcon;
+
+        /// <summary>Mangkuk berkuah (bakso, soto).</summary>
+        public static Sprite BowlIcon() => _bowlIcon ??= PatternSprite("PixelSkinBowl", new[]
+        {
+            "................",
+            "................",
+            "......ww........",
+            ".....w..w.......",
+            "...oooooooooo...",
+            "..onnnnnnnnnno..",
+            "..onwwnnnwwnno..",
+            "..onnnnnnnnnno..",
+            "...onnnnnnnno...",
+            "....oonnnnoo....",
+            "......oooo......",
+            "................",
+            "................",
+            "................",
+            "................",
+            "................",
+        });
+
+        /// <summary>Botol air kemasan.</summary>
+        public static Sprite BottleIcon() => _bottleIcon ??= PatternSprite("PixelSkinBottle", new[]
+        {
+            "................",
+            ".......oo.......",
+            ".......oo.......",
+            "......oGGo......",
+            "......oGGo......",
+            ".....oGGGGo.....",
+            ".....oGGGGo.....",
+            ".....oGGGGo.....",
+            ".....oGwwGo.....",
+            ".....oGGGGo.....",
+            ".....oGGGGo.....",
+            "......oooo......",
+            "................",
+            "................",
+            "................",
+            "................",
+        });
+
+
+        /// <summary>Centang hijau. Font piksel proyek ini tidak punya U+2713, jadi tanda selesai
+        /// digambar sebagai sprite — bukan karakter teks yang berubah jadi spasi.</summary>
+        public static Sprite CheckIcon() => _checkIcon ??= PatternSprite("PixelSkinCheck", new[]
+        {
+            "..........gg",
+            ".........gg.",
+            "........gg..",
+            "gg.....gg...",
+            ".gg...gg....",
+            "..gg.gg.....",
+            "...ggg......",
+            "....g.......",
+        });
+
+
+        /// <summary>Ikon menu warung untuk papan anggaran: nasi telur, ayam geprek, es teh, jus.
+        /// Dibuat procedural seperti ikon HUD lain supaya tidak menambah file sprite.</summary>
+        public static Sprite RiceIcon() => _riceIcon ??= PatternSprite("PixelSkinRice", new[]
+        {
+            "................",
+            "................",
+            "......oooo......",
+            ".....owwwwo.....",
+            "....owwYYwwo....",
+            "...owwYYYYwwo...",
+            "..owwwwYYwwwwo..",
+            "..owwwwwwwwwwo..",
+            ".owwwwwwwwwwwwo.",
+            ".oooooooooooooo.",
+            ".olllllllllllllo",
+            "..oooooooooooo..",
+            "................",
+            "................",
+            "................",
+            "................",
+        });
+
+        public static Sprite ChickenIcon() => _chickenIcon ??= PatternSprite("PixelSkinChicken", new[]
+        {
+            "................",
+            "................",
+            ".....oooo.......",
+            "....onnnno......",
+            "...onnnnnno.....",
+            "...onnnnnnno....",
+            "....onnnnnno....",
+            ".....onnnnno....",
+            "..owwwonnnoo....",
+            ".owwwwwooooo....",
+            ".oooooooooooo...",
+            "..oooooooooo....",
+            "................",
+            "................",
+            "................",
+            "................",
+        });
+
+        public static Sprite TeaIcon() => _teaIcon ??= PatternSprite("PixelSkinTea", new[]
+        {
+            "................",
+            "....oooooooo....",
+            "....oGGGGGGo....",
+            "....oGttttGo....",
+            "....otttttto....",
+            "....ottGGtto....",
+            "....otttttto....",
+            "....otttttto....",
+            "....otttttto....",
+            ".....otttto.....",
+            ".....oooooo.....",
+            "................",
+            "................",
+            "................",
+            "................",
+            "................",
+        });
+
+        public static Sprite JuiceIcon() => _juiceIcon ??= PatternSprite("PixelSkinJuice", new[]
+        {
+            "................",
+            "........ooo.....",
+            "....oooowwo.....",
+            "....oGGowwo.....",
+            "....ojjowwo.....",
+            "....ojjjjjo.....",
+            "....ojjjjjo.....",
+            "....ojjjjjo.....",
+            "....ojjjjjo.....",
+            ".....ojjjo......",
+            ".....ooooo......",
+            "................",
+            "................",
+            "................",
+            "................",
+            "................",
+        });
+
         public static Sprite PatternSprite(string name, string[] rows)
         {
             int width = rows[0].Length, height = rows.Length;
@@ -425,6 +567,8 @@ namespace Alif.Campaign
                     {
                         'o' => Outline, 'Y' => GoldLight, 'c' => Cream, 'S' => OrangeShade, 'l' => SlotEdge,
                         'g' => Rgb(92, 158, 96), 'p' => Rgb(240, 150, 176), 'b' => Rgb(120, 160, 214), 'k' => Rgb(58, 58, 68),
+                        'w' => Rgb(246, 242, 232), 'n' => Rgb(164, 102, 58), 't' => Rgb(126, 74, 44), 'j' => Rgb(240, 162, 62),
+                        'G' => Rgb(196, 224, 236),
                         _ => Color.clear,
                     };
                 }

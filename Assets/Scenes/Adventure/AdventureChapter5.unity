@@ -2015,7 +2015,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 51d20c50c965946f5b07a95a1955aec8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Alif.Systems.TimeSystem
-  _gameMinutesPerRealSecond: 1
+  _gameMinutesPerRealSecond: 3
   _currentHour: 6
   _currentMinute: 0
   _currentDayIndex: 0

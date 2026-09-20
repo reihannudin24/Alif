@@ -64,6 +64,11 @@ namespace Alif.Adventure
         GameObject _touchControls;
         VirtualJoystick _joystick;
         Button _skipTutorial;
+        // Elemen HUD yang disorot tutorial pembuka (papan status, catatan tujuan, 4 tombol ikon).
+        RectTransform _statusBoard,_objectivePanel,_coachCard,_coachGlow,_coachDim,_dpadRect,_interactRect;
+        CanvasGroup _statusFade;
+        readonly Button[] _hudIcons=new Button[4];
+        TMP_Text _coachText;Button _coachNext;
         RectTransform _hotbar;Rigidbody2D _playerBody;float _hotbarIdleFor;
         readonly Queue<(string name,Sprite icon)> _receivedItems=new Queue<(string name,Sprite icon)>();
         const float HotbarShownY=14,HotbarShowDelay=.3f;
@@ -190,17 +195,26 @@ namespace Alif.Adventure
             top.raycastTarget=false;ApplySprite(top,PixelSkin.Panel());
             _objective=Text(top.transform,"",Vector2.zero,Vector2.one,18,PixelSkin.TextDark);
             _objective.margin=new Vector4(26,0,26,0);_objective.textWrappingMode=TextWrappingModes.NoWrap;_objective.overflowMode=TextOverflowModes.Ellipsis;
-            IconButton("HP",PixelSkin.PhoneIcon(),3,OpenPhone);
-            IconButton("Tas",PixelSkin.BagIcon(),2,Bag);
-            IconButton("Jurnal",PixelSkin.NotebookIcon(),1,()=>Journal(0));
-            IconButton("Jeda",PixelSkin.MenuIcon(),0,Pause);
+            _objectivePanel=(RectTransform)top.transform;
+            // Banner tugas sekaligus tombol: diklik = tujuannya ditandai panah oranye di dunia.
+            top.raycastTarget=true;
+            var objectiveButton=top.gameObject.AddComponent<Button>();
+            objectiveButton.targetGraphic=top;objectiveButton.transition=Selectable.Transition.None;
+            objectiveButton.navigation=new Navigation{mode=Navigation.Mode.None};
+            objectiveButton.onClick.AddListener(PingObjective);
+            _hudIcons[0]=IconButton("HP",PixelSkin.PhoneIcon(),3,OpenPhone);
+            _hudIcons[1]=IconButton("Tas",PixelSkin.BagIcon(),2,Bag);
+            _hudIcons[2]=IconButton("Jurnal",PixelSkin.NotebookIcon(),1,()=>Journal(0));
+            _hudIcons[3]=IconButton("Jeda",PixelSkin.MenuIcon(),0,Pause);
+            BuildCoach();
             _skipTutorial=Button(_hud,"Lewati tutorial",Vector2.one,Vector2.one,SkipTutorial);
             var skipRect=(RectTransform)_skipTutorial.transform;skipRect.pivot=Vector2.one;skipRect.anchoredPosition=new Vector2(-14,-84);skipRect.sizeDelta=new Vector2(196,40);
             _skipTutorial.GetComponentInChildren<TMP_Text>().fontSize=Mathf.RoundToInt(16*_textScale);
 
             _guideArrow=CampaignUI.Rect(_hud,"Route arrow",new Vector2(.31f,.82f),new Vector2(.345f,.87f)).gameObject.AddComponent<Image>();
-            _guideArrow.sprite=InteractionArrow;_guideArrow.preserveAspect=true;_guideArrow.raycastTarget=false;_guideArrow.gameObject.SetActive(false);
-            _guide=WorldText(new Vector2(.345f,.82f),new Vector2(.69f,.87f),16);
+            _guideArrow.sprite=InteractionArrow;_guideArrow.preserveAspect=true;_guideArrow.raycastTarget=false;
+            _guideArrow.color=PixelSkin.Orange;_guideArrow.gameObject.SetActive(false);
+            _guide=WorldText(new Vector2(.345f,.82f),new Vector2(.69f,.87f),16);_guide.color=PixelSkin.OrangeLight;
             _prompt=WorldText(new Vector2(.27f,.19f),new Vector2(.73f,.245f),18);
             _toast=WorldText(new Vector2(.22f,.255f),new Vector2(.78f,.31f),17);
             BuildTouchControls();
@@ -210,6 +224,111 @@ namespace Alif.Adventure
 
         /// <summary>Tombol ikon persegi di kanan-atas (Tas / Jurnal / Jeda). Nama GameObject
         /// tetap nama tombolnya (dipakai smoke test & navigasi keyboard); label teks disembunyikan.</summary>
+        /// <summary>Tutorial pembuka 7 langkah: gerak → tombol E → papan status → catatan tujuan →
+        /// HP → Tas → Jurnal. Tiap langkah menyorot elemen HUD-nya dan menjelaskan gunanya; langkah
+        /// yang perlu dicoba sendiri (gerak, E, tiga tombol) menunggu pemain melakukannya, sisanya
+        /// lanjut lewat tombol. "Lewati tutorial" tetap memotong semuanya.</summary>
+        static readonly (string title,string body)[] TutorialSteps =
+        {
+            ("Bergerak","WASD, tombol panah, atau D-pad di kiri layar untuk melangkah."),
+            ("Berinteraksi","Dekati Papan arah sampai muncul tulisan E, lalu tekan E atau tombol lingkaran."),
+            ("Papan status","Hari, jam, dan uangmu ada di sini. Tiga bar di bawahnya: energi, Logika Finansial, dan Kepatuhan Syariah — dua bar terakhir naik saat kamu mengambil keputusan yang benar."),
+            ("Catatan tujuan","Baris ini selalu menunjukkan tugasmu berikutnya. Ikuti panah petunjuk di layar kalau tujuannya di area lain."),
+            ("HP","Coba buka HP. Isinya Peta untuk bepergian, Kontak warga, Kalender, dan kartu Investasi yang terbuka satu per satu."),
+            ("Tas","Coba buka Tas. Struk, brosur, dan barang titipan warga tersimpan di sini."),
+            ("Buku Perjalanan","Coba buka Jurnal — semua tujuanmu tercatat di sana. Tutup lagi untuk mengakhiri tutorial."),
+        };
+
+        void BuildCoach()
+        {
+            // Layar diredupkan seperti modal lain (Jurnal/Tas/HP) supaya mata tertuju ke elemen
+            // yang sedang dijelaskan; elemen itu sendiri diangkat ke atas lapisan gelapnya.
+            // Raycast dimatikan supaya tombol HUD di baliknya tetap bisa diklik saat langkah
+            // "coba buka HP / Tas / Jurnal".
+            _coachDim=CampaignUI.Rect(_hud,"Tutorial dim",Vector2.zero,Vector2.one);
+            var dim=_coachDim.gameObject.AddComponent<Image>();
+            dim.color=new Color(.10f,.06f,.04f,.62f);dim.raycastTarget=false;
+            _coachDim.gameObject.SetActive(false);
+
+            _coachGlow=CampaignUI.Rect(_hud,"Tutorial glow",Vector2.one*.5f,Vector2.one*.5f);
+            var glow=_coachGlow.gameObject.AddComponent<Image>();glow.raycastTarget=false;
+            ApplySprite(glow,PixelSkin.Panel());glow.color=new Color(1f,.62f,.24f,.34f);
+            _coachGlow.gameObject.SetActive(false);
+
+            _coachCard=(RectTransform)Panel(_hud,new Vector2(.26f,.40f),new Vector2(.74f,.60f),Color.white).transform;
+            ApplySprite(_coachCard.GetComponent<Image>(),PixelSkin.Panel());
+            _coachText=Text(_coachCard,"",new Vector2(.05f,.30f),new Vector2(.95f,.92f),17,PixelSkin.TextDark);
+            _coachText.alignment=TextAlignmentOptions.Top;_coachText.textWrappingMode=TextWrappingModes.Normal;
+            _coachNext=Button(_coachCard,"Lanjut",new Vector2(.34f,.07f),new Vector2(.66f,.26f),AdvanceCoach);
+            _coachCard.gameObject.SetActive(false);
+        }
+
+        /// <summary>Sorot elemen HUD langkah ini dan tampilkan penjelasannya.</summary>
+        void RefreshCoach()
+        {
+            if(_coachCard==null)return;
+            int step=TutorialActive?State.TutorialStep:0;
+            RevealHudForTutorial(step);
+            bool show=step>=1&&step<=TutorialSteps.Length;
+            _coachCard.gameObject.SetActive(show);
+            _coachGlow.gameObject.SetActive(show);
+            _coachDim.gameObject.SetActive(show);
+            if(!show)return;
+            var info=TutorialSteps[step-1];
+            _coachText.text=$"<b>{info.title}</b>\n{info.body}";
+            // Langkah 1-2 dilatih sambil berjalan, jadi layarnya hanya diredupkan tipis dan
+            // kartunya digeser ke bawah supaya jalur pemain tetap terlihat.
+            bool walking=step<=2;
+            _coachDim.GetComponent<Image>().color=new Color(.10f,.06f,.04f,walking?.32f:.62f);
+            _coachCard.anchorMin=new Vector2(.26f,walking?.62f:.40f);
+            _coachCard.anchorMax=new Vector2(.74f,walking?.80f:.60f);
+            _coachNext.gameObject.SetActive(step==3||step==4);              // sisanya menunggu aksi aslinya
+            var target=step==1?_dpadRect:step==2?_interactRect
+                :step==3?_statusBoard:step==4?_objectivePanel
+                :_hudIcons[step-5]?(RectTransform)_hudIcons[step-5].transform:null;
+            // Urutan lapisan: gelap → sorotan → elemen yang dijelaskan → kartu penjelasan,
+            // jadi hanya elemen itu yang tetap terang di atas layar yang diredupkan.
+            _coachDim.SetAsLastSibling();
+            if(_skipTutorial)_skipTutorial.transform.SetAsLastSibling();
+            if(!target){_coachGlow.gameObject.SetActive(false);_coachCard.SetAsLastSibling();return;}
+            _coachGlow.position=target.TransformPoint(target.rect.center);
+            _coachGlow.sizeDelta=target.rect.size+new Vector2(18f,18f);
+            _coachGlow.SetAsLastSibling();
+            target.SetAsLastSibling();
+            _coachCard.SetAsLastSibling();
+        }
+
+        /// <summary>HUD tumbuh bertahap selama tutorial: tiap elemen baru muncul di langkah yang
+        /// menjelaskannya, jadi layar pemain baru tidak penuh sekaligus. Di luar tutorial semuanya
+        /// tampil seperti biasa.</summary>
+        void RevealHudForTutorial(int step)
+        {
+            bool done=step<=0;                                   // 0 = tutorial selesai/dilewati
+            Show(_interactRect,done||step>=2);                   // tombol E — langkah 2
+            Show(_statusBoard,done||step>=3);                    // papan status — langkah 3
+            Show(_objectivePanel,done||step>=4);                 // catatan tujuan — langkah 4
+            for(int i=0;i<_hudIcons.Length;i++)                  // HP, Tas, Jurnal, lalu Jeda
+                if(_hudIcons[i])Show((RectTransform)_hudIcons[i].transform,done||step>=(i==3?7:5+i));
+        }
+
+        static void Show(RectTransform rect,bool visible)
+        {
+            if(rect&&rect.gameObject.activeSelf!=visible)rect.gameObject.SetActive(visible);
+        }
+
+        void AdvanceCoach()
+        {
+            if(!TutorialActive)return;
+            if(State.TutorialStep>=7){CompleteTutorial();return;}
+            State.TutorialStep++;Save(false);RefreshHud();
+        }
+
+        /// <summary>Langkah tutorial yang selesai dengan membuka fitur HUD-nya sendiri.</summary>
+        void CoachOpened(int step)
+        {
+            if(TutorialActive&&State.TutorialStep==step)AdvanceCoach();
+        }
+
         Button IconButton(string name,Sprite icon,int slotFromRight,Action click)
         {
             const float size=60,gap=8;
@@ -229,6 +348,11 @@ namespace Alif.Adventure
         {
             const float width=262,rowHeight=28,iconSize=26;
             var board=CampaignUI.Rect(_hud,"Status board",new Vector2(0,1),new Vector2(0,1));
+            _statusBoard=board;
+            // Toko di tepi map (Toko Kelontong di ujung kiri Jalan Pasar) jatuh persis di bawah
+            // papan ini karena kamera mentok di tepi — papannya memudar kalau pemain ada di
+            // baliknya, jadi etalase & penanda pintunya tetap terbaca.
+            _statusFade=board.gameObject.AddComponent<CanvasGroup>();
             board.pivot=new Vector2(0,1);board.anchoredPosition=new Vector2(14,-22);board.sizeDelta=new Vector2(width,130);
             var boardImage=board.gameObject.AddComponent<Image>();boardImage.raycastTarget=false;ApplySprite(boardImage,PixelSkin.Button());
 
@@ -407,24 +531,96 @@ namespace Alif.Adventure
                 else legacy.gameObject.SetActive(false);
             }
             _touchControls=CampaignUI.Rect(_hud,"Touch Controls",Vector2.zero,Vector2.one).gameObject;
-            var touchArea=CampaignUI.Rect(_touchControls.transform,"Joystick touch area",new Vector2(0,.02f),new Vector2(.46f,.58f));
-            var catcher=touchArea.gameObject.AddComponent<Image>();catcher.color=new Color(1,1,1,.001f);catcher.raycastTarget=true;
-            var background=CampaignUI.Rect(touchArea,"Joystick base",Vector2.zero,Vector2.zero);
-            background.anchorMin=background.anchorMax=Vector2.zero;background.pivot=new Vector2(.5f,.5f);
-            background.anchoredPosition=new Vector2(92,92);background.sizeDelta=new Vector2(144,144);
-            var baseImage=background.gameObject.AddComponent<Image>();baseImage.sprite=PixelSkin.JoystickBase();baseImage.color=new Color(1,1,1,.8f);baseImage.preserveAspect=true;baseImage.raycastTarget=false;
-            var knob=CampaignUI.Rect(background,"Knob",new Vector2(.5f,.5f),new Vector2(.5f,.5f));
-            knob.pivot=new Vector2(.5f,.5f);knob.sizeDelta=new Vector2(64,64);
-            var knobImage=knob.gameObject.AddComponent<Image>();knobImage.sprite=PixelSkin.JoystickKnob();knobImage.preserveAspect=true;knobImage.raycastTarget=false;
+            // Kontrol gerak = D-pad empat arah (bukan stik analog): arah tegas, cocok untuk map
+            // berbasis petak dan lebih terbaca di layar kecil. VirtualJoystick tetap dipakai sebagai
+            // sumber baca PlayerController — arahnya disetel tombol-tombol ini lewat SetDirection.
+            var touchArea=CampaignUI.Rect(_touchControls.transform,"Dpad area",new Vector2(0,.02f),new Vector2(.46f,.58f));
+            var pad=CampaignUI.Rect(touchArea,"Dpad",Vector2.zero,Vector2.zero);
+            pad.anchorMin=pad.anchorMax=Vector2.zero;pad.pivot=new Vector2(.5f,.5f);
+            pad.anchoredPosition=new Vector2(124,124);pad.sizeDelta=new Vector2(212,212);
+            _dpadRect=pad;
+            DpadButton(pad,"Atas",0,new Vector2(0,68),180f);
+            DpadButton(pad,"Bawah",1,new Vector2(0,-68),0f);
+            DpadButton(pad,"Kiri",2,new Vector2(-68,0),-90f);
+            DpadButton(pad,"Kanan",3,new Vector2(68,0),90f);
             _joystick=touchArea.gameObject.AddComponent<VirtualJoystick>();
-            _joystick.Configure(touchArea,background,knob,VirtualJoystick.SavedMode);_player.BindJoystick(_joystick);
+            _joystick.Configure(touchArea,pad,null,VirtualJoystick.SavedMode);_player.BindJoystick(_joystick);
 
             var interact=CampaignUI.Rect(_touchControls.transform,"Interact",Vector2.one,Vector2.one);
+            _interactRect=interact;
             interact.anchorMin=interact.anchorMax=interact.pivot=new Vector2(1,0);
             interact.anchoredPosition=new Vector2(-26,28);interact.sizeDelta=new Vector2(104,104);
             var image=interact.gameObject.AddComponent<Image>();image.sprite=PixelSkin.Disc();image.preserveAspect=true;
             var button=interact.gameObject.AddComponent<Button>();button.targetGraphic=image;button.onClick.AddListener(_player.Interact);button.navigation=new Navigation{mode=Navigation.Mode.None};
             var label=CampaignUI.Text(interact,"E",Vector2.zero,Vector2.one,34);label.alignment=TextAlignmentOptions.Center;label.color=PixelSkin.TextLight;label.margin=Vector4.zero;
+        }
+
+        bool _padUp,_padDown,_padLeft,_padRight;
+
+        /// <summary>Satu tombol arah D-pad: panah yang sama dengan penanda pintu, diputar sesuai
+        /// arahnya. Ditekan-tahan (PointerDown/Up); PointerExit ikut melepas supaya arah tidak
+        /// "nyangkut" kalau jari digeser keluar tombol.</summary>
+        void DpadButton(RectTransform parent,string name,int direction,Vector2 offset,float rotation)
+        {
+            var rect=CampaignUI.Rect(parent,name,Vector2.one*.5f,Vector2.one*.5f);
+            rect.anchoredPosition=offset;rect.sizeDelta=new Vector2(74,74);
+            var image=rect.gameObject.AddComponent<Image>();ApplySprite(image,PixelSkin.Button());
+            var arrow=CampaignUI.Rect(rect,"Arrow",Vector2.one*.5f,Vector2.one*.5f);
+            arrow.sizeDelta=new Vector2(38,38);arrow.localRotation=Quaternion.Euler(0,0,rotation);
+            var arrowImage=arrow.gameObject.AddComponent<Image>();
+            arrowImage.sprite=PixelSkin.EntranceArrow();arrowImage.preserveAspect=true;arrowImage.raycastTarget=false;
+            var trigger=rect.gameObject.AddComponent<EventTrigger>();
+            AddPadTrigger(trigger,EventTriggerType.PointerDown,direction,true);
+            AddPadTrigger(trigger,EventTriggerType.PointerUp,direction,false);
+            AddPadTrigger(trigger,EventTriggerType.PointerExit,direction,false);
+        }
+
+        void AddPadTrigger(EventTrigger trigger,EventTriggerType type,int direction,bool pressed)
+        {
+            var entry=new EventTrigger.Entry{eventID=type};
+            entry.callback.AddListener(_=>PressDpad(direction,pressed));
+            trigger.triggers.Add(entry);
+        }
+
+        void PressDpad(int direction,bool pressed)
+        {
+            switch(direction)
+            {
+                case 0:_padUp=pressed;break;
+                case 1:_padDown=pressed;break;
+                case 2:_padLeft=pressed;break;
+                default:_padRight=pressed;break;
+            }
+            var move=new Vector2((_padRight?1f:0f)-(_padLeft?1f:0f),(_padUp?1f:0f)-(_padDown?1f:0f));
+            _joystick?.SetDirection(move.sqrMagnitude>1f?move.normalized:move);
+        }
+
+        SpriteRenderer _objectivePing;float _pingUntil;
+
+        /// <summary>Klik banner tugas = tandai tujuannya: panah oranye melayang di atas sasaran
+        /// (tokoh/prop kalau satu area, atau pintu menuju areanya) selama beberapa detik, plus
+        /// toast berisi judul tugasnya. Panah petunjuk di tepi layar memakai warna yang sama.</summary>
+        public void PingObjective()
+        {
+            if(!CanExplore)return;
+            var task=CurrentTask;
+            if(task==null){Toast(TutorialActive?"Selesaikan tutorial dulu":"Semua tugas bab ini sudah selesai",4);return;}
+            var target=task.Area==State.Area?FindPoint(task.Target,task.Area)?.transform:NextDoor(task.Area)?.transform;
+            if(!target){Toast("Tujuan: "+task.Title,5);return;}
+            if(!_objectivePing)
+            {
+                var go=new GameObject("Penanda tujuan");
+                _objectivePing=go.AddComponent<SpriteRenderer>();
+                _objectivePing.sprite=PixelSkin.EntranceArrow();
+                _objectivePing.color=PixelSkin.Orange;
+                _objectivePing.sortingOrder=YSortOrder.PromptOrderBase+30;
+                go.transform.localScale=Vector3.one*1.8f;
+                go.AddComponent<FloatingPrompt>();
+            }
+            _objectivePing.gameObject.SetActive(true);
+            _objectivePing.transform.position=(Vector2)target.position+new Vector2(0f,1.15f);
+            _pingUntil=Time.unscaledTime+6f;
+            Toast("Tujuan: "+task.Title,5);
         }
 
         void SetTouchControlsVisible()
@@ -445,12 +641,15 @@ namespace Alif.Adventure
         void RefreshHud()
         {
             if(!_objective)return;
+            RefreshCoach();
+            RefreshEntranceMarkers();
             RefreshQuestMarkers();
             if(_skipTutorial)_skipTutorial.gameObject.SetActive(TutorialActive);
             if(TutorialActive)
             {
                 _location.text=$"BAB {Chapter}  •  {Content.Areas[State.Area]}";
-                _objective.text=State.TutorialStep==1?Objective("TUTORIAL 1/3","Bergerak satu langkah"):State.TutorialStep==2?Objective("TUTORIAL 2/3","Baca papan arah"):Objective("TUTORIAL 3/3","Buka lalu tutup Jurnal");
+                int step=Mathf.Clamp(State.TutorialStep,1,TutorialSteps.Length);
+                _objective.text=Objective($"TUTORIAL {step}/{TutorialSteps.Length}",TutorialSteps[step-1].title);
                 foreach(var p in _points)if(p.Label)p.Label.gameObject.SetActive(State.TutorialStep==2&&p.Target==TutorialTarget&&p.Area==0);
                 return;
             }
@@ -484,6 +683,7 @@ namespace Alif.Adventure
             if(k!=null && k.pKey.wasPressedThisFrame){OpenPhone();return;}
             var pos=(Vector2)_player.transform.position;
             State.Area=AreaOf(pos);
+            FadeStatusBoard(pos);
             var collider=_player.InteractionTarget;
             var nearest=collider?collider.GetComponentInParent<AdventurePoint>():null;
             bool near=nearest!=null;
@@ -491,8 +691,8 @@ namespace Alif.Adventure
             if(TutorialActive)
             {
                 UpdateTutorial(pos);
-                if(State.TutorialStep==1){_guide.text="WASD / panah / joystick untuk bergerak";_guideArrow.gameObject.SetActive(false);}
-                else if(State.TutorialStep==3){_guide.text="J atau tombol Jurnal • lalu tutup Jurnal";_guideArrow.gameObject.SetActive(false);}
+                if(State.TutorialStep==1){_guide.text="";_guideArrow.gameObject.SetActive(false);}
+                else if(State.TutorialStep>=3){_guide.text="";_guideArrow.gameObject.SetActive(false);}
                 else ShowGuide(FindPoint(TutorialTarget,0)?.transform,pos,TutorialTarget);
                 if(Time.unscaledTime-_savedAt>20)Save(false);
                 return;
@@ -527,8 +727,21 @@ namespace Alif.Adventure
             if(_tutorialDistance<1f)return;
             State.TutorialStep=2;Save(false);RefreshHud();Toast("Bagus • dekati Papan arah dan tekan E atau tombol interaksi",6);
         }
+        /// <summary>Papan status memudar saat pemain berjalan di belakangnya (pojok kiri-atas layar),
+        /// supaya toko di tepi map tidak tertutup HUD.</summary>
+        void FadeStatusBoard(Vector2 position)
+        {
+            if(!_statusFade||!Camera.main)return;
+            Vector3 view=Camera.main.WorldToViewportPoint(position);
+            bool behind=view.z>0f&&view.x<.34f&&view.y>.58f;
+            float target=behind?.25f:1f;
+            _statusFade.alpha=Mathf.MoveTowards(_statusFade.alpha,target,Time.unscaledDeltaTime*4f);
+        }
+
         void ShowGuide(Transform guide,Vector2 position,string target)
         {
+            if(_objectivePing&&_objectivePing.gameObject.activeSelf&&Time.unscaledTime>_pingUntil)
+                _objectivePing.gameObject.SetActive(false);
             if(!guide){_guide.text="";_guideArrow.gameObject.SetActive(false);return;}
             Vector2 delta=(Vector2)guide.position-position;
             bool horizontal=Mathf.Abs(delta.x)>Mathf.Abs(delta.y);
@@ -543,6 +756,13 @@ namespace Alif.Adventure
             {
                 var p=_points[i];
                 if(p.Target==target&&p.Area==area)return p;
+            }
+            // Sasaran tugas ditulis dengan nama tokoh ("Bu Tini"), sedangkan warga kota dipasang
+            // dengan id "npc:tini" — cocokkan lewat namanya supaya panah petunjuk tetap menemukannya.
+            for(int i=0;i<_points.Count;i++)
+            {
+                var p=_points[i];
+                if(p.Area==area&&p.Target!=null&&p.Target.StartsWith("npc:")&&SideQuestContent.Npc(p.Target)?.Name==target)return p;
             }
             return null;
         }
@@ -575,7 +795,7 @@ namespace Alif.Adventure
             {
                 if(State.TutorialStep!=2||target!=TutorialTarget||State.Area!=0){Toast("Ikuti langkah tutorial yang tampil di atas",4);return;}
                 Say("Alif","Papan ini menunjukkan jalan keluar stasiun dan arah Warung Bu Siti. Interaksi berhasil—sekarang coba buka Jurnal.",()=>
-                {State.TutorialStep=3;Save(false);RefreshHud();Toast("Buka Jurnal dengan J atau tombol Jurnal, lalu tutup kembali",7);});
+                {State.TutorialStep=3;Save(false);RefreshHud();});
                 return;
             }
             var t=CurrentTask;
@@ -592,14 +812,18 @@ namespace Alif.Adventure
             if(t.Target!=target||t.Area!=State.Area){Toast("Tugas berikutnya: "+t.Title,5);return;}
             _task=t;
             // Pertama bertemu tokoh main quest: adegan cerita dulu, lalu tugasnya.
+            // Adegan tokoh dulu (kalau baru kenal), lalu adegan khusus tugas itu (kalau ada),
+            // baru dialog tugasnya sendiri.
             PlayStoryOnce(StoryContent.MainIntro(t.Speaker),()=>
-            {
-                if (t.Kind == "encounter") { Say(t.Speaker,t.Introduction,BeginEncounter); return; }
-                Say(t.Speaker,t.Introduction,()=>{if(t.Board!=null){State.PrepareBoard(t);Save();OpenBoard(MainBoard(t));}else CompleteTalk(t);});
-            });
+                PlayStoryOnce(StoryContent.TaskScene(t.Id),()=>
+                {
+                    if (t.Kind == "encounter") { Say(t.Speaker,t.Introduction,BeginEncounter); return; }
+                    Say(t.Speaker,t.Introduction,()=>{if(t.Board!=null){State.PrepareBoard(t);Save();OpenBoard(MainBoard(t));}else CompleteTalk(t);});
+                }));
         }
         void CompleteTalk(AdventureTask task)
         {
+            if(task.SkipMinutes>0)TimeSystem.Instance?.SkipMinutes(task.SkipMinutes);
             if(State.Accept(task,0,out string feedback)) {Save();ObjectiveCompleted?.Invoke(task.Id);RefreshHud();}
             Say(task.Speaker,feedback,()=>{State.Finish(Content);Save();if(State.Completed)ShowEnding();else SetPlaying();});
         }
@@ -610,14 +834,55 @@ namespace Alif.Adventure
             var line=Content.Optional[Mathf.Min(State.Area,Content.Optional.Length-1)].Split('|');
             Say(line[0],line[1],()=>{string id=$"c{Chapter}.optional.{State.Area}";if(!State.Discoveries.Contains(id))State.Discoveries.Add(id);Save();});
         }
+        /// <summary>Gedung yang belum ada urusannya dikunci sampai rantai tugas di Buku Perjalanan
+        /// selesai — pemain baru tidak tersesat masuk sepuluh toko sebelum alur harinya jalan.
+        /// Yang tetap terbuka: gedung tempat tugas berikutnya.</summary>
+        /// <remarks>Sebagian gedung punya kuncinya sendiri: terbuka begitu tugas penanda selesai,
+        /// tanpa menunggu seluruh rantai. Kamar kos baru bisa dimasuki setelah Bu Siti memberi
+        /// alamatnya — sebelum itu Bu Tini menunggu di trotoar depan kos.</remarks>
+        static readonly (string area,string task)[] UnlockedByTask = { ("Kamar Alif","c1.rent") };
+
+        bool BuildingLocked(SceneDoor door) => door.EntersBuilding && BuildingLocked(door.DestinationArea);
+
+        bool BuildingLocked(int destinationArea)
+        {
+            var task = CurrentTask;
+            if (task == null) return false;                                  // rantai tugas selesai
+            if (destinationArea == task.Area) return false;                  // gedung tugas berikutnya
+            if (destinationArea < 0 || destinationArea >= Content.Areas.Length) return false;
+            foreach (var (area,unlock) in UnlockedByTask)
+                if (Content.Areas[destinationArea] == area) return State.Progress(unlock)?.Complete != true;
+            return true;
+        }
+
+        /// <summary>Pintu selalu bertanya dulu — pemain sering menyenggol pintu saat menyusuri
+        /// tepi ruangan, dan pindah area tanpa diminta membuat dia kehilangan arah.</summary>
         public void Travel(SceneDoor door)
         {
             if(!CanExplore)return;
             if(TutorialActive){Toast("Selesaikan atau lewati tutorial sebelum meninggalkan stasiun",5);return;}
+            if(BuildingLocked(door))
+            {
+                Toast($"Belum ada urusan di sini. Selesaikan dulu: {CurrentTask.Title}",5);
+                return;
+            }
+            ClearModal(CampaignActivity.Item);
+            var panel=Panel(_modal,new Vector2(.32f,.36f),new Vector2(.68f,.64f),Color.white);ApplySprite(panel,PixelSkin.Panel());
+            var p=panel.rectTransform;
+            Text(p,string.IsNullOrEmpty(door.ConfirmMessage)?"Pindah ke area lain?":door.ConfirmMessage,
+                new Vector2(.08f,.46f),new Vector2(.92f,.86f),22).alignment=TextAlignmentOptions.Center;
+            Button(p,"Ya",new Vector2(.1f,.14f),new Vector2(.48f,.38f),()=>{CloseModal();BeginTravel(door);});
+            Button(p,"Batal",new Vector2(.52f,.14f),new Vector2(.9f,.38f),CloseModal);
+            FocusFirst();
+        }
+
+        void BeginTravel(SceneDoor door)
+        {
             _transition=true;
             SceneFadeController.Instance.TransitionTo(_player,_player.GetComponent<Rigidbody2D>(),door.Destination,Camera.main.GetComponent<CameraFollow>(),()=>
             {
                 State.Area=door.DestinationArea;_transition=false;Save();RefreshHud();Toast("Memasuki"+" "+Content.Areas[State.Area],4);
+                PlayStoryOnce(StoryContent.AreaIntro(Content.Areas[State.Area]),null);
             });
         }
         public void Travel(int area)
@@ -650,7 +915,7 @@ namespace Alif.Adventure
         }
         void CloseModal()
         {
-            bool completedTutorialJournal=Activity==CampaignActivity.Journal&&TutorialActive&&State.TutorialStep==3;
+            bool completedTutorialJournal=Activity==CampaignActivity.Journal&&TutorialActive&&State.TutorialStep==7;
             if(_modal){_modal.gameObject.SetActive(false);Destroy(_modal.gameObject);}_buttons.Clear();SetPlaying();
             if(completedTutorialJournal)CompleteTutorial();
         }
@@ -743,6 +1008,24 @@ namespace Alif.Adventure
                 return (true,feedback);
             },
         };
+        /// <summary>Ikon kartu anggaran dipilih dari namanya — menu warung punya gambarnya sendiri,
+        /// papan anggaran lain (biaya kuliah, acara warga) memakai ikon koin.</summary>
+        static Sprite MenuIconFor(string card)
+        {
+            string name=card.ToLowerInvariant();
+            if(name.Contains("geprek"))return PixelSkin.ChickenIcon();
+            if(name.Contains("bakso")||name.Contains("soto"))return PixelSkin.BowlIcon();
+            if(name.Contains("nasi")||name.Contains("makan"))return PixelSkin.RiceIcon();
+            if(name.Contains("air"))return PixelSkin.BottleIcon();
+            if(name.Contains("teh")||name.Contains("kopi"))return PixelSkin.TeaIcon();
+            if(name.Contains("jus")||name.Contains("es ")||name.Contains("minum"))return PixelSkin.JuiceIcon();
+            return PixelSkin.CoinIcon();
+        }
+
+        /// <summary>Nama kebutuhan untuk judul langkah ("Makanan", "Minuman").</summary>
+        static string GroupLabel(ActivityBoard board,int group) =>
+            board.GroupNames!=null&&group<board.GroupNames.Length?board.GroupNames[group]:"Kebutuhan "+(group+1);
+
         void ShowPuzzle(string feedback=null)
         {
             var board=_board.Board;var placements=_board.Placements();
@@ -751,10 +1034,43 @@ namespace Alif.Adventure
             Text(p,board.Instruction,new Vector2(.04f,.67f),new Vector2(.96f,.77f),18);
             if(board.Kind=="budget")
             {
-                for(int i=0;i<board.Cards.Length;i++){int card=i;float y=.58f-i*.076f;bool chosen=placements[i]==1;
-                    Button(p,(chosen?"✓  ":"+  ")+board.Cards[i]+" • Rp"+board.Costs[i].ToString("N0"),new Vector2(.04f,y),new Vector2(.58f,y+.068f),()=>Place(card,chosen?0:1));}
+                // Satu kebutuhan per langkah: pilih makanan dulu, baru minuman. Kartunya besar
+                // dengan gambar, jadi pemain memilih dari gambar bukan dari daftar harga.
+                var groups=board.Groups.Where(g=>g>=0).Distinct().OrderBy(g=>g).ToArray();
+                int step=Array.FindIndex(groups,g=>!Enumerable.Range(0,board.Cards.Length).Any(i=>board.Groups[i]==g&&placements[i]==1));
+                int shown=step>=0?groups[step]:-1;
+                string title=step>=0
+                    ?$"LANGKAH {step+1} DARI {groups.Length}  —  PILIH {GroupLabel(board,groups[step]).ToUpperInvariant()}"
+                    :"PESANANMU  —  KLIK KARTU UNTUK MENGGANTI";
+                Text(p,title,new Vector2(.045f,.60f),new Vector2(.55f,.66f),16,PixelSkin.Accent);
+
+                var cards=shown>=0
+                    ?Enumerable.Range(0,board.Cards.Length).Where(i=>board.Groups[i]==shown).ToArray()
+                    :Enumerable.Range(0,board.Cards.Length).Where(i=>placements[i]==1).ToArray();
+                float width=Mathf.Min(.185f,.92f/Mathf.Max(1,cards.Length)),gap=.012f;
+                float left=.5f-(cards.Length*(width+gap)-gap)/2f;
+                for(int m=0;m<cards.Length;m++)
+                {
+                    int card=cards[m];bool chosen=placements[card]==1;
+                    float x=left+m*(width+gap);
+                    var b=Button(p,"",new Vector2(x,.245f),new Vector2(x+width,.585f),()=>Place(card,chosen?0:1));
+                    if(b.targetGraphic is Image face)ApplySprite(face,chosen?PixelSkin.Button():PixelSkin.Panel());
+                    var caption=b.GetComponentInChildren<TMP_Text>();
+                    caption.text=board.Cards[card]+"\nRp"+board.Costs[card].ToString("N0");
+                    caption.fontSize=Mathf.RoundToInt(14*_textScale);caption.alignment=TextAlignmentOptions.Center;
+                    caption.color=chosen?PixelSkin.TextLight:PixelSkin.TextDark;caption.margin=new Vector4(4,0,4,0);
+                    var captionRect=caption.rectTransform;
+                    captionRect.anchorMin=new Vector2(.04f,.06f);captionRect.anchorMax=new Vector2(.96f,.40f);
+                    captionRect.offsetMin=captionRect.offsetMax=Vector2.zero;
+                    Icon(b.transform,MenuIconFor(board.Cards[card]),new Vector2(.24f,.44f),new Vector2(.76f,.94f));
+                    if(chosen)Icon(b.transform,PixelSkin.CheckIcon(),new Vector2(.74f,.78f),new Vector2(.96f,.96f));
+                }
+
                 int total=board.Total(placements);
-                Text(p,"Dana tersedia\nRp"+board.Limit.ToString("N0")+"\n\nDialokasikan\nRp"+total.ToString("N0")+"\nSisa Rp"+(board.Limit-total).ToString("N0"),new Vector2(.63f,.23f),new Vector2(.95f,.66f),22,total>board.Limit?PixelSkin.Warning:PixelSkin.Accent);
+                // Sebaris dengan judul langkah (rata kanan) — di bawah kartu sudah ada baris umpan balik.
+                Text(p,$"Dana Rp{board.Limit:N0}  •  Dipesan Rp{total:N0}  •  Sisa Rp{board.Limit-total:N0}",
+                    new Vector2(.55f,.60f),new Vector2(.955f,.66f),16,total>board.Limit?PixelSkin.Warning:PixelSkin.Accent)
+                    .alignment=TextAlignmentOptions.Right;
             }
             else if(board.Kind=="inspect")
             {
@@ -763,13 +1079,13 @@ namespace Alif.Adventure
                 if(_board.Id=="c3.rules")Icon(face.transform,PromotionIcon,Vector2.zero,Vector2.one);
                 else {Text(face.transform,"RADIO  /  S-014",new Vector2(.02f,.62f),new Vector2(.98f,.96f),24,Paper);Text(face.transform,"▥   ───   ◉",new Vector2(.05f,.2f),new Vector2(.95f,.6f),40,Paper);}
                 for(int i=0;i<board.Cards.Length;i++){int card=i;float y=.55f-i*.09f;
-                    Button(p,(placements[i]==0?"✓ ":"Periksa: ")+board.Cards[i],new Vector2(.56f,y),new Vector2(.96f,y+.078f),()=>Place(card,0));}
+                    Button(p,(placements[i]==0?"Sudah • ":"Periksa: ")+board.Cards[i],new Vector2(.56f,y),new Vector2(.96f,y+.078f),()=>Place(card,0));}
             }
             else
             {
                 for(int i=0;i<board.Cards.Length;i++){int card=i;float h=.4f/board.Cards.Length,y=.63f-(i+1)*h;
                     bool done=placements[i]==board.Answers[i];
-                    var b=Button(p,(done?"✓ ":_selectedCard==i?"> ":"")+board.Cards[i],new Vector2(.04f,y),new Vector2(.51f,y+h-.008f),()=>{_selectedCard=card;ShowPuzzle();});b.interactable=!done;}
+                    var b=Button(p,(done?"Sudah • ":_selectedCard==i?"> ":"")+board.Cards[i],new Vector2(.04f,y),new Vector2(.51f,y+h-.008f),()=>{_selectedCard=card;ShowPuzzle();});b.interactable=!done;}
                 for(int i=0;i<board.Slots.Length;i++){int slot=i;float h=.4f/board.Slots.Length,y=.63f-(i+1)*h;
                     Button(p,(board.Kind=="flow"?"Urutan: ":"")+board.Slots[i],new Vector2(.57f,y),new Vector2(.96f,y+h-.008f),()=>{if(_selectedCard>=0)Place(_selectedCard,slot);else ShowPuzzle("Pilih kartu di kiri terlebih dahulu.");});}
             }
@@ -804,16 +1120,48 @@ namespace Alif.Adventure
             }
             else for(int i=0;i<b.Cards.Length;i++)if(placements[i]!=b.Answers[i]){Place(i,b.Answers[i]);return;}
         }
+        /// <summary>Satu baris Buku Perjalanan: 0 = belum dikerjakan, 1 = sedang dikerjakan,
+        /// 2 = selesai, 3 = catatan (bukan tugas, jadi tanpa kotak centang).</summary>
+        const int RowsPerJournalPage=5;
+
         void Journal(int page)
         {
             _journalPage=page;
-            var entries=Content.Tasks.Select(t=>(State.Progress(t.Id)?.Complete==true?"✓  ":t==CurrentTask?">  ":"•  ")+t.Title).Concat(State.Evidence.Select(e=>"CATATAN  /  "+e)).Concat(State.Discoveries.Select(id=>"CERITA WARGA  /  "+Content.Optional[Mathf.Clamp(int.Parse(id.Substring(id.Length-1)),0,Content.Optional.Length-1)].Replace('|',':'))).Concat(SideQuestJournalEntries()).ToArray();
-            int pages=Mathf.Max(1,(entries.Length+3)/4);_journalPage=Mathf.Clamp(page,0,pages-1);
+            var entries=Content.Tasks.Select(t=>(t.Title,State.Progress(t.Id)?.Complete==true?2:t==CurrentTask?1:0))
+                .Concat(State.Evidence.Select(e=>("Catatan  /  "+e,3)))
+                .Concat(State.Discoveries.Select(id=>("Cerita warga  /  "+Content.Optional[Mathf.Clamp(int.Parse(id.Substring(id.Length-1)),0,Content.Optional.Length-1)].Replace('|',':'),3)))
+                .Concat(SideQuestJournalEntries().Select(e=>(e.TrimStart('>','•','✓',' '),e.StartsWith("✓")?2:e.StartsWith(">")?1:0)))
+                .ToArray();
+            int pages=Mathf.Max(1,(entries.Length+RowsPerJournalPage-1)/RowsPerJournalPage);_journalPage=Mathf.Clamp(page,0,pages-1);
             var p=Card(CampaignActivity.Journal,$"BUKU PERJALANAN  /  HALAMAN {_journalPage+1} DARI {pages}",Content.Title);
-            for(int i=0;i<4;i++){int n=_journalPage*4+i;if(n>=entries.Length)break;Text(p,entries[n],new Vector2(.04f,.61f-i*.14f),new Vector2(.96f,.75f-i*.14f),20);}
+            for(int i=0;i<RowsPerJournalPage;i++)
+            {
+                int n=_journalPage*RowsPerJournalPage+i;if(n>=entries.Length)break;
+                JournalRow(p,entries[n].Item1,entries[n].Item2,.70f-i*.115f);
+            }
             Button(p,"< Sebelumnya",new Vector2(.04f,.03f),new Vector2(.26f,.12f),()=>Journal(_journalPage-1)).interactable=_journalPage>0;
             Button(p,"Berikutnya >",new Vector2(.29f,.03f),new Vector2(.51f,.12f),()=>Journal(_journalPage+1)).interactable=_journalPage<pages-1;
             Button(p,"Kembali",new Vector2(.74f,.03f),new Vector2(.96f,.12f),CloseModal);FocusFirst();
+        }
+
+        /// <summary>Satu baris daftar tugas: kotak centang + judulnya. Yang sedang dikerjakan
+        /// memakai kotak oranye, yang selesai dicentang dan teksnya diredupkan, catatan warga
+        /// tanpa kotak (bukan tugas).</summary>
+        void JournalRow(RectTransform parent,string label,int state,float y)
+        {
+            var row=CampaignUI.Rect(parent,"Row",new Vector2(.05f,y),new Vector2(.95f,y+.105f));
+            if(state<3)
+            {
+                var box=CampaignUI.Rect(row,"Box",new Vector2(0,.5f),new Vector2(0,.5f));
+                box.pivot=new Vector2(0,.5f);box.sizeDelta=new Vector2(30,30);
+                var boxImage=box.gameObject.AddComponent<Image>();
+                ApplySprite(boxImage,state==1?PixelSkin.Button():PixelSkin.Panel());
+                if(state==2)Icon(box,PixelSkin.CheckIcon(),new Vector2(.12f,.16f),new Vector2(.88f,.84f));
+            }
+            var text=Text(row,label,new Vector2(.045f,0f),new Vector2(1f,1f),19,
+                state==2?new Color(PixelSkin.TextDark.r,PixelSkin.TextDark.g,PixelSkin.TextDark.b,.5f):PixelSkin.TextDark);
+            text.alignment=TextAlignmentOptions.Left;text.fontStyle=state==1?FontStyles.Bold:FontStyles.Normal;
+            text.textWrappingMode=TextWrappingModes.NoWrap;text.overflowMode=TextOverflowModes.Ellipsis;
         }
         /// <summary>Popup "Aku mendapatkan …" bergaya kartu hadiah: nama barang, ikon di kotak
         /// slot, tombol OK.</summary>
@@ -856,6 +1204,7 @@ namespace Alif.Adventure
         /// <summary>Kartu Tas: semua slot InventorySystem dengan ikon, nama, dan jumlah.</summary>
         void Bag()
         {
+            CoachOpened(6);                       // langkah tutorial "Tas" selesai saat dibuka
             var p=Card(CampaignActivity.Bag,"TAS  /  BARANG BAWAAN","Isi tas Alif");
             var slots=InventorySystem.Instance?InventorySystem.Instance.Slots:null;
             bool any=false;

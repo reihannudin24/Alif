@@ -12,6 +12,9 @@ namespace Alif.Adventure
         public float Duration = 1.2f;
 
         Animator _animator;
+        /// <summary>Tinggi balon emote di dunia (tokoh ≈ .85 unit) dan jaraknya dari ubun-ubun.</summary>
+        const float EmoteHeight = .42f, EmoteGap = .22f;
+
         Sprite _idleSprite;
         SpriteRenderer _emote;
         Coroutine _reaction, _idle;
@@ -52,10 +55,18 @@ namespace Alif.Adventure
             {
                 if (!_emote)
                 {
-                    var child = new GameObject("Sprite emote"); child.transform.SetParent(transform, false); child.transform.localPosition = new Vector3(0, 1.2f);
+                    var child = new GameObject("Sprite emote"); child.transform.SetParent(transform, false);
                     _emote = child.AddComponent<SpriteRenderer>(); _emote.sortingOrder = 110;
                 }
                 _emote.sprite = EmoteSprite; _emote.gameObject.SetActive(true);
+                // Banyak NPC/prop diskalakan supaya sprite-nya seragam (localScale bisa belasan kali),
+                // dan skala itu diwariskan ke anaknya. Tanpa dinormalkan, balon emote ikut membesar
+                // sampai menutupi layar. Tingginya dikunci EmoteHeight unit dunia.
+                float owner = Mathf.Abs(transform.lossyScale.y) < .0001f ? 1f : Mathf.Abs(transform.lossyScale.y);
+                float art = EmoteSprite.bounds.size.y <= .0001f ? 1f : EmoteSprite.bounds.size.y;
+                _emote.transform.localScale = Vector3.one * (EmoteHeight / art / owner);
+                float head = Body && Body.sprite ? Body.sprite.bounds.max.y : 1f;
+                _emote.transform.localPosition = new Vector3(0f, head + EmoteGap / owner, 0f);
             }
             yield return new WaitForSeconds(Duration);
             Restore(); _reaction = null;

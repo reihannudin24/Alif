@@ -25,13 +25,19 @@ namespace Alif.World
         private bool _promptShown;
         private Alif.Adventure.AdventureGame _adventure;
         public Transform Destination => _destination;
+        /// <summary>Pertanyaan yang dipakai popup konfirmasi ("Keluar ke Jalan Pasar?").</summary>
+        public string ConfirmMessage => _confirmMessage;
+        /// <summary>Pintu masuk ke dalam gedung (bukan jalur jalan kaki antar jalan). Dipakai
+        /// AdventureGame untuk mengunci gedung yang belum ada urusannya.</summary>
+        public bool EntersBuilding { get; private set; }
         public int SourceArea { get; private set; }
         public int DestinationArea { get; private set; }
         /// <summary>Dipakai CityWorld saat merakit pintu kota runtime (tidak ada prefab-nya).</summary>
-        public void Configure(Transform destination, string confirmMessage)
+        public void Configure(Transform destination, string confirmMessage, bool entersBuilding = false)
         {
             _destination = destination;
             if (!string.IsNullOrEmpty(confirmMessage)) _confirmMessage = confirmMessage;
+            EntersBuilding = entersBuilding;
         }
 
         public void Bind(Alif.Adventure.AdventureGame game, int source, int destination)

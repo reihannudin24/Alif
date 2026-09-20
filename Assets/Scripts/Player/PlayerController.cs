@@ -93,7 +93,10 @@ namespace Alif.Player
         public Vector2 MoveInput => _moveInput;
         public bool IsSprinting => _isSprinting;
         private Vector2 _adventureDirection;
-        public void ConfigureAdventure() { _interactableLayer = 1 << 7; _interactRadius = 1.35f; _moveSpeed = 3f; }
+        /// <summary>Mode Adventure: jangkauan interaksi lebih jauh dan langkah lebih pelan. 2 unit/detik
+        /// dipilih setelah seluruh dunia dikecilkan ke 1 petak = 0,3125 unit (INTERIOR_SCALE) — pada
+        /// 3 unit/detik yang lama, Alif menyeberangi satu ruangan dalam dua detik.</summary>
+        public void ConfigureAdventure() { _interactableLayer = 1 << 7; _interactRadius = 1.35f; _moveSpeed = 2f; }
         public void SetAdventureDirection(Vector2 direction) { _adventureDirection = direction; }
 
         // Jalan otomatis (mis. adegan masuk di awal game): Player berjalan sendiri ke titik

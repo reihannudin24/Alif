@@ -24,10 +24,22 @@ namespace Alif.Adventure
         /// (roads di city.json): <c>west</c> ada di kiri <c>east</c>.</summary>
         [Serializable] public sealed class Road { public string west, east; }
 
+        /// <summary>Pintu dari map kota ke interior yang tinggal di scene bab (sceneDoors di
+        /// city.json): <c>map</c> map kotanya, <c>area</c> nama area scene tujuannya.</summary>
+        [Serializable] public sealed class RetiredArea
+        { public string area, to; public int x, y; public string[] keep; }
+
+        [Serializable] public sealed class SceneDoorSpec
+        { public string map, area, label; public int x, y, h, landX, landY; }
+
         [Serializable] public sealed class MapSpec
         {
             public string id, area, file;
-            public int width, height, spawnX, spawnY;
+            /// <summary>Ukuran map dalam petak. Pecahan karena interior dikecilkan lewat `scale`
+            /// di generate_city.py (INTERIOR_SCALE) — gambarnya tetap resolusi penuh, PPU impornya
+            /// yang dinaikkan.</summary>
+            public float width, height;
+            public int spawnX, spawnY;
             public PixelRect[] walk, blocks;
             public NpcSpot[] npcs;
             public Door[] doors;
@@ -40,6 +52,12 @@ namespace Alif.Adventure
             public MapSpec[] maps;
             public Pin[] pins;
             public Road[] roads;
+            public SceneDoorSpec[] sceneDoors;
+            /// <summary>Area scene yang sudah tidak dipakai lagi: isinya dimatikan runtime dan
+            /// penghuninya pindah ke <c>to</c> pada titik (x, y).</summary>
+            public RetiredArea[] retired;
+            /// <summary>Prop scene yang sudah tidak cocok dengan interior berlukisan.</summary>
+            public string[] hiddenProps;
         }
 
         /// <summary>Tepi kiri/kanan sebuah map jalan: strip pemicu setinggi lantainya, plus titik
@@ -51,8 +69,31 @@ namespace Alif.Adventure
             public Vector2[] Centers, Spawns;
             public readonly Dictionary<string, (string area, Vector2 position)> Npcs = new Dictionary<string, (string, Vector2)>();
             /// <summary>Pintu masuk per map: titik lantai di depan pintu, tinggi bebas penanda (unit), label.</summary>
-            public readonly List<(string area, Vector2 foot, float height, string label)> Entrances =
-                new List<(string, Vector2, float, string)>();
+            public readonly List<(string area, Vector2 foot, float height, string label, string destination)> Entrances =
+                new List<(string, Vector2, float, string, string)>();
+            /// <summary>Map yang punya latar malam (Kota/&lt;file&gt;_Malam): latar siangnya ditukar
+            /// saat malam lewat <see cref="SetNight"/>.</summary>
+            readonly List<(SpriteRenderer renderer, Sprite day, Sprite night)> _nightSwaps =
+                new List<(SpriteRenderer, Sprite, Sprite)>();
+            bool _night;
+
+            internal void AddNightSwap(SpriteRenderer renderer, Sprite day, Sprite night) =>
+                _nightSwaps.Add((renderer, day, night));
+
+            /// <summary>Tukar latar siang/malam. Aman dipanggil tiap frame: hanya bekerja saat berubah.</summary>
+            public void SetNight(bool night)
+            {
+                if (night == _night) return;
+                _night = night;
+                foreach (var (renderer, day, dark) in _nightSwaps)
+                    if (renderer) renderer.sprite = night ? dark : day;
+            }
+
+            /// <summary>Pemeta piksel map → dunia per map kota, untuk memasang pintu tambahan
+            /// setelah kota berdiri (mis. pintu ke interior yang tinggal di scene bab).</summary>
+            public readonly Dictionary<string, Func<float, float, Vector2>> Worlds =
+                new Dictionary<string, Func<float, float, Vector2>>();
+
             /// <summary>Tepi barat/timur tiap map kota, untuk jalur jalan kaki antar area.</summary>
             public readonly Dictionary<string, RoadEdge> WestEdges = new Dictionary<string, RoadEdge>();
             public readonly Dictionary<string, RoadEdge> EastEdges = new Dictionary<string, RoadEdge>();
@@ -65,6 +106,8 @@ namespace Alif.Adventure
         // sengaja 36 px (> 1 unit): kalau lebih dekat, pemain mendarat di dalam strip tepi map
         // tujuan dan langsung terlempar balik.
         const float RoadEdgeInset = 10f, RoadLandingInset = 46f, RoadEdgeWidth = .5f;
+        /// <summary>Akhiran file lukisan malam (lihat NIGHT_SUFFIX di generate_city.py).</summary>
+        const string NightSuffix = "_Malam";
 
         static Spec _spec;
 
@@ -101,6 +144,9 @@ namespace Alif.Adventure
                 var background = mapRoot.gameObject.AddComponent<SpriteRenderer>();
                 background.sprite = Resources.Load<Sprite>("Kota/" + map.file);
                 background.sortingOrder = 0;
+                // Latar malam opsional (mis. Kafe Senja): lukisan kedua dengan lampu menyala.
+                var nightSprite = Resources.Load<Sprite>("Kota/" + map.file + NightSuffix);
+                if (nightSprite) built.AddNightSwap(background, background.sprite, nightSprite);
                 mapRoot.gameObject.AddComponent<CameraBounds>().Configure(mapRoot.position, size / 2f);
 
                 foreach (var rect in map.walk) AddBox(mapRoot, "WalkableArea", World(rect.x, rect.y + rect.h), rect, spec.ppu, true);
@@ -123,6 +169,7 @@ namespace Alif.Adventure
                 built.Spawns[i] = World(map.spawnX, map.spawnY);
                 foreach (var npc in map.npcs) built.Npcs[npc.id] = (map.area, World(npc.x, npc.y));
                 places[map.area] = (mapRoot, World);
+                built.Worlds[map.area] = World;
             }
 
             // Pintu dipasang setelah semua map berdiri: tujuannya ada di map lain yang mungkin
@@ -133,10 +180,10 @@ namespace Alif.Adventure
                 foreach (var door in map.doors)
                 {
                     Vector2 foot = here.world(door.x, door.y);
-                    built.Entrances.Add((map.area, foot, door.h / spec.ppu, door.label));
+                    built.Entrances.Add((map.area, foot, door.h / spec.ppu, door.label, door.area));
                     if (!places.TryGetValue(door.area, out var there))
                     { Debug.LogError($"[Alif] Pintu {map.area} → {door.area}: area tujuan tidak ada di city.json."); continue; }
-                    AddDoor(here.root, there.root, foot, there.world(door.tx, door.ty), door.area);
+                    AddDoor(here.root, there.root, foot, there.world(door.tx, door.ty), door.area, door.label);
                 }
             }
             Physics2D.SyncTransforms();
@@ -171,7 +218,7 @@ namespace Alif.Adventure
 
         /// <summary>Trigger SceneDoor + titik mendarat di area tujuan. Titik mendaratnya sengaja
         /// dijauhkan dari trigger seberang supaya pemain tidak langsung terpental balik.</summary>
-        static void AddDoor(Transform parent, Transform destinationMap, Vector2 position, Vector2 destination, string destinationArea)
+        static void AddDoor(Transform parent, Transform destinationMap, Vector2 position, Vector2 destination, string destinationArea, string label = null)
         {
             var landing = new GameObject("Door landing " + destinationArea);
             landing.transform.SetParent(destinationMap, false);
@@ -183,7 +230,8 @@ namespace Alif.Adventure
             var box = go.AddComponent<BoxCollider2D>();
             box.size = DoorTriggerSize;
             box.isTrigger = true;
-            go.AddComponent<SceneDoor>().Configure(landing.transform, "Masuk ke " + destinationArea + "?");
+            go.AddComponent<SceneDoor>().Configure(landing.transform,
+                (label == "OUT" ? "Keluar ke " : "Masuk ke ") + destinationArea + "?", label != "OUT");
         }
 
         static void AddBox(Transform parent, string name, Vector2 bottomLeft, PixelRect rect, float ppu, bool walkable)

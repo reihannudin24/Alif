@@ -33,8 +33,10 @@ namespace Alif.Adventure
             Spawns = Spawns.Concat(_city.Spawns).ToArray();
             if (Centers.Length != Content.Areas.Length)
                 Debug.LogError($"[Alif] Jumlah area tidak cocok: {Centers.Length} pusat vs {Content.Areas.Length} nama area.");
+            BuildSceneDoors();
             BuildEntranceMarkers();
             BuildRoadDoors();
+            RetireUnusedAreas();
         }
 
         /// <summary>Penanda pintu masuk gedung kota: label ("IN") + panah bawah melayang bebas di
@@ -45,10 +47,12 @@ namespace Alif.Adventure
         {
             const float Gap = .12f;          // jarak panah dari puncak serambi/kusen
             const float ArrowScale = 1.4f;   // sprite 10 px pada PPU 33 ≈ .3 unit — dinaikkan agar terbaca
-            foreach (var (area, foot, height, label) in _city.Entrances)
+            foreach (var (area, foot, height, label, destination) in _city.Entrances)
             {
                 var root = new GameObject("Entrance " + area + " " + label);
                 root.transform.position = foot;
+                // Penanda gedung yang terkunci disembunyikan (lihat RefreshEntranceMarkers).
+                if (label != "OUT") _entranceMarkers.Add((root, Array.IndexOf(Content.Areas, destination)));
 
                 var arrow = new GameObject("Arrow").AddComponent<SpriteRenderer>();
                 arrow.transform.SetParent(root.transform, false);
@@ -61,6 +65,103 @@ namespace Alif.Adventure
 
                 var text = WorldLabel(root.transform, label, arrowY + arrow.sprite.bounds.extents.y * ArrowScale + .10f, .45f, PixelSkin.Cream);
                 text.outlineColor = PixelSkin.Outline; text.outlineWidth = .3f;
+            }
+        }
+
+        // ───────────────────── Pintu kota → interior di scene bab ─────────────────────
+
+        /// <summary>Memasang pintu dari fasad toko di map kota ke interior yang tinggal di scene
+        /// bab (<c>sceneDoors</c> di city.json). Warung Bu Siti dipakai begini: interiornya tetap
+        /// yang digambar tangan di scene, tapi masuknya sekarang lewat etalase Toko Kelontong di
+        /// Jalan Pasar — area luar lamanya ("Depan warung") dipensiunkan.</summary>
+        void BuildSceneDoors()
+        {
+            var spec = CityWorld.Load();
+            if (spec?.sceneDoors == null) return;
+            var root = new GameObject("Pintu kota ke scene").transform;
+            foreach (var entry in spec.sceneDoors)
+            {
+                int inside = Array.IndexOf(Content.Areas, entry.area);
+                if (inside < 0 || !_city.Worlds.TryGetValue(entry.map, out var world)) continue;
+                var inward = InwardDoor(inside);                     // pintu lama yang menuju interior
+                var outward = SideDoor(inside, null);                // pintu keluar interior
+                if (!inward || !outward) continue;
+
+                // Sisi kota: trigger baru di fasad, mendarat di titik masuk interior yang sudah ada.
+                Vector2 foot = world(entry.x, entry.y);
+                var landing = new GameObject("Scene landing " + entry.area).transform;
+                landing.SetParent(root, false);
+                landing.position = inward.Destination.position;
+                var go = new GameObject($"Door {entry.map} → {entry.area}");
+                go.transform.SetParent(root, false);
+                go.transform.position = foot;
+                var box = go.AddComponent<BoxCollider2D>();
+                box.size = new Vector2(1.1f, .5f);
+                box.isTrigger = true;
+                go.AddComponent<SceneDoor>().Configure(landing, "Masuk ke " + entry.area + "?", true);
+                _city.Entrances.Add((entry.map, foot, entry.h / CityWorld.Load().ppu, entry.label, entry.area));
+
+                // Sisi interior: pintu keluarnya diarahkan ke trotoar depan fasad itu.
+                var back = new GameObject("Scene landing " + entry.map).transform;
+                back.SetParent(root, false);
+                back.position = world(entry.landX, entry.landY);
+                outward.Configure(back, "Keluar ke " + entry.map + "?");
+            }
+        }
+
+        /// <summary>Pintu mana pun yang tujuannya area ini (dipakai untuk meminjam titik
+        /// mendaratnya), dan pintu mana pun yang ada di dalam area ini.</summary>
+        SceneDoor InwardDoor(int area)
+        {
+            foreach (var door in FindObjectsByType<SceneDoor>(FindObjectsSortMode.None))
+                if (door.Destination && AreaOf(door.Destination.position) == area && AreaOf(door.transform.position) != area)
+                    return door;
+            return null;
+        }
+
+        /// <summary>Area scene yang sudah tidak dipakai: latar, prop, dan NPC-nya dimatikan, pintu
+        /// yang masih menuju ke sana dilucuti, dan pemain yang checkpoint-nya tersimpan di sana
+        /// dipindahkan ke area terdekat yang masih hidup.</summary>
+        void RetireUnusedAreas()
+        {
+            var spec = CityWorld.Load();
+            if (spec == null) return;
+            // Prop tempelan yang kalah oleh lukisan interiornya (rak saji bambu di Warung Bu Siti).
+            if (spec.hiddenProps != null)
+                foreach (var point in FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                    if (Array.IndexOf(spec.hiddenProps, point.name) >= 0) point.gameObject.SetActive(false);
+            if (spec.retired == null || spec.retired.Length == 0) return;
+            foreach (var retired in spec.retired)
+            {
+                int area = Array.IndexOf(Content.Areas, retired.area);
+                int host = Array.IndexOf(Content.Areas, retired.to);
+                if (area < 0 || host < 0 || !_city.Worlds.TryGetValue(retired.to, out var world)) continue;
+                Vector2 spot = world(retired.x, retired.y);
+                foreach (var door in FindObjectsByType<SceneDoor>(FindObjectsSortMode.None))
+                    if (door.Destination && AreaOf(door.Destination.position) == area) door.gameObject.SetActive(false);
+
+                // Hanya warga yang didaftarkan di 'keep' yang ikut pindah — sisanya duplikat dari
+                // tokoh yang sudah berdiri di dalam gedungnya, jadi dimatikan bersama latar & prop
+                // supaya trotoar penggantinya tidak sesak.
+                foreach (var point in FindObjectsByType<AdventurePoint>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                {
+                    var go = point.transform.root.gameObject;
+                    if (AreaOf(go.transform.position) != area) continue;
+                    if (retired.keep == null || Array.IndexOf(retired.keep, point.Target) < 0) { go.SetActive(false); continue; }
+                    go.transform.position = spot;                // di balik meja dagangan, bukan di jalur pemain
+                    point.Area = host;
+                }
+                foreach (var renderer in FindObjectsByType<SpriteRenderer>(FindObjectsSortMode.None))
+                {
+                    var go = renderer.transform.root.gameObject;
+                    // BuildCity() berjalan sebelum BindOriginalScene(), jadi _player masih null di
+                    // sini — pemain dikenali lewat tag, bukan lewat referensinya.
+                    if (go.CompareTag("Player") || go.GetComponentInChildren<Alif.Player.PlayerController>()) continue;
+                    if (AreaOf(go.transform.position) == area) go.SetActive(false);
+                }
+                // Checkpoint yang tersimpan di area pensiunan: cukup pindahkan areanya dan lupakan
+                // koordinatnya — BindOriginalScene() akan menaruh pemain di titik spawn area baru.
+                if (State.Area == area) { State.Area = host; State.HasPosition = false; }
             }
         }
 
@@ -138,16 +239,17 @@ namespace Alif.Adventure
         }
 
         /// <summary>Pintu scene terluar di sisi kiri/kanan sebuah area (diukur dari pusat areanya).</summary>
-        SceneDoor SideDoor(int area, bool east)
+        SceneDoor SideDoor(int area, bool? east)
         {
             SceneDoor best = null;
             foreach (var door in FindObjectsByType<SceneDoor>(FindObjectsSortMode.None))
             {
                 if (AreaOf(door.transform.position) != area) continue;
+                if (east == null) return door;                       // sisi mana pun (pintu tunggal)
                 float offset = door.transform.position.x - Centers[area].x;
-                if (east ? offset <= .5f : offset >= -.5f) continue;
-                if (!best || (east ? door.transform.position.x > best.transform.position.x
-                                   : door.transform.position.x < best.transform.position.x)) best = door;
+                if (east.Value ? offset <= .5f : offset >= -.5f) continue;
+                if (!best || (east.Value ? door.transform.position.x > best.transform.position.x
+                                         : door.transform.position.x < best.transform.position.x)) best = door;
             }
             return best;
         }
@@ -171,6 +273,18 @@ namespace Alif.Adventure
             label.outlineColor = PixelSkin.Outline; label.outlineWidth = .3f;
         }
 
+        /// <summary>Penanda pintu masuk gedung + area tujuannya, untuk disembunyikan selama
+        /// gedungnya masih terkunci (rantai tugas Buku Perjalanan belum sampai ke sana).</summary>
+        readonly List<(GameObject root, int destination)> _entranceMarkers = new List<(GameObject, int)>();
+
+        /// <summary>Sembunyikan panah "IN" di gedung yang belum ada urusannya, tampilkan lagi
+        /// begitu tugasnya pindah ke sana atau rantai tugasnya selesai.</summary>
+        void RefreshEntranceMarkers()
+        {
+            foreach (var (root, destination) in _entranceMarkers)
+                if (root) root.SetActive(destination < 0 || !BuildingLocked(destination));
+        }
+
         readonly Dictionary<string, TMP_Text> _questMarkers = new Dictionary<string, TMP_Text>();
         bool _restoringInventory;
 
@@ -181,7 +295,10 @@ namespace Alif.Adventure
                 if (State.PickedUp.Contains(pickup.ItemName)) pickup.MarkCollected();
             ItemPickup.Collected -= RecordPickup;
             ItemPickup.Collected += RecordPickup;
-            SyncStoryDay(false);
+            // Sesi pertama sebuah bab: jamnya disetel ke jam kedatangan (Bab 1 tiba pukul 13.00).
+            // Sesi lanjutan memakai jam berjalan supaya checkpoint tidak memundurkan waktu.
+            if (State.HasPosition) SyncStoryDay(false);
+            else TimeSystem.Instance?.SetStoryDay(State.Day, true, Content.StartHour);
             WatchClock();
             BuildQuestNpcs();
         }
@@ -319,6 +436,12 @@ namespace Alif.Adventure
         {
             if (TutorialActive) { Toast("Selesaikan atau lewati tutorial sebelum membantu warga", 4); return; }
             if (npc == CaseContent.Bed) { InteractBed(); return; }
+            // Warga kota bisa sekaligus jadi sasaran tugas bab (Bu Tini dengan sewa kamar). Tugas
+            // utama menang atas obrolan santai; Interact(nama) yang menangani dialog & papannya.
+            var mainTask = CurrentTask;
+            var resident = SideQuestContent.Npc(npc);
+            if (mainTask != null && resident != null && mainTask.Target == resident.Name && mainTask.Area == State.Area)
+            { Interact(resident.Name); return; }
             var intro = StoryContent.NpcIntro(npc);
             if (!StorySeen(intro)) { PlayStoryOnce(intro, () => InteractQuestNpc(npc)); return; }
             var info = SideQuestContent.Npc(npc);

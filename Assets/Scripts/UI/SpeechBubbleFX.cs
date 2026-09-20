@@ -29,8 +29,12 @@ namespace Alif.UI
             bubble.sprite = PixelSkin.SpeechBubble();
             bubble.sortingOrder = YSortOrder.PromptOrderBase + 28;
 
-            go.transform.localScale = Vector3.one * (Height / bubble.sprite.bounds.size.y);
-            go.transform.localPosition = new Vector3(OffsetX, HeadTop(owner) + OffsetAboveHead, 0f);
+            // Banyak prop/NPC di scene diskalakan agar sprite-nya seragam (mis. localScale 20 untuk
+            // sprite mungil). Skala itu diwariskan ke anaknya, jadi balon ikut membesar puluhan kali.
+            // Dibagi lossyScale supaya ukurannya selalu Height unit dunia, apa pun induknya.
+            float ownerScale = Mathf.Abs(owner.lossyScale.y) < .0001f ? 1f : Mathf.Abs(owner.lossyScale.y);
+            go.transform.localScale = Vector3.one * (Height / bubble.sprite.bounds.size.y / ownerScale);
+            go.transform.localPosition = new Vector3(OffsetX / ownerScale, HeadTop(owner) + OffsetAboveHead / ownerScale, 0f);
             go.AddComponent<FloatingPrompt>();   // meng-cache posisi & skala di Awake, jadi dipasang terakhir
             return go;
         }
