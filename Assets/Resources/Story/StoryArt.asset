@@ -22,7 +22,15 @@ MonoBehaviour:
   - Key: warung_depan
     Art: {fileID: 21300000, guid: 2294a436c521a43948389b4915be6ac6, type: 3}
   - Key: warung_dalam
-    Art: {fileID: 21300000, guid: 6927790b8a3fc4a66a1d1924664af17c, type: 3}
+    Art: {fileID: 21300000, guid: 9b5b37aa65ee4976b7e832b91c8e1406, type: 3}
+  - Key: warung_dapur
+    Art: {fileID: 21300000, guid: f607590db68c4236bcfd996505440f2c, type: 3}
+  - Key: warung_sambut
+    Art: {fileID: 21300000, guid: 06d0f74e1aa34ca6841001d03d043498, type: 3}
+  - Key: warung_antar
+    Art: {fileID: 21300000, guid: be48498168b5459bbd04c9a527bf97e3, type: 3}
+  - Key: warung_raka
+    Art: {fileID: 21300000, guid: 03e20a3dc33a46cd8ce658e4044fbb0e, type: 3}
   - Key: kos_halaman
     Art: {fileID: 21300000, guid: bbe7f8514221e4030b05d80e5341355c, type: 3}
   - Key: kos_lantai1
@@ -30,7 +38,7 @@ MonoBehaviour:
   - Key: kos_kamar
     Art: {fileID: 21300000, guid: 3170e6e1e101f4a69836fe9c5d82b4f3, type: 3}
   - Key: panel_tiba
-    Art: {fileID: 21300000, guid: a9bb8427272a448e1ada0e36960700dd, type: 3}
+    Art: {fileID: 21300000, guid: 9417a0347cc54de4a2696e0f6c20cf8a, type: 3}
   - Key: panel_kereta
     Art: {fileID: 21300000, guid: 8dfffb9977d814a0ebff509dadd04174, type: 3}
   - Key: panel_perut

@@ -24,6 +24,14 @@ namespace Alif.Adventure
             {
                 Array.Find(c.Tasks, t => t.Id == "c1.resolve").Cost = 18000;
                 Array.Find(c.Tasks, t => t.Id == "c1.meal").SkipMinutes = 10;   // waktu makan
+                // Tawaran Raka dinilai bebas (papan Free): penutupnya mengikuti ketepatan penilaian Alif.
+                var offer = Array.Find(c.Tasks, t => t.Id == "c1.offer");
+                offer.Outcomes = new[]
+                {
+                    "Menurut penilaianmu tawaran itu aman, dan Bu Siti sedang terdesak. Ia menandatangani malam itu juga; KTP-nya ikut dibawa Raka. Alif mencatatnya dengan perasaan tidak enak.",
+                    "Bu Siti ragu. Sebagian syaratnya terdengar wajar, sebagian tidak — ia meminta waktu dan menyimpan map itu di laci kasir. Keputusannya menggantung sampai besok.",
+                    offer.Outcome,
+                };
                 Array.Find(c.Tasks, t => t.Id == "c1.rent").Cost = 40000;       // sewa malam pertama
                 c.StartHour = 13;                                               // turun dari kereta siang hari
             }
@@ -68,14 +76,15 @@ namespace Alif.Adventure
             Optional=new[]{"Petugas stasiun|Warung Bu Siti ada di sebelah timur. Di kampung ini, orang masih saling menitipkan kabar lewat warung. Papan arah akan membantumu pulang juga.","Raka|Aku sedang mencari kerja sambilan. Kadang malu mengaku uangku terbatas. Terima kasih sudah bertanya sebelum menghakimi.","Bu Siti|Aku menulis harga besar-besar supaya setiap orang bisa memilih dengan tenang. Kalau ada yang tidak jelas, tanyakan sebelum memesan."},
             Tasks=new[]{
                 T("c1.arrival",0,"Papan arah","Alif","Baca petunjuk — papan stasiun","Papan menunjukkan jalan keluar stasiun dan arah Warung Bu Siti di sebelah timur. Periksa arah sebelum melanjutkan perjalanan.","Warung berada di timur. Ikuti penanda KELUAR menuju gang, lalu MASUK Warung Bu Siti."),
-                T("c1.menu",2,"Papan menu","Bu Siti","Susun pesanan — papan menu","Selamat datang, Nak! Harga di papan berlaku untuk semua. Sisihkan dulu uang perjalananmu, lalu pilih makanan dan minuman tanpa melewati Rp20.000. Jangan sungkan bertanya sebelum memesan.","Pesanan dicatat: nasi telur dan es teh, total Rp18.000. Belum ada uang yang dipotong; struknya menunggu di meja dekat jendela.","budget",
+                T("c1.menu",2,"Papan menu","Bu Siti","Susun pesanan — papan menu","Harga di papan berlaku untuk semua, Nak. Sisihkan dulu uang perjalananmu, lalu pilih makanan dan minuman tanpa melewati Rp20.000. Jangan sungkan bertanya sebelum memesan.","Pesanan dicatat: nasi telur dan es teh, total Rp18.000. Belum ada uang yang dipotong; struknya menunggu di meja dekat jendela.","budget",
                     S("Pilih lauk agar es teh Rp6.000 tetap masuk anggaran.","ANGGARAN 20.000  |  Minuman 6.000  |  Batas lauk 14.000","Nasi telur Rp12.000 menyisakan Rp8.000, cukup untuk minuman Rp6.000.",1,"Ayam geprek • 18.000","Nasi telur • 12.000","Paket spesial • 22.000"),
                     S("Masukkan minuman sesuai pesanan.","Nasi telur 12.000  +  ?  =  total maksimal 20.000","Es teh Rp6.000 membuat total Rp18.000; masih ada Rp2.000 dari anggaran makan.",2,"Jus • 10.000","Kopi susu • 12.000","Es teh • 6.000"),
                     S("Pisahkan sisa anggaran makan.","20.000 − 12.000 − 6.000 = ?","Sisa Rp2.000 tetap milik Alif. Tidak perlu dihabiskan hanya karena sudah dianggarkan.",0,"Simpan 2.000","Tambah kerupuk 4.000","Anggap tidak ada sisa"),
                     S("Konfirmasi harga sebelum pesanan dibuat.","Nasi telur 12.000 / Es teh 6.000 / Tidak ada biaya lain","Kesepakatan pesanan memuat barang, jumlah, dan total yang jelas.",1,"Bayar berapa saja nanti","Pesan dua item • total 18.000","Minta paket tanpa harga")),
                 // Urutan warung mengikuti alur nyata: lihat papan menu → duduk & makan (adegan
                 // Bu Siti mengantar pesanan) → baru struknya ketahuan keliru saat membayar.
-                T("c1.meal",2,"Meja jendela","Bu Siti","Nikmati pesananmu — meja jendela","Pesanan datang ke meja: nasi telur hangat dan es teh. Makan dulu, tidak perlu buru-buru.","Makan selesai. Di kasir ada tamu yang bicara keras soal pinjaman — bayar dulu, lalu urus itu."),
+                // Introduction "c1.meal" kosong: pembukanya adegan TaskScene; Raka masuk di TaskOutro.
+                T("c1.meal",2,"Meja jendela","Bu Siti","Nikmati pesananmu — meja jendela","","Makan selesai. Di kasir ada tamu yang bicara keras soal pinjaman — bayar dulu, lalu urus itu."),
                 // Dua baris keliru saja — baris yang sudah benar dan baris total dulu ikut dikartukan,
                 // dan itu membuat papannya terasa berat tanpa menambah pelajaran apa pun.
                 T("c1.receipt",2,"Bu Siti","Alif","Periksa struk — kasir","Di kasir, struknya tertulis Rp28.000 padahal pesananmu Rp18.000. Ada dua baris yang tidak cocok — pasangkan tiap baris itu dengan tindakan yang benar sebelum membayar.","Struk diperbaiki: nasi telur Rp12.000 + es teh Rp6.000 = Rp18.000.","match",

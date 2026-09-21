@@ -181,6 +181,13 @@ kaki (Jalan Pasar → Jalan Kafe → Depan warung). `NextDoor()` mem-BFS jalur i
 HUD otomatis mengarah ke pintu pertama yang benar; pemain yang ingin cepat tetap bisa memakai
 Peta HP.
 
+**Penanda sasaran.** Selama sasaran tugas (papan menu, tokoh, loket…) berada di area pemain,
+panah oranye melayang tepat di atasnya (`AdventureGame.MarkObjective`) — termasuk Papan arah di
+langkah 2 tutorial. Kalau sasarannya di area lain, klik banner tugas menandai pintu menuju ke sana
+selama 6 detik. Posisi panah harus diberikan lewat `FloatingPrompt.SetBasePosition`, bukan
+`transform.position` (FloatingPrompt menimpa posisi tiap frame). Panah HUD memakai
+`InteractionArrow.png` yang aslinya menunjuk **atas**: Atas 0°, Kiri 90°, Bawah 180°, Kanan −90°.
+
 **Kota = satu rantai barat–timur.** Map jalan tidak punya tepi atas/bawah yang bisa dilewati, jadi
 Pusat Kota, Taman, dan Kampus ada di **barat stasiun** supaya bisa dicapai dengan berjalan:
 `Kampus ⇄ Taman ⇄ Pusat Kota ⇄ Depan stasiun ⇄ Jalan Pasar ⇄ Jalan Kafe ⇄ Depan warung`.
@@ -556,18 +563,86 @@ rancangan hanya dipakai untuk urutan, tidak ditampilkan.
 | 9 | Om Hendra, pengelola properti (raka) | Jalan Pasar | DIRE Syariah | flow: alur DIRE |
 | 10 | Pak Yusuf, dosen pasar modal (dimas) | Kampus | EBA Syariah | flow: alur EBA |
 
+### Aplikasi Investasi (HP) — Alif bisa berinvestasi
+Alur layar (`AdventureGame.Story.cs`): **daftar instrumen** → **Kenali dulu** (penjelasan kartu:
+contoh, cara hasil, risiko, pelajaran) → **Penawaran berjalan** (mis. *Sukuk Ijarah Gedung Seni
+Rupa & Desain* di Kampus Cempaka, dengan batang dana terkumpul) → **Detail** + pemilih unit →
+**Konfirmasi** → **Portofolio**. Data & aturan ada di `Model/Investment.cs`:
+`InvestmentContent.Listings` (harga unit, `RateBp` = ujrah per periode dalam basis poin,
+`PeriodDays`, `Periods`) dan `InvestmentRules` (`Buy`, `Settle`, `Valid`).
+- Dibayar dari **dompet dulu** (`State.Money`, uang yang terlihat di HUD), sisanya dari rekening
+  (`State.Bank`); dana terkunci sampai jatuh tempo. Ujrah & pokok kembali ke dompet (kelebihan
+  batas dompet masuk rekening). Pemain harus merasakan uangnya berkurang — kehabisan uang tunai
+  adalah risiko nyatanya, dan di situlah Pinjol menggoda.
+- `InvestmentRules.Settle` dipanggil tiap hari cerita berganti (tidur maupun begadang): ujrah periode
+  yang lewat masuk dompet, pokok kembali saat jatuh tempo. Tersimpan di `AdventureState.Holdings`;
+  tidak dibawa lintas bab karena uang pun disetel ulang tiap bab.
+- Instrumen terbuka bila kartunya sudah didapat dari quest **atau** punya penawaran (sukuk terbuka
+  dari awal). Menambah penawaran = menambah entri di `Listings` dengan `Card` = id kartunya.
+- **Bahasa & angka syariah:** hasil sukuk ijarah adalah *ujrah* (sewa) tetap sesuai akad — jangan
+  ditulis "bunga" atau "jaminan untung". `RateBp` dijaga ≤ 300 oleh tes: janji hasil tinggi adalah
+  tanda bahaya yang diajarkan Bab 5.
+
+**Dampak investasi.** Membeli menarik neraca skor ke jalan tengah (`ScoreSystem.MoveTowardsBalance`),
+mencatat jurnal, dan layar konfirmasi memperingatkan bila sisa uang hanya cukup untuk sewa < 5 malam.
+Tiap penawaran punya `Impact` (apa yang dibangun, tampil di detail) dan `MaturityNote` (catatan
+jurnal saat jatuh tempo). Karena dana terkunci, berinvestasi berlebihan bisa membuat Alif kehabisan
+uang tunai — di situlah aplikasi Pinjol menggoda.
+
+### Aplikasi Pinjol "DanaKilat" (HP) — godaan, bukan jalan keluar
+`Model/Pinjol.cs` (`PinjolRules`) + `AdventureGame.Pinjol.cs`. Nominal Rp100/300/500 ribu, **admin
+10% dipotong di depan**, **bunga 5% per hari berbunga**, jatuh tempo 5 hari, lalu denda Rp10.000/hari.
+Satu pinjaman aktif; dicicil/dilunasi dari dompet dulu lalu rekening. Layar "Hitung dulu"
+memperlihatkan utang 3/7/14 hari ke depan + jalan lain yang lebih bijak sebelum tombol pinjam, dan
+"Tidak jadi" adalah tombol terfokus. Meminjam = neraca −10 dari Kepatuhan Syariah, tiap bunga −2
+(−4 bila lewat tempo), lunas = kembali ke tengah. Jurnal mencatat pinjaman (riba) dan, saat lunas,
+ongkos sebenarnya. Bunga dihitung tiap hari berganti (`PinjolRules.Accrue`), tersimpan di
+`AdventureState.Debt*`, tidak dibawa lintas bab, dan penutup demo menyebut utang yang masih berjalan.
+
 ### Adegan cerita (cutscene di dalam game)
 `StoryContent` + `AdventureGame.Story.cs` + `StoryOverlay.cs`: tampilan **sama dengan
 Chapter1Cutscene** — ilustrasi layar penuh, tokoh besar di tengah adegan, kotak dialog krem
 selebar layar dengan tab nama, efek ketik, **LANJUT** di dalam kotak, **LEWATI >>** kanan atas
 (klik/Space/Enter = lanjut, Esc = lewati). Tidak memakai kotak dialog gameplay. Diputar **sekali**
-saat pertama bertemu NPC side quest dan tokoh main quest (Bu Siti, Raka, Dimas, Ustadz Farid, Naya,
+saat pertama bertemu NPC side quest dan tokoh main quest (Raka, Dimas, Ustadz Farid, Naya,
 Penjual), dan **setiap** bab dimulai. Gambar dirujuk lewat `Assets/Resources/Story/StoryArt.asset`:
 satu slot per area kota (`cerita_pasar`, `cerita_kafe`, `cerita_pusat`, `cerita_kampus`,
 `cerita_taman`) yang sementara memakai latar painted terdekat, plus latar/panel
 bab. Kunci berawalan `kota:` (mis. `kota:J3P_Puskesmas` untuk perkenalan Bu Ningsih) dibaca
 langsung dari `Resources/Kota` tanpa entri di StoryArt. Ganti `Art` entri saat ilustrasi final siap. Adegan yang sudah
 dilihat tersimpan di save (`SeenStories`).
+
+**Adegan pembuka vs sesudah tugas.** `StoryContent.TaskScene(id)` diputar sebelum tugas,
+`StoryContent.TaskOutro(id)` sesudah tugasnya selesai (sebelum kalimat penutup). `c1.meal`
+memakai keduanya: Bu Siti mengantar pesanan → Alif makan → baru Raka menerobos masuk. Tugas yang
+`Introduction`-nya kosong melewati dialog pembuka — adegan TaskScene-nya yang membawakan.
+
+**Papan penilaian bebas & akhir bercabang.** `ActivityBoard.Free` (dipakai `c1.offer`, tawaran
+pinjaman Raka): setiap kartu boleh dinilai apa saja dan bisa diubah; tidak ada jawaban yang
+ditolak. UI-nya satu syarat per layar dengan pilihan besar, lalu ringkasan sebelum "Sampaikan
+penilaian" (`AdventureGame.ShowJudgement`). Ketepatan penilaian (`ActivityBoard.Tier`: 2 tepat
+semua, 1 ≥ separuh, 0 < separuh) memilih penutup tugas (`AdventureTask.Outcomes`), adegan pagi
+berikutnya (`StoryContent.OfferAftermath`: Bu Siti menolak / menggantung / menandatangani), dan
+satu baris penutup demo (`StoryContent.DemoOutroFor`). Tier dibaca dari `Placements` yang sudah
+tersimpan (`AdventureState.BoardTier`) — tidak ada kolom save baru. Hanya pelajaran dari kartu
+yang dinilai tepat yang masuk jurnal. Sisa Bab 1 (mis. `c1.finale`) belum ikut bercabang.
+
+**Dokumen papan.** `ActivityBoard.Document` (`BoardDocument`) membuat papan dibuka lewat tampilan
+dokumen dulu: kertas dokumen di kiri, pembandingnya di kanan, tombol "Periksa …" ke kartunya, dan
+tombol "Lihat …" di papan untuk membukanya lagi. Dipakai `c1.receipt` (struk Rp28.000 vs pesanan
+Rp18.000); datanya di `OriginalCampaign.Apply`.
+
+Bu Siti sengaja **tidak** punya adegan "pertama bertemu": ia menyambut di pintu lewat AreaIntro
+"Dalam Warung Bu Siti", jadi menyentuh papan menu langsung membuka tugas `c1.menu`.
+
+**Tag panggung per baris** (`StoryLine.Parse`): sebuah baris boleh diawali
+`[art=<kunci> tokoh=<nama>]` untuk mengganti gambar dan/atau tokoh mulai baris itu sampai diganti
+lagi; `tokoh=-` menyembunyikan tokoh (dipakai untuk close-up makanan/suasana dan ilustrasi penuh
+yang tokohnya sudah tergambar). Contoh: masuk Warung Bu Siti dibuka `[art=warung_dapur tokoh=-]`
+(aroma dari dapur), lalu `[art=warung_dalam tokoh=bu_siti]` saat Bu Siti menyapa; `task:c1.meal`
+memakai ilustrasi `warung_antar`. Gambar khusus cutscene disimpan di
+`Assets/Sprites/Cutscenes/Warung/` — **jangan** menimpa `Backgrounds/WarungBuSiti_Interior.png`,
+itu map gameplay. Tes `EverySceneArtKeyAndFigureTagResolves` menjaga kunci & nama tokoh tidak salah ketik.
 
 ---
 

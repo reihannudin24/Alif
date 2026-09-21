@@ -82,6 +82,7 @@
       "BattleSession",
       "BattleStage",
       "BlobShadow",
+      "BoardDocument",
       "BossPhase",
       "Built",
       "ButtonJuice",
@@ -105,6 +106,7 @@
       "CutsceneScene",
       "DayLight",
       "DayPart",
+      "DemoStage",
       "DialogueChoice",
       "DialogueData",
       "DialogueLine",
@@ -123,6 +125,7 @@
       "GameManager",
       "GameState",
       "HUDController",
+      "Holding",
       "ICampaignEncounter",
       "IInteractable",
       "InteractableObject",
@@ -135,6 +138,9 @@
       "InventoryUI",
       "InvestigationPoint",
       "InvestmentCard",
+      "InvestmentContent",
+      "InvestmentListing",
+      "InvestmentRules",
       "ItemCatalog",
       "ItemPickup",
       "ItemStack",
@@ -151,6 +157,7 @@
       "OriginalCampaign",
       "PauseMenuController",
       "Pin",
+      "PinjolRules",
       "PixelArt",
       "PixelRect",
       "PixelSkin",
@@ -164,9 +171,11 @@
       "QuitConfirmationUI",
       "RestaurantStoryPoint",
       "RestaurantStoryTrigger",
+      "RetiredArea",
       "Road",
       "RoadEdge",
       "SceneDoor",
+      "SceneDoorSpec",
       "SceneFadeController",
       "SceneLoader",
       "SceneTransition",
@@ -421,6 +430,55 @@
       "changes_analyzed": 270,
       "new_symbols": [
         "DayLight"
+      ]
+    },
+    {
+      "timestamp": "2026-09-21T10:00:10.279182",
+      "summary": "Evolved knowledge base: 139 C# symbols, 4 Yarn nodes, 4 tile specs. Discovered 3 new symbols.",
+      "changes_analyzed": 338,
+      "new_symbols": [
+        "DemoStage",
+        "RetiredArea",
+        "SceneDoorSpec"
+      ]
+    },
+    {
+      "timestamp": "2026-09-21T10:15:56.813254",
+      "summary": "Evolved knowledge base: 139 C# symbols, 4 Yarn nodes, 4 tile specs. Discovered 0 new symbols.",
+      "changes_analyzed": 338,
+      "new_symbols": []
+    },
+    {
+      "timestamp": "2026-09-21T11:17:52.551357",
+      "summary": "Evolved knowledge base: 140 C# symbols, 4 Yarn nodes, 4 tile specs. Discovered 1 new symbols.",
+      "changes_analyzed": 338,
+      "new_symbols": [
+        "BoardDocument"
+      ]
+    },
+    {
+      "timestamp": "2026-09-21T11:34:12.845180",
+      "summary": "Evolved knowledge base: 140 C# symbols, 4 Yarn nodes, 4 tile specs. Discovered 0 new symbols.",
+      "changes_analyzed": 338,
+      "new_symbols": []
+    },
+    {
+      "timestamp": "2026-09-21T11:52:08.622156",
+      "summary": "Evolved knowledge base: 144 C# symbols, 4 Yarn nodes, 4 tile specs. Discovered 4 new symbols.",
+      "changes_analyzed": 338,
+      "new_symbols": [
+        "Holding",
+        "InvestmentRules",
+        "InvestmentContent",
+        "InvestmentListing"
+      ]
+    },
+    {
+      "timestamp": "2026-09-21T11:57:56.427805",
+      "summary": "Evolved knowledge base: 145 C# symbols, 4 Yarn nodes, 4 tile specs. Discovered 1 new symbols.",
+      "changes_analyzed": 338,
+      "new_symbols": [
+        "PinjolRules"
       ]
     }
   ]

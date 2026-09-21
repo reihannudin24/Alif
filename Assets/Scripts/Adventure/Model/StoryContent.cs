@@ -13,7 +13,50 @@ namespace Alif.Adventure
         public string Art;
         /// <summary>Tokoh yang digambar besar di adegan (nama CharacterData placeholder), boleh null.</summary>
         public string Character;
+        /// <summary>Format "Pembicara|teks". Boleh diawali tag panggung, mis.
+        /// "[art=warung_dapur tokoh=-] Narator|…" — lihat <see cref="StoryLine"/>.</summary>
         public string[] Lines = Array.Empty<string>();
+    }
+
+    /// <summary>
+    /// Satu baris adegan yang sudah diurai. Tag panggung di awal baris mengganti gambar dan/atau
+    /// tokoh mulai baris itu sampai diganti lagi: "[art=kunci]" memakai kunci StoryArtLibrary,
+    /// "[tokoh=nama]" memakai nama CharacterData, "[tokoh=-]" menyembunyikan tokoh. Tanpa tag,
+    /// panggung baris sebelumnya dipertahankan (baris pertama memakai Art/Character adegannya).
+    /// </summary>
+    public readonly struct StoryLine
+    {
+        public readonly string Speaker, Text;
+        /// <summary>Kunci gambar baru, atau null bila tidak berubah.</summary>
+        public readonly string Art;
+        /// <summary>Tokoh baru; "" = tanpa tokoh, null = tidak berubah.</summary>
+        public readonly string Character;
+
+        StoryLine(string speaker, string text, string art, string character)
+        {
+            Speaker = speaker; Text = text; Art = art; Character = character;
+        }
+
+        public static StoryLine Parse(string raw)
+        {
+            raw ??= "";
+            string art = null, character = null;
+            int close = raw.StartsWith("[") ? raw.IndexOf(']') : -1;
+            if (close > 0)
+            {
+                foreach (var pair in raw.Substring(1, close - 1).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    int eq = pair.IndexOf('=');
+                    if (eq <= 0) continue;
+                    string key = pair.Substring(0, eq), value = pair.Substring(eq + 1);
+                    if (key == "art") art = value;
+                    else if (key == "tokoh") character = value == "-" ? "" : value;
+                }
+                raw = raw.Substring(close + 1).TrimStart();
+            }
+            var parts = raw.Split(new[] { '|' }, 2);
+            return new StoryLine(parts[0], parts.Length > 1 ? parts[1] : "", art, character);
+        }
     }
 
     /// <summary>Kartu investasi syariah yang terbuka setelah quest NPC-nya selesai (aplikasi
@@ -30,6 +73,31 @@ namespace Alif.Adventure
     /// (QuestNpc.Placeholder) sampai gambar finalnya dibuat. Klaim syariah perlu ditinjau
     /// narasumber sebelum rilis (lihat Docs/QUEST_DESIGN.md).
     /// </summary>
+    /// <summary>Batas versi demo. Ubah di sini kalau demonya mau dipanjangkan: matikan dengan
+    /// <see cref="Enabled"/> = false untuk rilis penuh, atau geser <see cref="EndDay"/> /
+    /// <see cref="EndArea"/> ke titik lain (mis. Hari 3 saat keluar dari Warung Bu Siti).</summary>
+    public static class DemoStage
+    {
+        public const bool Enabled = true;
+        /// <summary>Demo berakhir saat pemain keluar dari EndArea pada hari ini atau sesudahnya.</summary>
+        public const int EndDay = 2;
+        public const string EndArea = "Kamar Alif";
+        public const string SceneId = "demo:outro";
+
+        public static readonly string[] Credits =
+        {
+            "ALIF — DEMO",
+            "Bab 1: Cempaka, Minggu Pertama",
+            "",
+            "Cerita & desain permainan  ·  Tim Alif",
+            "Pixel art kota & interior  ·  Tim Alif",
+            "Materi literasi keuangan syariah  ·  ditinjau narasumber",
+            "",
+            "Terima kasih sudah memainkan demo ini.",
+            "Bab 2 — Jebakan Riba sedang disiapkan.",
+        };
+    }
+
     public static class StoryContent
     {
         public static readonly InvestmentCard[] Cards =
@@ -134,7 +202,8 @@ namespace Alif.Adventure
 
         static readonly Dictionary<string, StoryScene> MainIntros = new[]
         {
-            Scene("main:Bu Siti", "warung_depan", "bu_siti", "Narator|Asap arang dan aroma ayam geprek memenuhi gang. Di balik gerobak, seorang ibu berhijab batik tersenyum hangat.", "Bu Siti|Selamat datang, Nak! Baru sampai Cempaka, ya? Kelihatan dari kopernya."),
+            // Bu Siti tidak punya adegan "pertama bertemu": ia sudah menyambut di pintu lewat
+            // AreaIntro "Dalam Warung Bu Siti", jadi papan menu langsung membuka tugasnya.
             Scene("main:Raka", "warung_depan", "raka", "Narator|Seorang pemuda berbatik merah bata berdiri di pinggir gang sambil memegang struk dengan wajah kesal.", "Raka|Kamu lihat sendiri kan? Struknya beda sama yang aku pesan!"),
             Scene("main:Dimas", "kos_kamar", "dimas", "Narator|Kamar kos lantai dua. Dimas duduk memeluk lutut, layar ponselnya penuh iklan pinjaman cepat cair.", "Dimas|Alif? Maaf kamarnya berantakan… pikiranku juga."),
             Scene("main:Ustadz Farid", "kos_halaman", "pak_ustad", "Narator|Seorang ustadz berpeci hitam duduk di teras sambil memutar tasbih, menyambut siapa saja yang ingin bertanya.", "Ustadz Farid|Duduklah. Pertanyaan yang baik adalah awal dari keputusan yang baik."),
@@ -145,29 +214,89 @@ namespace Alif.Adventure
         static readonly Dictionary<string, StoryScene> AreaIntros = new[]
         {
             Scene("area:Dalam Warung Bu Siti", "warung_dalam", "bu_siti",
-                "Narator|Aroma nasi hangat dan sambal goreng menyambut dari balik pintu. Kipas angin berputar pelan di atas meja-meja kayu yang sudah terisi separuh.",
-                "Bu Siti|Mari, Nak, duduk saja di mana suka. Papan menunya di sebelah sana — harganya sudah ditulis semua, jadi tidak ada kejutan.",
+                "[art=warung_dapur tokoh=-] Narator|Aroma nasi hangat dan sambal goreng menyambut dari balik pintu. Kipas angin berputar pelan di atas meja-meja kayu yang sudah terisi separuh.",
+                "[art=warung_sambut] Bu Siti|Mari, Nak, duduk saja di mana suka. Papan menunya di sebelah sana — harganya sudah ditulis semua, jadi tidak ada kejutan.",
                 "Alif (Batin)|Tempat pertama di kota ini yang terasa seperti rumah. Lihat papan menunya dulu, baru pesan."),
         }.ToDictionary(s => s.Id.Substring("area:".Length));
 
+        /// <summary>Adegan penutup demo, diputar sebelum layar kredit.</summary>
+        public static readonly StoryScene DemoOutro = Scene(DemoStage.SceneId, "kota:J2K_KamarAlif", "dimas",
+            "Narator|Pagi kedua. Kamar kos yang semalam masih asing kini sudah punya bau kopi dan suara pasar di luar jendela.",
+            "Alif (Batin)|Satu hari, dan aku sudah belajar tiga hal: baca dulu sebelum tanda tangan, catat setiap kesepakatan, dan tanya sebelum membayar.",
+            "Narator|Di luar, Cempaka baru mulai bergerak — Dimas dengan tawaran pinjamannya, Kirana dengan kantong konsernya, warga lain dengan persoalannya masing-masing.",
+            "Narator|Tetapi perjalanan Alif berhenti di sini dulu. Versi demo berakhir; ceritanya berlanjut di Bab 2 — Jebakan Riba.");
+
         static readonly Dictionary<string, StoryScene> TaskScenes = new[]
         {
+            // Makanan datang dulu; Raka baru masuk setelah Alif selesai makan (lihat TaskOutros).
             Scene("task:c1.meal", "warung_dalam", "bu_siti",
-                "Narator|Tidak sampai sepuluh menit, Bu Siti datang membawa nampan: nasi telur yang masih mengepul dan segelas es teh berembun.",
-                "Bu Siti|Ini pesanannya, Nak. Nasi telur satu, es teh satu. Dimakan pelan-pelan saja, warung belum ramai.",
-                "Narator|— sepuluh menit kemudian —",
-                "Narator|Piring Alif tinggal sisa kerak nasi ketika pintu warung terbuka keras. Seorang pemuda berbatik merah bata masuk, menaruh map plastik di meja kasir tanpa dipersilakan.",
-                "Raka|Bu, saya bawa yang kemarin. Modal cair hari ini juga, tidak pakai ribet. Bunganya kecil kok, sepuluh persen — harian.",
-                "Bu Siti|Nanti dulu, Mas. Saya belum baca apa-apa…",
-                "Raka|Nggak usah dibaca, Bu. Orang lain juga langsung tanda tangan. KTP-nya saya pegang dulu buat jaminan, ya.",
-                "Alif (Batin)|Sepuluh persen sehari. KTP ditahan. Tanpa surat yang boleh dibaca. Ini bukan bantuan — ini jerat.",
-                "Alif (Batin)|Aku bayar dulu makananku, baru urus ini. Pesananku dua item, Rp18.000. Angka itu kuingat baik-baik."),
+                "[art=warung_antar tokoh=-] Narator|Tidak sampai sepuluh menit, Bu Siti datang membawa nampan: nasi telur yang masih mengepul dan segelas es teh berembun.",
+                "Bu Siti|Ini pesanannya, Nak. Nasi telur satu, es teh satu. Dimakan pelan-pelan saja, warung belum ramai."),
 
             Scene("task:c1.offer", "warung_dalam", "bu_siti",
                 "Narator|Raka pergi setelah meninggalkan map plastiknya di meja kasir. Bu Siti menatap map itu lama sekali.",
                 "Bu Siti|Dapur saya perlu diperbaiki, Nak. Tawarannya cepat sekali cair… tapi dadanya kok tidak enak, ya.",
                 "Alif|Boleh saya bantu baca, Bu? Kita pisahkan mana yang wajar dan mana yang jadi tanda bahaya."),
         }.ToDictionary(s => s.Id.Substring("task:".Length));
+
+        // Akibat penilaian Alif atas tawaran Raka (papan bebas "c1.offer"), diputar pagi berikutnya.
+        // Indeks = ActivityBoard.Tier: 0 Bu Siti menandatangani, 1 menggantung, 2 menolak.
+        static readonly StoryScene[] OfferAftermaths =
+        {
+            Scene("aftermath:c1.offer.signed", "warung_raka", null,
+                "Narator|Pagi berikutnya, pesan dari Bu Siti masuk ke HP Alif. Raka sudah berdiri di depan kasir sejak warung dibuka.",
+                "Raka|Bunga hari pertama, Bu. Sepuluh persen dari dua juta — dua ratus ribu. Besok segitu lagi, ya.",
+                "Bu Siti|Baru semalam uangnya cair, Nak, hari ini sudah ditagih. KTP saya juga masih dia pegang…",
+                "Alif (Batin)|Aku yang bilang syaratnya wajar. Bunga harian, KTP ditahan, surat yang tak boleh dibaca — semuanya tanda bahaya, dan aku melewatkannya. Ini harus kubantu bereskan."),
+            Scene("aftermath:c1.offer.pending", "warung_raka", null,
+                "Narator|Pagi berikutnya, pesan dari Bu Siti masuk ke HP Alif. Raka sudah kembali ke warung sejak subuh.",
+                "Raka|Kemarin katanya mau dipikir dulu, Bu. Sudah semalam, kan? Promo cair cepatnya cuma sampai hari ini.",
+                "Bu Siti|Saya masih bingung, Nak. Kemarin sebagian syaratnya kamu bilang wajar… yang mana yang sebenarnya berbahaya?",
+                "Alif (Batin)|Aku menilai setengah-setengah, dan sekarang Bu Siti yang menanggung ragunya. Bunga harian, KTP ditahan, surat yang tak boleh dibaca — tiga-tiganya tanda bahaya. Hanya waktu untuk membaca yang wajar."),
+            Scene("aftermath:c1.offer.refused", "warung_sambut", null,
+                "Narator|Pagi berikutnya, pesan dari Bu Siti masuk ke HP Alif lebih dulu daripada sarapan.",
+                "Bu Siti|Raka datang lagi subuh tadi, Nak. Saya bilang: tidak ada tanda tangan tanpa surat yang boleh dibaca. Dia pergi sambil menggerutu.",
+                "Bu Siti|Dapurnya tetap perlu diperbaiki. Tapi saya mau cari jalan yang akadnya jelas — pelan-pelan tidak apa-apa.",
+                "Alif (Batin)|Satu tanda tangan yang ditahan, satu jerat yang batal. Bunga sepuluh persen sehari bukan pertolongan."),
+        };
+
+        /// <summary>Adegan pagi setelah tawaran Raka dinilai (tier dari AdventureState.BoardTier); null bila belum dinilai.</summary>
+        public static StoryScene OfferAftermath(int tier) => tier >= 0 && tier < OfferAftermaths.Length ? OfferAftermaths[tier] : null;
+
+        static readonly string[] DemoOutroByOffer =
+        {
+            "Narator|Di warung, Bu Siti menghitung ulang uang kasnya: dua ratus ribu untuk bunga hari ini, dan besok segitu lagi.",
+            "Narator|Di laci kasir warung, map plastik biru itu masih menunggu jawaban — dan Raka berjanji kembali sore ini.",
+            "Narator|Di warung, Bu Siti menempel kertas kecil di dekat kasir: \"Tidak ada tanda tangan tanpa dibaca.\"",
+        };
+
+        /// <summary>Penutup demo, dengan satu baris tambahan sesuai nasib tawaran Raka (tier &lt; 0 = tanpa tambahan).</summary>
+        public static StoryScene DemoOutroFor(int offerTier, int debt = 0)
+        {
+            bool offer = offerTier >= 0 && offerTier < DemoOutroByOffer.Length;
+            if (!offer && debt <= 0) return DemoOutro;
+            var lines = DemoOutro.Lines.ToList();
+            if (offer) lines.Insert(lines.Count - 1, DemoOutroByOffer[offerTier]);
+            if (debt > 0) lines.Insert(lines.Count - 1, $"Alif (Batin)|Dan di HP-ku, notifikasi {PinjolRules.AppName} berkedip lagi: utangku sudah Rp{debt:N0}. Meminjam itu cepat — melunasinya yang tidak.");
+            return new StoryScene { Id = DemoOutro.Id, Art = DemoOutro.Art, Character = DemoOutro.Character, Lines = lines.ToArray() };
+        }
+
+        static readonly Dictionary<string, StoryScene> TaskOutros = new[]
+        {
+            Scene("after:c1.meal", "warung_dalam", null,
+                "Narator|— sepuluh menit kemudian —",
+                "[art=warung_raka] Narator|Piring Alif tinggal sisa kerak nasi ketika pintu warung terbuka keras. Seorang pemuda berbatik merah bata masuk, menaruh map plastik di meja kasir tanpa dipersilakan.",
+                "Raka|Bu, saya bawa yang kemarin. Modal cair hari ini juga, tidak pakai ribet. Bunganya kecil kok, sepuluh persen — harian.",
+                "Bu Siti|Nanti dulu, Mas. Saya belum baca apa-apa…",
+                "Raka|Nggak usah dibaca, Bu. Orang lain juga langsung tanda tangan. KTP-nya saya pegang dulu buat jaminan, ya.",
+                "Alif (Batin)|Sepuluh persen sehari. KTP ditahan. Tanpa surat yang boleh dibaca. Ini bukan bantuan — ini jerat.",
+                "Alif (Batin)|Aku bayar dulu makananku, baru urus ini. Pesananku dua item, Rp18.000. Angka itu kuingat baik-baik."),
+        }.ToDictionary(s => s.Id.Substring("after:".Length));
+
+        /// <summary>Adegan sesudah satu tugas selesai (kunci = id tugasnya), diputar sekali sebelum
+        /// kalimat penutup tugas — mis. Raka menerobos masuk setelah Alif selesai makan.</summary>
+        public static StoryScene TaskOutro(string taskId) =>
+            taskId != null && TaskOutros.TryGetValue(taskId, out var scene) ? scene : null;
 
         /// <summary>Adegan pembuka satu tugas (kunci = id tugasnya), diputar sekali sebelum
         /// dialog tugas itu dimulai — mis. Bu Siti mengantar makanan sebelum Alif makan.</summary>
@@ -189,13 +318,13 @@ namespace Alif.Adventure
         {
             Id = "chapter:" + chapter.Number,
             Art = ChapterArt[Math.Max(0, Math.Min(ChapterArt.Length - 1, chapter.Number - 1))],
-            Lines = new[] { $"Narator|Bab {chapter.Number} — {chapter.Title}. {chapter.Subtitle}.", "Alif (Batin)|" + chapter.Introduction },
+            Lines = new[] { $"Narator|Bab {chapter.Number} — {chapter.Title}. {chapter.Subtitle}.", "Narator|" + chapter.Introduction },
         };
 
         static StoryScene Scene(string id, string art, string character, params string[] lines) =>
             new StoryScene { Id = id, Art = art, Character = character, Lines = lines };
 
         public static IEnumerable<StoryScene> AllScenes =>
-            NpcIntros.Values.Concat(MainIntros.Values).Concat(AreaIntros.Values).Concat(TaskScenes.Values);
+            NpcIntros.Values.Concat(MainIntros.Values).Concat(AreaIntros.Values).Concat(TaskScenes.Values).Concat(TaskOutros.Values).Concat(OfferAftermaths);
     }
 }

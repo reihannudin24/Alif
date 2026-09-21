@@ -12,7 +12,8 @@ namespace Alif.Adventure
 {
     /// <summary>
     /// HP Alif (gaya game simulasi kehidupan): layar utama berisi aplikasi Peta (teleport ke
-    /// area mana pun), Tas, Jurnal, Kontak (hubungan NPC quest), Kalender, dan Pengaturan.
+    /// area mana pun), Tas, Jurnal, Kontak (hubungan NPC quest), Investasi, Kalender, Pengaturan,
+    /// dan Pinjol (DanaKilat — godaan saat uang menipis, lihat AdventureGame.Pinjol.cs).
     /// Dibuka lewat ikon HP di HUD atau tombol P.
     /// </summary>
     public sealed partial class AdventureGame
@@ -37,6 +38,7 @@ namespace Alif.Adventure
                 ("Investasi", PixelSkin.ChartIcon(), InvestColor, () => ShowInvestmentApp(0)),
                 ("Kalender", PixelSkin.CalendarIcon(), CalendarColor, ShowCalendarApp),
                 ("Pengaturan", PixelSkin.GearIcon(), SettingsColor, Pause),
+                ("Pinjol", PixelSkin.CoinIcon(), PinjolColor, () => ShowPinjolApp()),
             };
             for (int i = 0; i < apps.Length; i++)
             {

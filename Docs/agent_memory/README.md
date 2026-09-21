@@ -1,7 +1,7 @@
 # Alif Agent Evolving Memory Ledger
 
 > Auto-updated by the Alif Recursive Evolution Engine (`./Tools/alif agent evolve`).
-> Last updated: 2026-09-20 12:35:32
+> Last updated: 2026-09-21 11:57:56
 
 ## 📐 Architectural Rules & Invariants
 
@@ -24,7 +24,7 @@ TileRPG world specs must adhere to Tools/ai-tile-rpg/world.schema.json with vali
 Four-space indentation, braces on the same line, PascalCase public types/methods, camelCase locals.
 
 ## 🔍 Discovered Project Symbols
-- **Total Core C# Classes**: 136
+- **Total Core C# Classes**: 145
 - **Yarn Dialogue Nodes**: AgentGeneratedStory, BuSiti_Intro, BuSiti_MarketIntro, Station_NoticeBoard
 - **Authored Tile Specs**: AgentGardenWorld, AgentMarketWorld, MarketBazaar, sample-world
 
@@ -42,8 +42,8 @@ Four-space indentation, braces on the same line, PascalCase public types/methods
   - *Solution*: Use pure C# representations or domain coordinates in Alif.Adventure.Model
 
 ## 🔄 Evolution Cycles History
-- `[2026-09-13T16:35:40.696184]` Evolved knowledge base: 104 C# symbols, 4 Yarn nodes, 4 tile specs. Discovered 1 new symbols.
-- `[2026-09-20T11:40:00.385567]` Evolved knowledge base: 133 C# symbols, 4 Yarn nodes, 4 tile specs. Discovered 29 new symbols.
-- `[2026-09-20T12:22:06.127145]` Evolved knowledge base: 133 C# symbols, 4 Yarn nodes, 4 tile specs. Discovered 0 new symbols.
-- `[2026-09-20T12:30:14.329352]` Evolved knowledge base: 135 C# symbols, 4 Yarn nodes, 4 tile specs. Discovered 2 new symbols.
-- `[2026-09-20T12:35:32.800289]` Evolved knowledge base: 136 C# symbols, 4 Yarn nodes, 4 tile specs. Discovered 1 new symbols.
+- `[2026-09-21T10:15:56.813254]` Evolved knowledge base: 139 C# symbols, 4 Yarn nodes, 4 tile specs. Discovered 0 new symbols.
+- `[2026-09-21T11:17:52.551357]` Evolved knowledge base: 140 C# symbols, 4 Yarn nodes, 4 tile specs. Discovered 1 new symbols.
+- `[2026-09-21T11:34:12.845180]` Evolved knowledge base: 140 C# symbols, 4 Yarn nodes, 4 tile specs. Discovered 0 new symbols.
+- `[2026-09-21T11:52:08.622156]` Evolved knowledge base: 144 C# symbols, 4 Yarn nodes, 4 tile specs. Discovered 4 new symbols.
+- `[2026-09-21T11:57:56.427805]` Evolved knowledge base: 145 C# symbols, 4 Yarn nodes, 4 tile specs. Discovered 1 new symbols.

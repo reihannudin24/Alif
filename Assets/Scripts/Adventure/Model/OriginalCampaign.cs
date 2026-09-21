@@ -3,10 +3,28 @@ using System.Collections.Generic;
 using System.Linq;
 namespace Alif.Adventure
 {
+    /// <summary>Dokumen yang diperlihatkan sebelum papannya dibuka (struk, tagihan), berdampingan
+    /// dengan pembandingnya — pemain melihat sendiri selisihnya sebelum diminta mengoreksi.
+    /// Baris berformat "Keterangan|Jumlah".</summary>
+    [Serializable]
+    public sealed class BoardDocument
+    {
+        /// <summary>Nama pendek dokumennya, dipakai di tab dan tombol ("Lihat struk").</summary>
+        public string Label = "dokumen";
+        public string Prompt, Header, Total, CompareHeader, CompareTotal;
+        public string[] Rows = Array.Empty<string>(), CompareRows = Array.Empty<string>();
+    }
+
     [Serializable]
     public sealed class ActivityBoard
     {
         public string Kind, Instruction;
+        /// <summary>Boleh null. Kalau ada, papan dibuka lewat tampilan dokumen ini dulu.</summary>
+        public BoardDocument Document;
+        /// <summary>Papan penilaian bebas: tiap kartu boleh ditaruh di tujuan mana pun dan bisa diubah;
+        /// papan selesai begitu semua kartu dinilai. Ketepatannya (<see cref="Tier"/>) tidak
+        /// menghalangi pemain — ia menentukan akibat ceritanya (AdventureTask.Outcomes).</summary>
+        public bool Free;
         public string[] Cards, Slots, Notes;
         /// <summary>Nama tiap kebutuhan di papan anggaran (indeksnya = nilai di Groups), dipakai
         /// sebagai judul baris kartu — mis. "Makanan" dan "Minuman".</summary>
@@ -16,6 +34,7 @@ namespace Alif.Adventure
         public bool Solved(IReadOnlyList<int> values)
         {
             if(values==null||values.Count!=Cards.Length)return false;
+            if(Free)return values.All(v=>v>=0&&v<Slots.Length);
             if(Kind!="budget")return Enumerable.Range(0,Cards.Length).All(i=>values[i]==Answers[i]);
             int total=0;var groups=new HashSet<int>();
             for(int i=0;i<values.Count;i++)if(values[i]==1){total+=Costs[i];if(Groups[i]>=0&&!groups.Add(Groups[i]))return false;}
@@ -23,6 +42,10 @@ namespace Alif.Adventure
             // hanya punya dua kebutuhan (makanan & minuman).
             return total<=Limit && groups.Count==Groups.Where(g=>g>=0).Distinct().Count();
         }
+        /// <summary>Jumlah kartu yang dinilai tepat.</summary>
+        public int Score(IReadOnlyList<int> values) => values==null?0:Enumerable.Range(0,Math.Min(Cards.Length,values.Count)).Count(i=>values[i]==Answers[i]);
+        /// <summary>Tingkat hasil papan bebas: 2 = tepat semua, 1 = setidaknya separuh, 0 = kurang dari separuh.</summary>
+        public int Tier(IReadOnlyList<int> values){int score=Score(values);return score==Cards.Length?2:score*2>=Cards.Length?1:0;}
         public int Total(IReadOnlyList<int> values) => Enumerable.Range(0,Cards.Length).Where(i=>values[i]==1).Sum(i=>Costs[i]);
     }
     public static class OriginalCampaign
@@ -56,6 +79,16 @@ namespace Alif.Adventure
                         new[]{"Pilih satu makanan dan satu minuman; totalnya tidak boleh lebih dari Rp20.000.",
                               "Nasi telur Rp12.000 + es teh Rp6.000 = Rp18.000 — satu-satunya pasangan yang muat, masih sisa Rp2.000."},
                         new[]{"Makanan","Minuman"});break;
+                    // Struk keliru ditunjukkan dulu di samping pesanan Alif; dua baris salahnya (es teh
+                    // 2x, kerupuk) adalah kartu papan ini. 12.000 + 12.000 + 4.000 = 28.000 vs 18.000.
+                    case "c1.receipt": t.Board.Document=new BoardDocument{
+                        Label="struk",Prompt="Bandingkan struk dari kasir dengan pesananmu. Baris mana yang tidak cocok?",
+                        Header="WARUNG BU SITI",Rows=new[]{"Nasi telur   1 x 12.000|12.000","Es teh   2 x 6.000|12.000","Kerupuk   1 x 4.000|4.000"},Total="TOTAL|28.000",
+                        CompareHeader="PESANANMU",CompareRows=new[]{"Nasi telur   1 x 12.000|12.000","Es teh   1 x 6.000|6.000"},CompareTotal="TOTAL|18.000"};break;
+                    // Tawaran Raka dinilai bebas: Bu Siti mengikuti penilaian Alif, benar atau keliru,
+                    // dan akibatnya baru terasa keesokan paginya (StoryContent.OfferAftermath).
+                    case "c1.offer": t.Board.Free=true;
+                        t.Board.Instruction="Menurutmu, syarat ini melindungi Bu Siti atau menjeratnya? Tidak ada jawaban yang dikunci — Bu Siti akan mengikuti penilaianmu.";break;
                     case "c2.plan": t.Board=Budget(new[]{"Makan minggu ini", "Transport kuliah", "Kebutuhan kuliah", "Dekorasi kamar", "Langganan hiburan"},new[]{140000,60000,200000,80000,90000},new[]{0,1,2,-1,-1},400000,new[]{"Dana Rp300.000 + bantuan keluarga terkonfirmasi Rp100.000 menutup kebutuhan Rp400.000.","Bantuan kampus yang belum disetujui tidak dihitung sebagai dana tersedia."});break;
                     case "c3.plan": t.Board=Budget(new[]{"Tikar pinjaman + izin", "Kursi sewa", "Minuman semua peserta", "Poster dan kebersihan", "Hadiah promosi"},new[]{0,80000,40000,30000,70000},new[]{0,0,1,2,-1},100000,new[]{"Tikar dipinjam dengan izin; minuman Rp40.000, poster dan kebersihan Rp30.000.","Total Rp70.000, cadangan Rp30.000. Tidak ada pembayaran untuk peluang hadiah."});break;
                     case "c2.expenses": t.Board=Sort(new[]{"Makan minggu ini • 140.000", "Transport menuju kelas • 60.000", "Dekorasi kamar • 80.000", "Tagihan kuliah • 200.000", "Ganti casing telepon • 50.000", "Bantuan kampus belum disetujui"},new[]{"Kebutuhan mendesak", "Dapat ditunda", "Belum boleh dihitung sebagai dana"},new[]{0,0,1,0,1,2},new[]{"Makan dilindungi.","Transport diperlukan untuk kelas.","Dekorasi tidak mendesak.","Tagihan kuliah masuk kebutuhan yang perlu direncanakan.","Casing masih berfungsi; penggantian dapat ditunda.","Permohonan bukan dana yang sudah diterima."});break;

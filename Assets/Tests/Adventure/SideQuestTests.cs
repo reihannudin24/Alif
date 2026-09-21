@@ -159,6 +159,63 @@ namespace Alif.Adventure.Tests
         }
 
         [Test]
+        public void StageTagSwitchesArtAndFigureAndLeavesPlainLinesUntouched()
+        {
+            var tagged = StoryLine.Parse("[art=warung_dapur tokoh=-] Narator|Aroma nasi hangat.");
+            Assert.That(tagged.Art, Is.EqualTo("warung_dapur"));
+            Assert.That(tagged.Character, Is.EqualTo(""), "tokoh=- menyembunyikan tokoh.");
+            Assert.That(tagged.Speaker, Is.EqualTo("Narator"));
+            Assert.That(tagged.Text, Is.EqualTo("Aroma nasi hangat."));
+
+            var figureOnly = StoryLine.Parse("[tokoh=raka] Raka|Bunganya kecil kok.");
+            Assert.That(figureOnly.Art, Is.Null, "Tanpa art= gambar tidak berubah.");
+            Assert.That(figureOnly.Character, Is.EqualTo("raka"));
+
+            var plain = StoryLine.Parse("Bu Siti|Harga [sudah] ditulis | semua.");
+            Assert.That(plain.Art, Is.Null);
+            Assert.That(plain.Character, Is.Null);
+            Assert.That(plain.Speaker, Is.EqualTo("Bu Siti"));
+            Assert.That(plain.Text, Is.EqualTo("Harga [sudah] ditulis | semua."));
+
+            var broken = StoryLine.Parse("[art=warung_dapur Narator|Tag tidak ditutup.");
+            Assert.That(broken.Art, Is.Null, "Tag tanpa ']' diperlakukan sebagai teks biasa.");
+        }
+
+        [Test]
+        public void MealArrivesBeforeRakaInterruptsAndSilentTasksHaveAnOpeningScene()
+        {
+            var arrives = StoryContent.TaskScene("c1.meal").Lines.Select(StoryLine.Parse).ToList();
+            Assert.That(arrives.Any(l => l.Speaker == "Raka"), Is.False, "Raka belum boleh muncul sebelum Alif makan.");
+            Assert.That(arrives.Any(l => l.Speaker == "Bu Siti"), Is.True);
+
+            var interrupts = StoryContent.TaskOutro("c1.meal");
+            Assert.That(interrupts, Is.Not.Null);
+            Assert.That(interrupts.Lines.Select(StoryLine.Parse).Any(l => l.Speaker == "Raka"), Is.True);
+            Assert.That(StoryContent.AllScenes, Does.Contain(interrupts));
+            Assert.That(StoryContent.TaskOutro("c1.menu"), Is.Null);
+
+            // Tugas tanpa kalimat pembuka harus punya adegan pembuka, supaya pemain tidak kehilangan konteks.
+            for (int c = 1; c <= 5; c++)
+                foreach (var task in AdventureContent.Get(c).Tasks.Where(t => string.IsNullOrEmpty(t.Introduction)))
+                    Assert.That(StoryContent.TaskScene(task.Id), Is.Not.Null, task.Id + " tanpa Introduction butuh TaskScene.");
+        }
+
+        [Test]
+        public void EverySceneArtKeyAndFigureTagResolves()
+        {
+            var cast = UnityEditor.AssetDatabase.FindAssets("t:CharacterData")
+                .Select(g => System.IO.Path.GetFileNameWithoutExtension(UnityEditor.AssetDatabase.GUIDToAssetPath(g))).ToList();
+            foreach (var scene in StoryContent.AllScenes)
+            {
+                var lines = scene.Lines.Select(StoryLine.Parse).ToList();
+                foreach (var art in lines.Select(l => l.Art).Append(scene.Art).Where(a => a != null))
+                    Assert.That(Alif.Adventure.StoryArtLibrary.Find(art), Is.Not.Null, $"{scene.Id}: gambar '{art}' tidak ada di StoryArt.");
+                foreach (var who in lines.Select(l => l.Character).Where(c => !string.IsNullOrEmpty(c)))
+                    Assert.That(cast.Any(n => n.EndsWith(who, System.StringComparison.OrdinalIgnoreCase)), Is.True, $"{scene.Id}: tokoh '{who}' tidak punya CharacterData.");
+            }
+        }
+
+        [Test]
         public void InvestmentChainTeachesEveryCardOnceAndRevealsNpcsOneByOne()
         {
             var taught = SideQuestContent.All.SelectMany(q => q.Steps).Where(s => s.Card != null).Select(s => s.Card).ToList();

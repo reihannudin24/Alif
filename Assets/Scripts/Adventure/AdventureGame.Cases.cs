@@ -119,6 +119,10 @@ namespace Alif.Adventure
         void DawnWithoutSleep()
         {
             if (State == null || !State.PassNight()) return;
+            string ujrah = InvestmentRules.Settle(State);
+            if (ujrah != null) CurrencySystem.Instance?.RestoreBalances(State.Money, State.Bank);
+            string debtNotice = PinjolRules.Accrue(State);
+            if (debtNotice != null) DebtPressure();
             SyncStoryDay(false);
             _partShown = false;
             RefreshQuestMarkers();
@@ -169,11 +173,18 @@ namespace Alif.Adventure
 
         void InteractBed()
         {
+            int hour = TimeSystem.Instance ? TimeSystem.Instance.CurrentHour : 12;
             if (!State.CanSleep(Content))
             {
                 SayLines(new[] { State.Day >= AdventureState.MaxDay
                     ? "Alif (Batin)|Sudah terlalu banyak hari berlalu. Saatnya menuntaskan yang tertunda."
                     : "Alif (Batin)|Aku belum punya kamar di sini. Sebaiknya kuselesaikan dulu urusan di Warung Bu Siti." }, null);
+                return;
+            }
+            // Tidur hanya malam hari: siang bolong masih banyak yang bisa dikerjakan di kota.
+            if (!AdventureState.IsNightEnough(hour))
+            {
+                SayLines(new[] { $"Alif (Batin)|Baru pukul {hour:00}.00 — masih terang. Tidur nanti saja setelah pukul {AdventureState.SleepFromHour}.00; sekarang masih ada yang bisa kukerjakan." }, null);
                 return;
             }
             int open = SideQuestRules.PendingCases(State, Chapter).Count(q => SideQuestRules.CurrentStep(State, q) != null);
@@ -195,6 +206,10 @@ namespace Alif.Adventure
             {
                 State.Sleep(Content);
                 string rent = State.PayRent();                 // sewa kamar ditagih tiap malam
+                string ujrah = InvestmentRules.Settle(State);  // imbal hasil investasi yang jatuh hari ini
+                if (ujrah != null) rent = string.IsNullOrEmpty(rent) ? ujrah : rent + "  •  " + ujrah;
+                string debt = PinjolRules.Accrue(State);       // bunga harian pinjol
+                if (debt != null) { DebtPressure(); rent = string.IsNullOrEmpty(rent) ? debt : rent + "  •  " + debt; }
                 EnergySystem.Instance?.RestoreFull();
                 SyncStoryDay(true);
                 _partShown = false;          // pagi baru: jadwal warga diacak ulang tanpa pengumuman
@@ -210,7 +225,8 @@ namespace Alif.Adventure
                     ?? (SideQuestRules.CasesDone(State, Chapter)
                         ? "Alif (Batin)|Pagi yang tenang. Semua urusan warga sudah beres—saatnya mengabari Bu Siti."
                         : "Alif (Batin)|Pagi yang tenang. Masih ada urusan warga yang belum kutuntaskan.");
-                SayLines(new[] { news }, SetPlaying);
+                // Pagi pertama setelah tawaran Raka dinilai: akibat penilaian Alif dulu, baru kabar warga.
+                PlayStoryOnce(StoryContent.OfferAftermath(State.BoardTier("c1.offer")), () => SayLines(new[] { news }, SetPlaying));
             });
         }
     }

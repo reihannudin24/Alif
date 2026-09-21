@@ -84,8 +84,86 @@ namespace Alif.Adventure.Tests
             string oldJson=JsonUtility.ToJson(new AdventureState()).Replace("\"TutorialStep\":0,","");
             Assert.That(AdventureSave.Decode(oldJson).TutorialStep,Is.Zero);
 
+            // Pembuka bab kini diputar sebelum tutorial: checkpoint tutorial tetap sah setelah pembuka dilihat.
             tutorial.IntroductionSeen=true;
+            Assert.That(tutorial.Valid(),Is.True);
+            Assert.That(AdventureSave.Decode(JsonUtility.ToJson(tutorial)).IntroductionSeen,Is.True);
+            tutorial.Completed=true;
             Assert.That(tutorial.Valid(),Is.False);
+        }
+        /// <summary>Selesaikan tugas Bab 1 sampai tepat sebelum <paramref name="stopAt"/> (semua dengan jawaban benar).</summary>
+        static AdventureState PlayChapterOneUntil(string stopAt)
+        {
+            var s=new AdventureState();
+            foreach(var task in AdventureContent.Get(1).Tasks)
+            {
+                if(task.Id==stopAt)return s;
+                if(task.Board!=null)
+                {
+                    s.PrepareBoard(task);
+                    if(task.Board.Kind=="budget")foreach(int i in new[]{0,4})s.Place(task,i,1,out _);
+                    else for(int i=0;i<task.Board.Cards.Length;i++)s.Place(task,i,task.Board.Answers[i],out _);
+                    Assert.That(s.CommitBoard(task,out _),task.Id);
+                }
+                else Assert.That(s.Accept(task,0,out _),task.Id);
+            }
+            return s;
+        }
+        [Test]
+        public void LoanOfferAcceptsAnyJudgementAndItsAccuracyPicksTheNextMorning()
+        {
+            var offer=AdventureContent.Get(1).Tasks.First(t=>t.Id=="c1.offer");
+            Assert.That(offer.Board.Free,Is.True);
+            Assert.That(offer.Outcomes.Distinct().Count(),Is.EqualTo(3));
+            // wrongCards = berapa kartu yang sengaja dinilai keliru → tingkat hasil yang diharapkan.
+            foreach(var (wrongCards,tier) in new[]{(0,2),(1,1),(2,1),(3,0),(4,0)})
+            {
+                var s=PlayChapterOneUntil("c1.offer");
+                Assert.That(s.BoardTier("c1.offer"),Is.EqualTo(-1),"Belum dinilai: belum ada akibat.");
+                Assert.That(s.CommitBoard(offer,out _),Is.False,"Papan kosong belum bisa disampaikan.");
+                for(int i=0;i<offer.Board.Cards.Length;i++)
+                {
+                    int answer=offer.Board.Answers[i],slot=i<wrongCards?(answer+1)%offer.Board.Slots.Length:answer;
+                    Assert.That(s.Place(offer,i,slot,out _),Is.True,"Penilaian keliru pun diterima.");
+                }
+                // Penilaian boleh diubah sebelum disampaikan.
+                Assert.That(s.Place(offer,0,offer.Board.Slots.Length-1,out _),Is.True);
+                Assert.That(s.Place(offer,0,wrongCards>0?(offer.Board.Answers[0]+1)%offer.Board.Slots.Length:offer.Board.Answers[0],out _),Is.True);
+
+                Assert.That(s.CommitBoard(offer,out string feedback),Is.True);
+                Assert.That(feedback,Is.EqualTo(offer.Outcomes[tier]));
+                s=AdventureSave.Decode(JsonUtility.ToJson(s));
+                Assert.That(s,Is.Not.Null,"Save dengan penilaian keliru harus tetap sah.");
+                Assert.That(s.BoardTier("c1.offer"),Is.EqualTo(tier));
+                Assert.That(s.Place(offer,0,0,out _),Is.False,"Setelah disampaikan, penilaian terkunci.");
+
+                var morning=StoryContent.OfferAftermath(tier);
+                Assert.That(morning,Is.Not.Null);Assert.That(StoryContent.AllScenes,Does.Contain(morning));
+                var outro=StoryContent.DemoOutroFor(tier);
+                Assert.That(outro.Id,Is.EqualTo(StoryContent.DemoOutro.Id));
+                Assert.That(outro.Lines.Length,Is.EqualTo(StoryContent.DemoOutro.Lines.Length+1));
+                Assert.That(outro.Lines.Last(),Is.EqualTo(StoryContent.DemoOutro.Lines.Last()),"Baris penutup demo tetap paling akhir.");
+            }
+            Assert.That(StoryContent.OfferAftermath(-1),Is.Null);
+            Assert.That(StoryContent.DemoOutroFor(-1),Is.SameAs(StoryContent.DemoOutro));
+            // Papan lain tetap menolak penempatan yang keliru.
+            var receipt=AdventureContent.Get(1).Tasks.First(t=>t.Id=="c1.receipt");
+            var strict=PlayChapterOneUntil("c1.receipt");
+            Assert.That(strict.Place(receipt,0,(receipt.Board.Answers[0]+1)%receipt.Board.Slots.Length,out _),Is.False);
+        }
+        [Test]
+        public void ReceiptDocumentAddsUpAndShowsBothWrongRowsBesideTheOrder()
+        {
+            var doc=AdventureContent.Get(1).Tasks.First(t=>t.Id=="c1.receipt").Board.Document;
+            Assert.That(doc,Is.Not.Null,"Papan struk dibuka lewat tampilan struknya dulu.");
+            int Amount(string row)=>int.Parse(row.Split('|')[1].Replace(".",""));
+            Assert.That(doc.Rows.Sum(Amount),Is.EqualTo(Amount(doc.Total)));Assert.That(Amount(doc.Total),Is.EqualTo(28000));
+            Assert.That(doc.CompareRows.Sum(Amount),Is.EqualTo(Amount(doc.CompareTotal)));Assert.That(Amount(doc.CompareTotal),Is.EqualTo(18000));
+            Assert.That(doc.Rows.Any(r=>r.Contains("Es teh")&&r.Contains("2 x")),Is.True);
+            Assert.That(doc.Rows.Any(r=>r.Contains("Kerupuk")),Is.True);
+            Assert.That(doc.CompareRows.Any(r=>r.Contains("Kerupuk")),Is.False);
+            // Papan lain tidak berubah: tanpa dokumen, langsung ke kartunya.
+            Assert.That(AdventureContent.Get(1).Tasks.First(t=>t.Id=="c1.menu").Board.Document,Is.Null);
         }
         [Test]
         public void EveryRequiredTargetHasAreaAndEveryPuzzleHasValidOptions()

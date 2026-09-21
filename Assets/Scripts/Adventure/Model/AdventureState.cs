@@ -16,6 +16,8 @@ namespace Alif.Adventure
     [Serializable] public sealed class AdventureTask
     {
         public string Id, Title, Target, Speaker, Introduction, Outcome, Kind;
+        /// <summary>Penutup papan bebas per tingkat hasil (indeks = ActivityBoard.Tier); null = pakai Outcome.</summary>
+        public string[] Outcomes;
         public int Area, Cost;
         /// <summary>Menit in-game yang dilewati saat tugas ini selesai (mis. waktu makan).</summary>
         public int SkipMinutes;
@@ -71,10 +73,25 @@ namespace Alif.Adventure
         // Adegan cerita yang sudah diputar & kartu investasi yang sudah terbuka (lintas bab).
         public List<string> SeenStories = new List<string>();
         public List<string> Cards = new List<string>();
+        /// <summary>Investasi Alif yang sedang berjalan (aplikasi Investasi di HP). Dibeli dari saldo
+        /// rekening; tidak dibawa ke bab lain karena uang pun disetel ulang tiap bab.</summary>
+        public List<Holding> Holdings = new List<Holding>();
+        /// <summary>Pinjol DanaKilat (PinjolRules): sisa utang, pokok awal, hari meminjam, hari terakhir
+        /// bunganya dihitung, dan total yang sudah dicicil. Semua nol bila tidak ada pinjaman.</summary>
+        public int Debt, DebtPrincipal, DebtDay, DebtAccruedDay, DebtPaid;
         public float PlaySeconds;
         public TaskProgress Progress(string id) => Tasks.Find(t => t.Id == id);
         public bool CanStart(AdventureTask task) => !Completed && task.Prerequisites.All(id => Progress(id)?.Complete == true) &&
             (!task.NeedsCases || SideQuestRules.CasesDone(this, Chapter));
+        /// <summary>Jam paling awal Alif boleh tidur, dan jam paling akhir dini hari yang masih
+        /// dihitung "malam yang sama". Digeser di sini kalau ritme harinya berubah.</summary>
+        public const int SleepFromHour = 18, SleepUntilHour = 4;
+
+        /// <summary>Tidur butuh kamar, tugas penanda bab, dan hari yang sudah malam.</summary>
+        public bool CanSleep(AdventureChapter chapter, int hour) => CanSleep(chapter) && IsNightEnough(hour);
+
+        public static bool IsNightEnough(int hour) => hour >= SleepFromHour || hour < SleepUntilHour;
+
         public bool CanSleep(AdventureChapter chapter) => TutorialStep == 0 && Day < MaxDay &&
             (chapter.SleepAfter == null || Progress(chapter.SleepAfter)?.Complete == true);
         /// <summary>Fajar tiba tanpa tidur (begadang): hari tetap maju supaya jadwal warga dan kasus
@@ -146,6 +163,7 @@ namespace Alif.Adventure
             feedback="Selesaikan tugas sebelumnya.";
             if(task.Board==null||!CanStart(task)||card<0||card>=task.Board.Cards.Length||slot<0||slot>=(task.Board.Kind=="budget"?2:task.Board.Slots.Length))return false;
             var p=PrepareBoard(task);if(p.Complete)return false;
+            if(task.Board.Free){p.Placements[card]=slot;feedback="Penilaianmu dicatat — masih bisa diubah sebelum disampaikan.";return true;}
             if(task.Board.Kind!="budget" && p.Placements[card]==task.Board.Answers[card]){feedback="Bukti ini sudah tepat.";return false;}
             if(task.Board.Kind!="budget" && slot!=task.Board.Answers[card]){feedback=task.Board.Notes[card];return false;}
             p.Placements[card]=slot;feedback=task.Board.Kind=="budget"?"Alokasi diperbarui; periksa total sebelum menyetujui.":task.Board.Notes[card];
@@ -160,8 +178,24 @@ namespace Alif.Adventure
             if(Money+Bank<task.Cost){feedback="Dana belum cukup; bicarakan bantuan sebelum membayar.";return false;}
             int fromBank=Math.Max(0,task.Cost-Money);Bank-=fromBank;Money+=fromBank-task.Cost;
             p.Step=task.Steps.Length;p.Choices=task.Steps.Select(x=>x.Answer).ToList();p.Complete=true;
+            if(task.Board.Free)
+            {
+                // Hanya pelajaran dari kartu yang dinilai tepat yang masuk jurnal; sisanya datang lewat akibatnya.
+                for(int i=0;i<task.Board.Cards.Length;i++)
+                    if(p.Placements[i]==task.Board.Answers[i]&&!Evidence.Contains(task.Board.Notes[i]))Evidence.Add(task.Board.Notes[i]);
+                int tier=task.Board.Tier(p.Placements);
+                feedback=task.Outcomes!=null&&tier<task.Outcomes.Length?task.Outcomes[tier]:task.Outcome;return true;
+            }
             foreach(string note in task.Board.Notes)if(!Evidence.Contains(note))Evidence.Add(note);
             feedback=task.Outcome;return true;
+        }
+        /// <summary>Tingkat hasil papan bebas yang sudah diselesaikan (ActivityBoard.Tier), atau -1
+        /// bila tugasnya belum selesai / bukan papan bebas. Dibaca dari Placements yang tersimpan.</summary>
+        public int BoardTier(string taskId)
+        {
+            var task=AdventureContent.Get(Chapter).Tasks.FirstOrDefault(t=>t.Id==taskId);
+            var p=Progress(taskId);
+            return task?.Board==null||!task.Board.Free||p?.Complete!=true?-1:task.Board.Tier(p.Placements);
         }
         public bool CompleteEncounter(string taskId)
         {
@@ -192,9 +226,10 @@ namespace Alif.Adventure
             if (Version != 4 || Day < 1 || Day > MaxDay || Chapter < 1 || Chapter > 5 || HighestUnlocked < Chapter || HighestUnlocked > 5 || TutorialStep < 0 || TutorialStep > 3 ||
                 Area < 0 || Area >= AdventureContent.Get(Chapter).Areas.Length || Money < 0 || Money > 2000000 || Bank < 0 || Bank > 2000000 || !float.IsFinite(X) || !float.IsFinite(Y) ||
                 Math.Abs(X) > 500 || Math.Abs(Y) > 500 || !float.IsFinite(PlaySeconds) || PlaySeconds < 0 ||
-                Tasks == null || Evidence == null || Discoveries == null || CompletedChapters == null || !SideQuestRules.Valid(this)) return false;
+                Tasks == null || Evidence == null || Discoveries == null || CompletedChapters == null || !SideQuestRules.Valid(this) || !InvestmentRules.Valid(this) || !PinjolRules.Valid(this)) return false;
             var chapter = AdventureContent.Get(Chapter);
-            if (TutorialStep > 0 && (Chapter != 1 || Area != chapter.StartArea || IntroductionSeen || Completed || Tasks.Count > 0)) return false;
+            // Pembuka bab diputar sebelum tutorial, jadi IntroductionSeen boleh true di checkpoint tutorial.
+            if (TutorialStep > 0 && (Chapter != 1 || Area != chapter.StartArea || Completed || Tasks.Count > 0)) return false;
             if (Tasks.Any(t => t == null || t.Id == null) || Tasks.Select(t => t.Id).Distinct().Count() != Tasks.Count) return false;
             foreach (var p in Tasks)
             {

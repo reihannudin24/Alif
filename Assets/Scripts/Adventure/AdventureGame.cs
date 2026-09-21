@@ -121,19 +121,18 @@ namespace Alif.Adventure
             DialogueManager.Instance.OnDialogueCompleted+=DialogueCompleted;
             if(!string.IsNullOrEmpty(notice)) Toast(notice,10);
             if(State.Completed) {ShowEnding();return;}
-            if(TutorialActive) BeginTutorial();
-            else BeginChapterIntroduction(notice);
+            BeginChapterIntroduction(notice);
         }
         // Adegan masuk Main Baru Bab 1: Alif muncul di sisi kanan ruang tunggu lalu berjalan
         // sendiri ke titik spawn di tengah (tombol gerak pemain membatalkannya). 5.1: kaki
         // Alif (lebar .32) masih bebas dari BoundaryWall_Right (x 5.55) — di 5.4 posisinya
         // dianggap tidak aman dan adegan dilewati.
         static readonly Vector2 OpeningWalkOffset=new Vector2(5.1f,0f);
-        void BeginTutorial()
+        void BeginTutorial(bool openingWalk)
         {
             SetPlaying();
             Vector2 walkFrom=Spawns[0]+OpeningWalkOffset;
-            if(Chapter==1&&State.TutorialStep==1&&!State.HasPosition)
+            if(openingWalk)
             {
                 if(!SafePosition(walkFrom)){Debug.LogWarning($"[Alif] Adegan masuk dilewati: titik awal {walkFrom} tertutup collider.");StartTutorialCounting();return;}
                 _player.transform.position=walkFrom;_player.GetComponent<Rigidbody2D>().position=walkFrom;
@@ -149,10 +148,19 @@ namespace Alif.Adventure
             _tutorialLastPosition=_player.transform.position;_tutorialDistance=0;
             Toast(State.TutorialStep==1?"Tutorial dimulai • bergerak sejauh satu langkah":"Tutorial dilanjutkan dari checkpoint",6);
         }
+        /// <summary>Pembuka bab selalu diputar lebih dulu; di Main Baru Bab 1 tutorial menyusul
+        /// sesudahnya — "Alif baru tiba di Cempaka" tidak masuk akal setelah pemain berkeliling stasiun.</summary>
         void BeginChapterIntroduction(string notice="")
         {
+            // Save() mengisi posisi, jadi adegan masuk (jalan otomatis) diputuskan sebelum menyimpan.
+            bool openingWalk=Chapter==1&&State.TutorialStep==1&&!State.HasPosition;
             if(!State.IntroductionSeen)
-                PlayStory(StoryContent.ChapterIntro(Content),()=>{State.IntroductionSeen=true;Save();SetPlaying();});
+                PlayStory(StoryContent.ChapterIntro(Content),()=>
+                {
+                    State.IntroductionSeen=true;Save(!TutorialActive);
+                    if(TutorialActive)BeginTutorial(openingWalk);else SetPlaying();
+                });
+            else if(TutorialActive)BeginTutorial(openingWalk);
             else {SetPlaying();Toast(string.IsNullOrEmpty(notice)?"Checkpoint dimuat • "+Content.Areas[State.Area]:notice,8);}
         }
         void BindOriginalScene()
@@ -595,18 +603,27 @@ namespace Alif.Adventure
             _joystick?.SetDirection(move.sqrMagnitude>1f?move.normalized:move);
         }
 
-        SpriteRenderer _objectivePing;float _pingUntil;
+        SpriteRenderer _objectivePing;FloatingPrompt _pingFloat;Transform _pingDoor;float _pingUntil;
 
-        /// <summary>Klik banner tugas = tandai tujuannya: panah oranye melayang di atas sasaran
-        /// (tokoh/prop kalau satu area, atau pintu menuju areanya) selama beberapa detik, plus
-        /// toast berisi judul tugasnya. Panah petunjuk di tepi layar memakai warna yang sama.</summary>
+        /// <summary>Klik banner tugas = toast judul tugasnya. Sasaran di area yang sama sudah selalu
+        /// bertanda panah (lihat <see cref="MarkObjective"/>); kalau sasarannya di area lain, pintu
+        /// menuju ke sana ditandai beberapa detik — pintu punya penanda masuknya sendiri.</summary>
         public void PingObjective()
         {
             if(!CanExplore)return;
             var task=CurrentTask;
             if(task==null){Toast(TutorialActive?"Selesaikan tutorial dulu":"Semua tugas bab ini sudah selesai",4);return;}
-            var target=task.Area==State.Area?FindPoint(task.Target,task.Area)?.transform:NextDoor(task.Area)?.transform;
-            if(!target){Toast("Tujuan: "+task.Title,5);return;}
+            if(task.Area!=State.Area){_pingDoor=NextDoor(task.Area)?.transform;_pingUntil=Time.unscaledTime+6f;}
+            Toast("Tujuan: "+task.Title,5);
+        }
+
+        /// <summary>Panah oranye melayang di atas sasaran tugas (papan menu, tokoh, loket…) selama
+        /// sasaran itu ada di area pemain; null = sembunyikan. Posisi dasarnya diserahkan ke
+        /// FloatingPrompt — ia menimpa localPosition tiap frame — dan diperbarui terus karena
+        /// tokoh bisa berpindah mengikuti jadwalnya.</summary>
+        void MarkObjective(Transform target)
+        {
+            if(!target){if(_objectivePing)_objectivePing.gameObject.SetActive(false);return;}
             if(!_objectivePing)
             {
                 var go=new GameObject("Penanda tujuan");
@@ -615,12 +632,12 @@ namespace Alif.Adventure
                 _objectivePing.color=PixelSkin.Orange;
                 _objectivePing.sortingOrder=YSortOrder.PromptOrderBase+30;
                 go.transform.localScale=Vector3.one*1.8f;
-                go.AddComponent<FloatingPrompt>();
+                _pingFloat=go.AddComponent<FloatingPrompt>();
             }
-            _objectivePing.gameObject.SetActive(true);
-            _objectivePing.transform.position=(Vector2)target.position+new Vector2(0f,1.15f);
-            _pingUntil=Time.unscaledTime+6f;
-            Toast("Tujuan: "+task.Title,5);
+            Vector3 position=(Vector2)target.position+new Vector2(0f,1.15f);
+            _pingFloat.SetBasePosition(position);
+            if(_objectivePing.gameObject.activeSelf)return;
+            _objectivePing.transform.position=position;_objectivePing.gameObject.SetActive(true);
         }
 
         void SetTouchControlsVisible()
@@ -691,20 +708,22 @@ namespace Alif.Adventure
             if(TutorialActive)
             {
                 UpdateTutorial(pos);
-                if(State.TutorialStep==1){_guide.text="";_guideArrow.gameObject.SetActive(false);}
-                else if(State.TutorialStep>=3){_guide.text="";_guideArrow.gameObject.SetActive(false);}
-                else ShowGuide(FindPoint(TutorialTarget,0)?.transform,pos,TutorialTarget);
+                var board=State.TutorialStep==2?FindPoint(TutorialTarget,0)?.transform:null;
+                if(board)ShowGuide(board,pos,TutorialTarget);
+                else {_guide.text="";_guideArrow.gameObject.SetActive(false);}
+                MarkObjective(board);
                 if(Time.unscaledTime-_savedAt>20)Save(false);
                 return;
             }
             var target=CurrentTask;
-            Transform guide=null;
+            Transform guide=null;bool here=false;
             if(WaitingForCases(target))
             {
                 // Bab menunggu Kasus Warga: tunjuk tokoh langkah kasus yang terbuka, atau ranjang kamar kos.
                 var (caseTarget,caseArea)=CaseGuideTarget();
                 if(caseArea>=0)
                 {
+                    here=caseArea==State.Area;
                     var door=caseArea==State.Area?null:NextDoor(caseArea);
                     guide=caseArea==State.Area?(_questNpcRoots.TryGetValue(caseTarget,out var npcRoot)&&npcRoot&&npcRoot.activeSelf?npcRoot.transform:null):door?.transform;
                     if(guide)ShowGuide(guide,pos,caseArea==State.Area?PointName(caseTarget):"Pintu ke "+Content.Areas[door.DestinationArea]);
@@ -712,11 +731,13 @@ namespace Alif.Adventure
             }
             else if(target!=null)
             {
+                here=target.Area==State.Area;
                 var door=target.Area==State.Area?null:NextDoor(target.Area);
                 guide=target.Area==State.Area?FindPoint(target.Target,target.Area)?.transform:door?.transform;
                 if(guide)ShowGuide(guide,pos,target.Area==State.Area?target.Target:"Pintu ke "+Content.Areas[door.DestinationArea]);
             }
             if(!guide){_guide.text="";_guideArrow.gameObject.SetActive(false);}
+            MarkObjective(here?guide:Time.unscaledTime<_pingUntil?_pingDoor:null);
             if(Time.unscaledTime-_savedAt>20)Save(false);
         }
         void UpdateTutorial(Vector2 position)
@@ -740,12 +761,11 @@ namespace Alif.Adventure
 
         void ShowGuide(Transform guide,Vector2 position,string target)
         {
-            if(_objectivePing&&_objectivePing.gameObject.activeSelf&&Time.unscaledTime>_pingUntil)
-                _objectivePing.gameObject.SetActive(false);
             if(!guide){_guide.text="";_guideArrow.gameObject.SetActive(false);return;}
             Vector2 delta=(Vector2)guide.position-position;
             bool horizontal=Mathf.Abs(delta.x)>Mathf.Abs(delta.y);
-            float angle=horizontal?(delta.x>0?90:-90):(delta.y>0?180:0);
+            // InteractionArrow.png menunjuk ke ATAS; rotasi Z positif = berlawanan arah jarum jam.
+            float angle=horizontal?(delta.x>0?-90:90):(delta.y>0?0:180);
             _guideArrow.rectTransform.localEulerAngles=new Vector3(0,0,angle);_guideArrow.gameObject.SetActive(true);
             string direction=horizontal?(delta.x>0?"Kanan":"Kiri"):(delta.y>0?"Atas":"Bawah");
             _guide.text=direction+"  •  "+target;
@@ -818,14 +838,18 @@ namespace Alif.Adventure
                 PlayStoryOnce(StoryContent.TaskScene(t.Id),()=>
                 {
                     if (t.Kind == "encounter") { Say(t.Speaker,t.Introduction,BeginEncounter); return; }
-                    Say(t.Speaker,t.Introduction,()=>{if(t.Board!=null){State.PrepareBoard(t);Save();OpenBoard(MainBoard(t));}else CompleteTalk(t);});
+                    Action begin=()=>{if(t.Board!=null){State.PrepareBoard(t);Save();OpenBoard(MainBoard(t));}else CompleteTalk(t);};
+                    // Introduction kosong = pembukanya sudah dibawakan adegan tugasnya (mis. Bu Siti mengantar pesanan).
+                    if(string.IsNullOrEmpty(t.Introduction))begin();else Say(t.Speaker,t.Introduction,begin);
                 }));
         }
         void CompleteTalk(AdventureTask task)
         {
             if(task.SkipMinutes>0)TimeSystem.Instance?.SkipMinutes(task.SkipMinutes);
             if(State.Accept(task,0,out string feedback)) {Save();ObjectiveCompleted?.Invoke(task.Id);RefreshHud();}
-            Say(task.Speaker,feedback,()=>{State.Finish(Content);Save();if(State.Completed)ShowEnding();else SetPlaying();});
+            // Adegan sesudah tugas (mis. Raka masuk setelah Alif selesai makan), baru kalimat penutupnya.
+            PlayStoryOnce(StoryContent.TaskOutro(task.Id),()=>
+                Say(task.Speaker,feedback,()=>{State.Finish(Content);Save();if(State.Completed)ShowEnding();else SetPlaying();}));
         }
         public void Discover()
         {
@@ -857,9 +881,19 @@ namespace Alif.Adventure
 
         /// <summary>Pintu selalu bertanya dulu — pemain sering menyenggol pintu saat menyusuri
         /// tepi ruangan, dan pindah area tanpa diminta membuat dia kehilangan arah.</summary>
+        /// <summary>Versi demo berhenti di titik yang diatur <see cref="DemoStage"/>: keluar dari
+        /// area penutup pada hari batas memutar adegan penutup lalu layar kredit, bukan berpindah.</summary>
+        bool DemoEndsHere(SceneDoor door)
+        {
+            if(!DemoStage.Enabled||State.Day<DemoStage.EndDay)return false;
+            if(State.Area<0||State.Area>=Content.Areas.Length)return false;
+            return Content.Areas[State.Area]==DemoStage.EndArea&&door.DestinationArea!=State.Area;
+        }
+
         public void Travel(SceneDoor door)
         {
             if(!CanExplore)return;
+            if(DemoEndsHere(door)){PlayStoryOnce(StoryContent.DemoOutroFor(State.BoardTier("c1.offer"),State.Debt),ShowDemoCredits);return;}
             if(TutorialActive){Toast("Selesaikan atau lewati tutorial sebelum meninggalkan stasiun",5);return;}
             if(BuildingLocked(door))
             {
@@ -873,6 +907,26 @@ namespace Alif.Adventure
                 new Vector2(.08f,.46f),new Vector2(.92f,.86f),22).alignment=TextAlignmentOptions.Center;
             Button(p,"Ya",new Vector2(.1f,.14f),new Vector2(.48f,.38f),()=>{CloseModal();BeginTravel(door);});
             Button(p,"Batal",new Vector2(.52f,.14f),new Vector2(.9f,.38f),CloseModal);
+            FocusFirst();
+        }
+
+        /// <summary>Layar kredit demo: daftar kredit dari DemoStage.Credits, lalu kembali ke menu.</summary>
+        void ShowDemoCredits()
+        {
+            ClearModal(CampaignActivity.Ending);
+            var panel=Panel(_modal,new Vector2(.14f,.1f),new Vector2(.86f,.92f),Color.white);ApplySprite(panel,PixelSkin.Panel());
+            var p=panel.rectTransform;
+            var lines=DemoStage.Credits;
+            float top=.86f,height=.62f/Mathf.Max(1,lines.Length);
+            for(int i=0;i<lines.Length;i++)
+            {
+                if(string.IsNullOrEmpty(lines[i]))continue;
+                var text=Text(p,lines[i],new Vector2(.06f,top-(i+1)*height),new Vector2(.94f,top-i*height),i==0?26:18,
+                    i==0?PixelSkin.Accent:PixelSkin.TextDark);
+                text.alignment=TextAlignmentOptions.Center;
+                if(i==0)text.fontStyle=FontStyles.Bold;
+            }
+            Button(p,"Kembali ke menu",new Vector2(.3f,.06f),new Vector2(.7f,.16f),()=>SceneTransition.Load(MenuScene));
             FocusFirst();
         }
 
@@ -922,11 +976,11 @@ namespace Alif.Adventure
         public void SkipTutorial()
         {
             if(!TutorialActive)return;
-            State.TutorialStep=0;Save(false);RefreshHud();Toast("Tutorial dilewati",3);BeginChapterIntroduction();
+            State.TutorialStep=0;Save(false);RefreshHud();Toast("Tutorial dilewati",3);
         }
         void CompleteTutorial()
         {
-            State.TutorialStep=0;Save(false);RefreshHud();Toast("Tutorial selesai",3);BeginChapterIntroduction();
+            State.TutorialStep=0;Save(false);RefreshHud();Toast("Tutorial selesai",3);
         }
         RectTransform Card(CampaignActivity screen,string eyebrow,string title)
         {
@@ -994,7 +1048,40 @@ namespace Alif.Adventure
             public Func<(bool ok,string feedback)> Commit;
         }
         BoardSession _board;
-        void OpenBoard(BoardSession session){_board=session;_hint=0;_selectedCard=-1;ShowPuzzle();}
+        void OpenBoard(BoardSession session){_board=session;_hint=0;_selectedCard=-1;_judging=-1;if(session.Board.Document!=null)ShowDocument();else ShowPuzzle();}
+
+        /// <summary>Tampilan dokumen sebelum papan (mis. struk warung): kertas dokumen di kiri,
+        /// pembandingnya di kanan, lalu lanjut ke papan. Bisa dibuka lagi dari papannya.</summary>
+        void ShowDocument()
+        {
+            var doc=_board.Board.Document;
+            var p=Card(CampaignActivity.Puzzle,doc.Label.ToUpperInvariant(),_board.Title.Split('—')[0]);
+            Text(p,doc.Prompt,new Vector2(.04f,.67f),new Vector2(.96f,.77f),18);
+            DocumentSheet(p,new Vector2(.04f,.15f),new Vector2(.53f,.65f),doc.Header,doc.Rows,doc.Total,PixelSkin.Slot());
+            DocumentSheet(p,new Vector2(.57f,.25f),new Vector2(.96f,.65f),doc.CompareHeader,doc.CompareRows,doc.CompareTotal,PixelSkin.Panel());
+            Button(p,"Periksa "+doc.Label+" >",new Vector2(.61f,.035f),new Vector2(.96f,.11f),()=>ShowPuzzle());
+            Button(p,"Kembali",new Vector2(.34f,.035f),new Vector2(.54f,.11f),()=>{Save();CloseModal();});
+            FocusFirst();
+        }
+        void DocumentSheet(Transform parent,Vector2 min,Vector2 max,string header,string[] rows,string total,Sprite skin)
+        {
+            var sheet=Panel(parent,min,max,Color.white);ApplySprite(sheet,skin);sheet.raycastTarget=false;
+            var s=sheet.transform;
+            var title=Text(s,header,new Vector2(.05f,.82f),new Vector2(.95f,.97f),18,PixelSkin.Accent);
+            title.alignment=TextAlignmentOptions.Center;title.fontStyle=FontStyles.Bold;
+            float h=Mathf.Min(.16f,.56f/Mathf.Max(1,rows.Length));
+            for(int i=0;i<rows.Length;i++)DocumentRow(s,rows[i],.8f-(i+1)*h,h,false);
+            DocumentRow(s,total,.05f,.17f,true);
+        }
+        void DocumentRow(Transform sheet,string row,float y,float height,bool bold)
+        {
+            var parts=row.Split(new[]{'|'},2);
+            var label=Text(sheet,parts[0],new Vector2(.07f,y),new Vector2(.7f,y+height),bold?18:16);
+            var amount=Text(sheet,parts.Length>1?parts[1]:"",new Vector2(.7f,y),new Vector2(.93f,y+height),bold?18:16);
+            label.alignment=TextAlignmentOptions.MidlineLeft;amount.alignment=TextAlignmentOptions.MidlineRight;
+            label.textWrappingMode=amount.textWrappingMode=TextWrappingModes.NoWrap;
+            if(bold)label.fontStyle=amount.fontStyle=FontStyles.Bold;
+        }
         BoardSession MainBoard(AdventureTask t)=>new BoardSession
         {
             Id=t.Id,Title=t.Title,Board=t.Board,
@@ -1004,7 +1091,7 @@ namespace Alif.Adventure
             {
                 if(!State.CommitBoard(t,out string feedback))return (false,feedback);
                 CurrencySystem.Instance?.RestoreBalances(State.Money,State.Bank);ObjectiveCompleted?.Invoke(t.Id);RefreshHud();
-                Say(t.Speaker,t.Outcome,()=>{State.Finish(Content);Save();if(State.Completed)ShowEnding();});
+                Say(t.Speaker,feedback,()=>{State.Finish(Content);Save();if(State.Completed)ShowEnding();});
                 return (true,feedback);
             },
         };
@@ -1026,8 +1113,68 @@ namespace Alif.Adventure
         static string GroupLabel(ActivityBoard board,int group) =>
             board.GroupNames!=null&&group<board.GroupNames.Length?board.GroupNames[group]:"Kebutuhan "+(group+1);
 
+        /// <summary>Kartu yang sedang dinilai di papan bebas; -1 = kartu pertama yang belum dinilai,
+        /// atau layar ringkasan kalau semuanya sudah.</summary>
+        int _judging=-1;
+
+        /// <summary>Papan penilaian bebas (ActivityBoard.Free): satu syarat per layar dengan pilihan
+        /// besar, lalu ringkasan yang tiap barisnya bisa dibuka lagi sebelum disampaikan. Tidak ada
+        /// benar/salah di sini — akibatnya datang lewat cerita.</summary>
+        void ShowJudgement(string feedback=null)
+        {
+            var board=_board.Board;var placements=_board.Placements();
+            int count=board.Cards.Length,current=_judging>=0?_judging:placements.FindIndex(v=>v<0);
+            var p=Card(CampaignActivity.Puzzle,"NILAI TAWARAN",_board.Title.Split('—')[0]);
+            if(current>=0)
+            {
+                var step=Text(p,$"SYARAT {current+1} DARI {count}",new Vector2(.04f,.69f),new Vector2(.5f,.76f),17,PixelSkin.Accent);step.fontStyle=FontStyles.Bold;
+                // Titik kemajuan: terisi = sudah dinilai, berbingkai = yang sedang dibuka.
+                for(int i=0;i<count;i++)
+                {
+                    var pip=Panel(p,new Vector2(.96f-(count-i)*.035f,.705f),new Vector2(.96f-(count-i)*.035f+.025f,.745f),i==current?PixelSkin.Orange:placements[i]>=0?PixelSkin.Accent:new Color(.78f,.72f,.64f));
+                    pip.raycastTarget=false;
+                }
+                Text(p,board.Instruction,new Vector2(.04f,.59f),new Vector2(.96f,.69f),17);
+                var sheet=Panel(p,new Vector2(.1f,.31f),new Vector2(.9f,.58f),Color.white);ApplySprite(sheet,PixelSkin.Slot());sheet.raycastTarget=false;
+                var clause=Text(sheet.transform,"\""+board.Cards[current]+"\"",new Vector2(.05f,.08f),new Vector2(.95f,.92f),26);
+                clause.alignment=TextAlignmentOptions.Center;
+                float width=.84f/board.Slots.Length;
+                for(int s=0;s<board.Slots.Length;s++)
+                {
+                    int slot=s;float x=.08f+s*width;
+                    var choice=Button(p,(placements[current]==s?"> ":"")+board.Slots[s],new Vector2(x,.14f),new Vector2(x+width-.03f,.28f),()=>Judge(current,slot));
+                    choice.GetComponentInChildren<TMP_Text>().fontSize=Mathf.RoundToInt(23*_textScale);
+                }
+                Button(p,"Kembali",new Vector2(.04f,.035f),new Vector2(.24f,.11f),()=>{Save();CloseModal();});
+                if(placements.All(v=>v>=0))Button(p,"Lihat ringkasan",new Vector2(.66f,.035f),new Vector2(.96f,.11f),()=>{_judging=-1;ShowJudgement();});
+            }
+            else
+            {
+                Text(p,"Ini penilaianmu. Ketuk satu baris untuk mengubahnya, lalu sampaikan — Bu Siti akan mengikutinya.",new Vector2(.04f,.66f),new Vector2(.96f,.77f),17);
+                float h=.42f/count;
+                for(int i=0;i<count;i++)
+                {
+                    int card=i;float y=.65f-(i+1)*h;
+                    var row=Panel(p,new Vector2(.04f,y),new Vector2(.62f,y+h-.012f),Color.white);ApplySprite(row,PixelSkin.Slot());row.raycastTarget=false;
+                    var text=Text(row.transform,board.Cards[i],new Vector2(.04f,0f),new Vector2(.96f,1f),16);text.alignment=TextAlignmentOptions.MidlineLeft;
+                    Button(p,board.Slots[placements[i]],new Vector2(.64f,y),new Vector2(.96f,y+h-.012f),()=>{_judging=card;ShowJudgement();});
+                }
+                Button(p,"Sampaikan penilaian",new Vector2(.61f,.035f),new Vector2(.96f,.11f),Commit);
+                Button(p,"Kembali",new Vector2(.04f,.035f),new Vector2(.24f,.11f),()=>{Save();CloseModal();});
+            }
+            if(feedback!=null)Text(p,feedback,new Vector2(.27f,.035f),new Vector2(.6f,.11f),15,PixelSkin.Accent).alignment=TextAlignmentOptions.Center;
+            FocusFirst();
+        }
+        void Judge(int card,int slot)
+        {
+            var (accepted,feedback)=_board.Place(card,slot);
+            if(accepted)Save();
+            _judging=-1;ShowJudgement(accepted?null:feedback);
+        }
+
         void ShowPuzzle(string feedback=null)
         {
+            if(_board.Board.Free){ShowJudgement(feedback);return;}
             var board=_board.Board;var placements=_board.Placements();
             string kind=board.Kind=="budget"?"ANGGARAN":board.Kind=="inspect"?"PERIKSA DETAIL":board.Kind=="flow"?"ARUS PEMBAYARAN":board.Kind=="match"?"COCOKKAN DOKUMEN":"KELOMPOKKAN BUKTI";
             var p=Card(CampaignActivity.Puzzle,kind,_board.Title.Split('—')[0]);
@@ -1090,8 +1237,19 @@ namespace Alif.Adventure
                     Button(p,(board.Kind=="flow"?"Urutan: ":"")+board.Slots[i],new Vector2(.57f,y),new Vector2(.96f,y+h-.008f),()=>{if(_selectedCard>=0)Place(_selectedCard,slot);else ShowPuzzle("Pilih kartu di kiri terlebih dahulu.");});}
             }
             Text(p,feedback??"Kemajuan disimpan setiap kali satu bukti ditempatkan dengan benar.",new Vector2(.035f,.13f),new Vector2(.96f,.23f),18,PixelSkin.Accent);
-            Button(p,_hint>=2?"Terapkan satu panduan":"Petunjuk",new Vector2(.04f,.035f),new Vector2(.28f,.11f),Hint);
-            Button(p,"Kembali",new Vector2(.34f,.035f),new Vector2(.54f,.11f),()=>{Save();CloseModal();});
+            var document=board.Document;
+            if(document==null)
+            {
+                Button(p,_hint>=2?"Terapkan satu panduan":"Petunjuk",new Vector2(.04f,.035f),new Vector2(.28f,.11f),Hint);
+                Button(p,"Kembali",new Vector2(.34f,.035f),new Vector2(.54f,.11f),()=>{Save();CloseModal();});
+            }
+            else
+            {
+                // Papan berdokumen: baris tombol dibagi empat supaya dokumennya bisa dilihat lagi.
+                Button(p,_hint>=2?"Terapkan satu panduan":"Petunjuk",new Vector2(.04f,.035f),new Vector2(.23f,.11f),Hint);
+                Button(p,"Lihat "+document.Label,new Vector2(.25f,.035f),new Vector2(.42f,.11f),ShowDocument);
+                Button(p,"Kembali",new Vector2(.44f,.035f),new Vector2(.59f,.11f),()=>{Save();CloseModal();});
+            }
             Button(p,"Selesaikan aktivitas",new Vector2(.61f,.035f),new Vector2(.96f,.11f),Commit).interactable=board.Solved(placements);FocusFirst();
         }
         public void Place(int card,int slot)
