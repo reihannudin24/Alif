@@ -88,9 +88,10 @@ namespace Alif.Adventure
             var screen = PhoneScreen($"INVESTASI • Dompet Rp{State.Money:N0} • Rek Rp{State.Bank:N0}");
             var summary = Panel(screen, new Vector2(.02f, .77f), new Vector2(.98f, .88f), Color.white);
             ApplySprite(summary, PixelSkin.Panel()); summary.raycastTarget = false;
-            Text(summary.transform, $"Diinvestasikan Rp{InvestmentRules.Invested(State):N0}  •  {State.Holdings.Count} aktif  •  {State.Cards.Count}/{StoryContent.Cards.Length} kartu",
-                new Vector2(.03f, 0f), new Vector2(.7f, 1f), 14, PixelSkin.TextDark).alignment = TextAlignmentOptions.MidlineLeft;
-            Button(summary.transform, "Portofolio", new Vector2(.72f, .12f), new Vector2(.98f, .88f), () => ShowPortfolio(0));
+            Text(summary.transform, $"Rp{InvestmentRules.Invested(State):N0} • {State.Holdings.Count} aktif • {State.Cards.Count}/{StoryContent.Cards.Length} kartu",
+                new Vector2(.03f, 0f), new Vector2(.47f, 1f), 13, PixelSkin.TextDark).alignment = TextAlignmentOptions.MidlineLeft;
+            Button(summary.transform, "Pasar Koin", new Vector2(.48f, .12f), new Vector2(.72f, .88f), () => ShowCoinMarket());
+            Button(summary.transform, "Portofolio", new Vector2(.74f, .12f), new Vector2(.98f, .88f), () => ShowPortfolio(0));
 
             // Instrumen yang sudah bisa dibuka tampil lebih dulu.
             var cards = StoryContent.Cards.OrderByDescending(c => InvestmentRules.Open(State, c)).ToArray();

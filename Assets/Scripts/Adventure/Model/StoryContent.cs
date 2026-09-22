@@ -263,6 +263,34 @@ namespace Alif.Adventure
         /// <summary>Adegan pagi setelah tawaran Raka dinilai (tier dari AdventureState.BoardTier); null bila belum dinilai.</summary>
         public static StoryScene OfferAftermath(int tier) => tier >= 0 && tier < OfferAftermaths.Length ? OfferAftermaths[tier] : null;
 
+        // Pagi-pagi setelah ajakan koin Bang Jago dijawab (kunci = CoinMarket.MorningKey).
+        static readonly Dictionary<string, StoryScene> CoinMornings = new[]
+        {
+            Scene("coin:crash", "stasiun_depan", null,
+                "Narator|Pagi berikutnya. Grafik MoonCempaka di HP Alif merah dari ujung ke ujung: harga tinggal seperlima.",
+                "Bang Jago|Tenang, Bro! Ini cuma koreksi sehat. Jangan dijual — HODL! Besok juga balik, dijamin.",
+                "Alif (Batin)|Sejuta rupiahku tinggal dua ratus ribu dalam semalam. Kemarin dia bilang \"dijamin\" juga.",
+                "Alif (Batin)|Aku tidak pernah bertanya: koin ini usahanya apa, asetnya apa, akadnya apa. Aku hanya membeli janji — itu gharar. Jual sekarang atau menunggu, dua-duanya tebakan."),
+            Scene("coin:dust", "stasiun_depan", null,
+                "Narator|Dua hari setelah Alif membeli, MoonCempaka nyaris tak berharga. Tempat Bang Jago biasa nongkrong di depan stasiun kosong.",
+                "Alif (Batin)|Nomornya tidak aktif. Yang tersisa hanya angka kecil di layar dan pelajaran mahal: untung yang \"pasti\" tanpa aset nyata bukan investasi — itu untung-untungan."),
+            Scene("coin:pump", "stasiun_depan", null,
+                "Narator|Pagi berikutnya, HP Alif bergetar berkali-kali. MoonCempaka naik 400% dalam semalam.",
+                "Bang Jago|TUH KAN, BRO! Kemarin sejuta, hari ini jadi lima juta! Masih mau ketinggalan? Pintunya masih terbuka — minimal sejuta.",
+                "Alif (Batin)|Dadaku panas. Seandainya kemarin aku ikut… Tapi tidak ada yang berubah dari kemarin: tetap tidak ada aset, tidak ada laporan, tidak ada akad. Yang berubah cuma harganya — dan rasa takutku ketinggalan."),
+            Scene("coin:rug.lost", "stasiun_depan", null,
+                "Narator|Sehari setelah Alif membeli di harga puncak, MoonCempaka hilang dari bursa. Harganya nol.",
+                "Narator|Pengembangnya menjual seluruh koinnya saat harga tertinggi — tepat ketika para pembeli terakhir masuk — lalu menghapus semua akunnya.",
+                "Alif (Batin)|Aku menolak saat harganya wajar, lalu membeli saat harganya paling mahal, hanya karena takut ketinggalan. Sejuta rupiahku jadi jalan keluar bagi orang lain."),
+            Scene("coin:rug.safe", "stasiun_depan", null,
+                "Narator|Dua hari setelah Alif menolak, MoonCempaka hilang dari bursa. Harganya nol, dan Bang Jago tidak pernah terlihat lagi di depan stasiun.",
+                "Alif (Batin)|Kemarin rasanya aku orang paling bodoh di Cempaka karena menolak. Hari ini yang membeli di puncak kehilangan semuanya.",
+                "Alif (Batin)|Kenaikan harga bukan bukti apa-apa. Yang kuperiksa tetap sama: aset nyatanya apa, akadnya apa, siapa yang bertanggung jawab."),
+        }.ToDictionary(s => s.Id.Substring("coin:".Length));
+
+        /// <summary>Adegan pagi skenario koin untuk kunci dari CoinMarket.MorningKey; null bila tidak ada.</summary>
+        public static StoryScene CoinMorning(string key) => key != null && CoinMornings.TryGetValue(key, out var scene) ? scene : null;
+
         static readonly string[] DemoOutroByOffer =
         {
             "Narator|Di warung, Bu Siti menghitung ulang uang kasnya: dua ratus ribu untuk bunga hari ini, dan besok segitu lagi.",
@@ -271,12 +299,13 @@ namespace Alif.Adventure
         };
 
         /// <summary>Penutup demo, dengan satu baris tambahan sesuai nasib tawaran Raka (tier &lt; 0 = tanpa tambahan).</summary>
-        public static StoryScene DemoOutroFor(int offerTier, int debt = 0)
+        public static StoryScene DemoOutroFor(int offerTier, int debt = 0, string coinLine = null)
         {
             bool offer = offerTier >= 0 && offerTier < DemoOutroByOffer.Length;
-            if (!offer && debt <= 0) return DemoOutro;
+            if (!offer && debt <= 0 && coinLine == null) return DemoOutro;
             var lines = DemoOutro.Lines.ToList();
             if (offer) lines.Insert(lines.Count - 1, DemoOutroByOffer[offerTier]);
+            if (coinLine != null) lines.Insert(lines.Count - 1, coinLine);
             if (debt > 0) lines.Insert(lines.Count - 1, $"Alif (Batin)|Dan di HP-ku, notifikasi {PinjolRules.AppName} berkedip lagi: utangku sudah Rp{debt:N0}. Meminjam itu cepat — melunasinya yang tidak.");
             return new StoryScene { Id = DemoOutro.Id, Art = DemoOutro.Art, Character = DemoOutro.Character, Lines = lines.ToArray() };
         }
@@ -325,6 +354,6 @@ namespace Alif.Adventure
             new StoryScene { Id = id, Art = art, Character = character, Lines = lines };
 
         public static IEnumerable<StoryScene> AllScenes =>
-            NpcIntros.Values.Concat(MainIntros.Values).Concat(AreaIntros.Values).Concat(TaskScenes.Values).Concat(TaskOutros.Values).Concat(OfferAftermaths);
+            NpcIntros.Values.Concat(MainIntros.Values).Concat(AreaIntros.Values).Concat(TaskScenes.Values).Concat(TaskOutros.Values).Concat(OfferAftermaths).Concat(CoinMornings.Values);
     }
 }

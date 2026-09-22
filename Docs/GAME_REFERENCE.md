@@ -589,6 +589,23 @@ Tiap penawaran punya `Impact` (apa yang dibangun, tampil di detail) dan `Maturit
 jurnal saat jatuh tempo). Karena dana terkunci, berinvestasi berlebihan bisa membuat Alif kehabisan
 uang tunai — di situlah aplikasi Pinjol menggoda.
 
+### Skenario koin "Bang Jago" + Pasar Koin — pelajaran FOMO & pump-and-dump
+`Model/CoinMarket.cs` + `AdventureGame.Coin.cs`. **Bang Jago** berdiri di *Depan stasiun* (dekat titik
+spawn area; sprite placeholder Dimas berwarna emas) dan mengajak Alif membeli koin **MOON**
+(MoonCempaka) — Rp1.000.000 **tunai**, jadi Alif harus menarik uang di ATM dalam stasiun dulu.
+"Tidak, terima kasih" adalah tombol terfokus. Jalan ceritanya (harga deterministik per hari):
+- **Ikut:** besoknya −80% (tinggal seperlima), lusa nyaris nol, Bang Jago lenyap. Koin bisa dijual
+  kapan saja lewat HP selama harganya > 0. ("Turun 500%" tidak ada — harga paling jauh turun 100%.)
+- **Menolak:** besoknya **+400%** → adegan pagi + **tawaran kedua** (dompet dulu, lalu rekening; hanya
+  berlaku hari itu, juga bisa lewat Bang Jago). Lusa koin jadi **0** (pengembang kabur): yang tergoda
+  kehilangan Rp1.000.000, yang tetap menolak selamat.
+Adegan pagi: `StoryContent.CoinMorning` (`crash`, `dust`, `pump`, `rug.lost`, `rug.safe`), diputar
+sekali setelah tidur. Jurnal mencatat tiap keputusan; ikut = neraca −8 dari Kepatuhan Syariah,
+menolak = ke tengah; penutup demo menyebut nasib koinnya. Tersimpan di `AdventureState.Coin*`.
+**Pasar Koin** (HP › Investasi › "Pasar Koin"): daftar 8 koin fiktif dengan harga & perubahan harian,
+**kolom pencarian** (simbol/nama, Enter atau "Cari"), dan detail dengan grafik 5 hari + peringatan
+gharar. Koin lain hanya bisa dipantau — tidak bisa dibeli.
+
 ### Aplikasi Pinjol "DanaKilat" (HP) — godaan, bukan jalan keluar
 `Model/Pinjol.cs` (`PinjolRules`) + `AdventureGame.Pinjol.cs`. Nominal Rp100/300/500 ribu, **admin
 10% dipotong di depan**, **bunga 5% per hari berbunga**, jatuh tempo 5 hari, lalu denda Rp10.000/hari.

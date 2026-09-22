@@ -301,6 +301,7 @@ namespace Alif.Adventure
             else TimeSystem.Instance?.SetStoryDay(State.Day, true, Content.StartHour);
             WatchClock();
             BuildQuestNpcs();
+            BuildCoinNpc();
         }
 
         void StopSideQuests() => ItemPickup.Collected -= RecordPickup;

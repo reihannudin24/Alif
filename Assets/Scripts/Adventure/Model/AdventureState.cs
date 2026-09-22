@@ -79,6 +79,9 @@ namespace Alif.Adventure
         /// <summary>Pinjol DanaKilat (PinjolRules): sisa utang, pokok awal, hari meminjam, hari terakhir
         /// bunganya dihitung, dan total yang sudah dicicil. Semua nol bila tidak ada pinjaman.</summary>
         public int Debt, DebtPrincipal, DebtDay, DebtAccruedDay, DebtPaid;
+        /// <summary>Skenario koin Bang Jago (CoinMarket): hari tawaran pertama dijawab, jawaban pertama &
+        /// kedua (0 belum, 1 ikut, 2 menolak), koin MOON yang dipegang, dan total uang yang dikeluarkan.</summary>
+        public int CoinDay, CoinFirst, CoinSecond, CoinUnits, CoinSpent;
         public float PlaySeconds;
         public TaskProgress Progress(string id) => Tasks.Find(t => t.Id == id);
         public bool CanStart(AdventureTask task) => !Completed && task.Prerequisites.All(id => Progress(id)?.Complete == true) &&
@@ -226,7 +229,7 @@ namespace Alif.Adventure
             if (Version != 4 || Day < 1 || Day > MaxDay || Chapter < 1 || Chapter > 5 || HighestUnlocked < Chapter || HighestUnlocked > 5 || TutorialStep < 0 || TutorialStep > 3 ||
                 Area < 0 || Area >= AdventureContent.Get(Chapter).Areas.Length || Money < 0 || Money > 2000000 || Bank < 0 || Bank > 2000000 || !float.IsFinite(X) || !float.IsFinite(Y) ||
                 Math.Abs(X) > 500 || Math.Abs(Y) > 500 || !float.IsFinite(PlaySeconds) || PlaySeconds < 0 ||
-                Tasks == null || Evidence == null || Discoveries == null || CompletedChapters == null || !SideQuestRules.Valid(this) || !InvestmentRules.Valid(this) || !PinjolRules.Valid(this)) return false;
+                Tasks == null || Evidence == null || Discoveries == null || CompletedChapters == null || !SideQuestRules.Valid(this) || !InvestmentRules.Valid(this) || !PinjolRules.Valid(this) || !CoinMarket.Valid(this)) return false;
             var chapter = AdventureContent.Get(Chapter);
             // Pembuka bab diputar sebelum tutorial, jadi IntroductionSeen boleh true di checkpoint tutorial.
             if (TutorialStep > 0 && (Chapter != 1 || Area != chapter.StartArea || Completed || Tasks.Count > 0)) return false;

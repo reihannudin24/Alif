@@ -121,6 +121,7 @@ namespace Alif.Adventure
             if (State == null || !State.PassNight()) return;
             string ujrah = InvestmentRules.Settle(State);
             if (ujrah != null) CurrencySystem.Instance?.RestoreBalances(State.Money, State.Bank);
+            CoinMarket.NewDay(State);
             string debtNotice = PinjolRules.Accrue(State);
             if (debtNotice != null) DebtPressure();
             SyncStoryDay(false);
@@ -208,6 +209,7 @@ namespace Alif.Adventure
                 string rent = State.PayRent();                 // sewa kamar ditagih tiap malam
                 string ujrah = InvestmentRules.Settle(State);  // imbal hasil investasi yang jatuh hari ini
                 if (ujrah != null) rent = string.IsNullOrEmpty(rent) ? ujrah : rent + "  •  " + ujrah;
+                CoinMarket.NewDay(State);                      // tawaran koin hangus / koin yang jadi nol dihapus
                 string debt = PinjolRules.Accrue(State);       // bunga harian pinjol
                 if (debt != null) { DebtPressure(); rent = string.IsNullOrEmpty(rent) ? debt : rent + "  •  " + debt; }
                 EnergySystem.Instance?.RestoreFull();
@@ -226,7 +228,7 @@ namespace Alif.Adventure
                         ? "Alif (Batin)|Pagi yang tenang. Semua urusan warga sudah beres—saatnya mengabari Bu Siti."
                         : "Alif (Batin)|Pagi yang tenang. Masih ada urusan warga yang belum kutuntaskan.");
                 // Pagi pertama setelah tawaran Raka dinilai: akibat penilaian Alif dulu, baru kabar warga.
-                PlayStoryOnce(StoryContent.OfferAftermath(State.BoardTier("c1.offer")), () => SayLines(new[] { news }, SetPlaying));
+                PlayStoryOnce(StoryContent.OfferAftermath(State.BoardTier("c1.offer")), () => CoinMorning(() => SayLines(new[] { news }, SetPlaying)));
             });
         }
     }

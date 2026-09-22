@@ -100,6 +100,8 @@
       "ChapterSelectController",
       "CharacterData",
       "CityWorld",
+      "Coin",
+      "CoinMarket",
       "CurrencySystem",
       "CutscenePanelPart",
       "CutscenePlayerController",
@@ -479,6 +481,15 @@
       "changes_analyzed": 338,
       "new_symbols": [
         "PinjolRules"
+      ]
+    },
+    {
+      "timestamp": "2026-09-21T16:44:06.683432",
+      "summary": "Evolved knowledge base: 147 C# symbols, 4 Yarn nodes, 4 tile specs. Discovered 2 new symbols.",
+      "changes_analyzed": 353,
+      "new_symbols": [
+        "CoinMarket",
+        "Coin"
       ]
     }
   ]

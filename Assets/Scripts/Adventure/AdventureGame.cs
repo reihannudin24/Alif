@@ -661,6 +661,7 @@ namespace Alif.Adventure
             RefreshCoach();
             RefreshEntranceMarkers();
             RefreshQuestMarkers();
+            RefreshCoinNpc();
             if(_skipTutorial)_skipTutorial.gameObject.SetActive(TutorialActive);
             if(TutorialActive)
             {
@@ -810,6 +811,7 @@ namespace Alif.Adventure
         public void Interact(string target)
         {
             if(!CanExplore)return;
+            if(target==CoinMarket.NpcId){InteractCoinNpc();return;}
             if(target.StartsWith("npc:")){InteractQuestNpc(target);return;}
             if(TutorialActive)
             {
@@ -893,7 +895,7 @@ namespace Alif.Adventure
         public void Travel(SceneDoor door)
         {
             if(!CanExplore)return;
-            if(DemoEndsHere(door)){PlayStoryOnce(StoryContent.DemoOutroFor(State.BoardTier("c1.offer"),State.Debt),ShowDemoCredits);return;}
+            if(DemoEndsHere(door)){PlayStoryOnce(StoryContent.DemoOutroFor(State.BoardTier("c1.offer"),State.Debt,CoinMarket.OutroLine(State)),ShowDemoCredits);return;}
             if(TutorialActive){Toast("Selesaikan atau lewati tutorial sebelum meninggalkan stasiun",5);return;}
             if(BuildingLocked(door))
             {
